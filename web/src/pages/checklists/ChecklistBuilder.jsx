@@ -8,6 +8,7 @@ const STANDARDS = [
   { value: 'ISO_22000', label: 'ISO 22000' },
   { value: 'LOCAL_CODE', label: 'Local code' },
   { value: 'INTERNAL_QC', label: 'Internal QC' },
+  { value: 'SOP', label: 'Opening/closing SOP' },
   { value: 'CUSTOM', label: 'Custom' },
 ];
 
@@ -17,6 +18,7 @@ export default function ChecklistBuilder() {
   const [standard, setStandard] = useState('');
   const [criticalOnly, setCriticalOnly] = useState(false);
   const [selected, setSelected] = useState([]);
+  const [expanded, setExpanded] = useState(new Set());
   const [templates, setTemplates] = useState([]);
   const [templateName, setTemplateName] = useState('');
   const [frequency, setFrequency] = useState('daily');
@@ -57,6 +59,15 @@ export default function ChecklistBuilder() {
 
   const toggleItem = (id) => {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  };
+
+  const toggleExpanded = (id) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const selectAllShown = () => {
@@ -149,7 +160,19 @@ export default function ChecklistBuilder() {
                       <span className="pill">{item.standard}</span>{' '}
                       {item.requires_photo && <span className="pill pill-amber">photo required</span>}{' '}
                       {item.is_critical && <span className="pill pill-red">critical</span>}
+                      {item.description && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleExpanded(item.id); }}
+                          style={{ background: 'none', border: 'none', padding: 0, marginLeft: 8, color: 'var(--green)', cursor: 'pointer', font: 'inherit', textDecoration: 'underline' }}
+                        >
+                          {expanded.has(item.id) ? 'Hide detail' : 'Show detail'}
+                        </button>
+                      )}
                     </div>
+                    {item.description && expanded.has(item.id) && (
+                      <p style={{ marginTop: 6, marginBottom: 0 }}>{item.description}</p>
+                    )}
                   </div>
                   <input type="checkbox" checked={selected.includes(item.id)} onChange={() => toggleItem(item.id)} />
                 </label>

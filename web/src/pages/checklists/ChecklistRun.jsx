@@ -119,6 +119,7 @@ export default function ChecklistRun() {
               {item.text}{' '}
               {item.is_critical && <span className="pill pill-red">critical</span>}
             </p>
+            {item.description && <p className="hint" style={{ marginTop: -6 }}>{item.description}</p>}
 
             {observation ? (
               <div className="field">
