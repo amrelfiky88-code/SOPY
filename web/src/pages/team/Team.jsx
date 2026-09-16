@@ -85,28 +85,30 @@ export default function Team() {
       {tab === 'users' && (
         <div>
           <div className="card">
-            <table>
-              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Access</th><th>Status</th></tr></thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id}>
-                    <td>{u.full_name}</td>
-                    <td>{u.email}</td>
-                    <td>
-                      <select value={u.role} onChange={(e) => updateUser(u.id, { role: e.target.value })}>
-                        {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                      </select>
-                    </td>
-                    <td>
-                      <select value={u.access_level} onChange={(e) => updateUser(u.id, { accessLevel: e.target.value })}>
-                        {ACCESS_LEVELS.map((a) => <option key={a.value} value={a.value}>{a.label.split(' —')[0]}</option>)}
-                      </select>
-                    </td>
-                    <td><span className="pill">{u.status}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="table-scroll">
+              <table>
+                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Access</th><th>Status</th></tr></thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id}>
+                      <td>{u.full_name}</td>
+                      <td>{u.email}</td>
+                      <td>
+                        <select value={u.role} onChange={(e) => updateUser(u.id, { role: e.target.value })}>
+                          {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                        </select>
+                      </td>
+                      <td>
+                        <select value={u.access_level} onChange={(e) => updateUser(u.id, { accessLevel: e.target.value })}>
+                          {ACCESS_LEVELS.map((a) => <option key={a.value} value={a.value}>{a.label.split(' —')[0]}</option>)}
+                        </select>
+                      </td>
+                      <td><span className="pill">{u.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
           <form onSubmit={invite} className="card">
             <div className="field">

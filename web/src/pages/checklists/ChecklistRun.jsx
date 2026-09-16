@@ -232,18 +232,20 @@ function Scorecard({ scorecard, onDone }) {
 
       <div className="card">
         <h3 style={{ marginBottom: 12 }}>By section</h3>
-        <table>
-          <thead><tr><th>Section</th><th>Score</th><th>Critical fails</th></tr></thead>
-          <tbody>
-            {scorecard.sections.map((s) => (
-              <tr key={s.category}>
-                <td>{s.category}</td>
-                <td>{s.compliant} / {s.total} ({s.percentage}%)</td>
-                <td>{s.criticalFails || '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="table-scroll">
+          <table>
+            <thead><tr><th>Section</th><th>Score</th><th>Critical fails</th></tr></thead>
+            <tbody>
+              {scorecard.sections.map((s) => (
+                <tr key={s.category}>
+                  <td>{s.category}</td>
+                  <td>{s.compliant} / {s.total} ({s.percentage}%)</td>
+                  <td>{s.criticalFails || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <button className="btn btn-primary" onClick={onDone}>Back to dashboard</button>

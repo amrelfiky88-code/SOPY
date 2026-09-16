@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 
 const STEP_TO_PATH = {
@@ -13,6 +13,12 @@ const STEP_TO_PATH = {
 export default function AppLayout() {
   const { user, tenant, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close the drawer automatically whenever the route changes, so
+  // tapping a nav link on mobile doesn't leave it open over the new page.
+  useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -27,7 +33,21 @@ export default function AppLayout() {
 
   return (
     <div className="layout">
-      <div className="sidebar">
+      <div className="mobile-topbar">
+        <button
+          type="button"
+          className="hamburger-btn"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open menu"
+        >
+          ☰
+        </button>
+        <span className="brand">SOPY</span>
+      </div>
+
+      <div className={`sidebar-backdrop ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} />
+
+      <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <span className="brand">SOPY</span>
         <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>Dashboard</NavLink>
         <NavLink to="/app/kpi" className={({ isActive }) => (isActive ? 'active' : '')}>KPI dashboard</NavLink>

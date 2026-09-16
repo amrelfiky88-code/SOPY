@@ -14,7 +14,12 @@ import { dashboardRouter } from './routes/dashboard.routes.js';
 export function createApp() {
   const app = express();
 
-  app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
+  // In production, lock CORS to the configured client origin. In dev,
+  // reflect whatever origin asked — this is what lets the Vite dev
+  // server's proxy work when it's reached via a LAN IP from a phone
+  // (the browser's same-origin request to Vite still forwards with that
+  // LAN-IP origin once proxied through to this API), not just localhost.
+  app.use(cors({ origin: process.env.NODE_ENV === 'production' ? (process.env.CLIENT_ORIGIN || 'http://localhost:5173') : true }));
 
   // Paddle webhook needs the raw body for signature verification, so it's
   // mounted before the global express.json() middleware.

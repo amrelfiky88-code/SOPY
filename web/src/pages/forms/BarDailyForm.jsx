@@ -155,7 +155,7 @@ export default function BarDailyForm() {
       {report.error && <div className="error-banner">{report.error}</div>}
 
       <Section title="A. Shift identification">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2col">
           <LabeledInput label="Report No. (BDR-)" value={form.shift.reportNo} onChange={(v) => patchNested('shift', 'reportNo', v)} />
           <LabeledSelect label="Shift" value={form.shift.shiftType} onChange={(v) => patchNested('shift', 'shiftType', v)}
             options={[['morning', 'Morning (Open)'], ['afternoon', 'Afternoon'], ['evening', 'Evening (Close)']]} />
@@ -173,7 +173,7 @@ export default function BarDailyForm() {
 
       <Section title="B. Equipment & temperature monitoring">
         <TemperatureLogTable rows={TEMP_ROWS} values={form.temperatureLog} onChange={setFixedRow('temperatureLog')} />
-        <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2col" style={{ marginTop: 12 }}>
           <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400 }}>
             <input type="checkbox" checked={form.tempDeviation.found} onChange={(e) => patch('tempDeviation', { found: e.target.checked })} />
             Temperature deviation noted
@@ -188,10 +188,8 @@ export default function BarDailyForm() {
       </Section>
 
       <Section title="C. Beverage stock & inventory log">
-        <div style={{ overflowX: 'auto' }}>
-          <FixedRowDataTable rows={STOCK_ITEMS} columns={STOCK_COLUMNS} values={form.stockLog} onChange={setFixedRow('stockLog')} />
-        </div>
-        <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <FixedRowDataTable rows={STOCK_ITEMS} columns={STOCK_COLUMNS} values={form.stockLog} onChange={setFixedRow('stockLog')} />
+        <div className="form-grid-2col" style={{ marginTop: 12 }}>
           <input placeholder="Items below par level" value={form.stockNotes.belowPar} onChange={(e) => patch('stockNotes', { belowPar: e.target.value })} />
           <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400 }}>
             <input type="checkbox" checked={form.stockNotes.reorderPlaced} onChange={(e) => patch('stockNotes', { reorderPlaced: e.target.checked })} />
@@ -209,7 +207,7 @@ export default function BarDailyForm() {
 
       <Section title="D. Beverage sales performance">
         <FixedRowDataTable rows={SALES_ROWS} columns={SALES_COLUMNS} values={form.salesPerformance} onChange={setFixedRow('salesPerformance')} />
-        <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2col" style={{ marginTop: 12 }}>
           <input placeholder="Best-selling item today" value={form.salesNotes.bestSeller} onChange={(e) => patch('salesNotes', { bestSeller: e.target.value })} />
           <input placeholder="Slowest-moving item" value={form.salesNotes.slowest} onChange={(e) => patch('salesNotes', { slowest: e.target.value })} />
           <input placeholder="Promotion / offer active" value={form.salesNotes.promoActive} onChange={(e) => patch('salesNotes', { promoActive: e.target.value })} />
@@ -242,7 +240,7 @@ export default function BarDailyForm() {
       </Section>
 
       <Section title="I. Sign-off & authorization">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2col">
           <LabeledInput label="Bar Manager / Shift Lead name" value={form.signOff.barManagerName} onChange={(v) => patchNested('signOff', 'barManagerName', v)} />
           <LabeledInput label="Operations Manager name" value={form.signOff.opsManagerName} onChange={(v) => patchNested('signOff', 'opsManagerName', v)} />
         </div>

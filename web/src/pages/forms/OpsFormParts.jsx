@@ -46,35 +46,37 @@ export function Section({ title, children }) {
 // applicable (e.g. fryer oil temp isn't read mid-shift in KDR-001).
 export function TemperatureLogTable({ rows, values, onChange }) {
   return (
-    <table>
-      <thead>
-        <tr><th>Equipment / Unit</th><th>Safe range</th><th>Start</th><th>Mid</th><th>End</th></tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => {
-          const v = values[row.key] || {};
-          return (
-            <tr key={row.key}>
-              <td>{row.label}</td>
-              <td className="hint">{row.safeRange}</td>
-              <td><input type="number" style={{ width: 70 }} value={v.s || ''} onChange={(e) => onChange(row.key, 's', e.target.value)} /></td>
-              <td>
-                {row.midNA ? 'N/A' : (
-                  <input type="number" style={{ width: 70 }} value={v.m || ''} onChange={(e) => onChange(row.key, 'm', e.target.value)} />
-                )}
-              </td>
-              <td><input type="number" style={{ width: 70 }} value={v.e || ''} onChange={(e) => onChange(row.key, 'e', e.target.value)} /></td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <div className="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Equipment / Unit</th><th>Safe range</th><th>Start</th><th>Mid</th><th>End</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const v = values[row.key] || {};
+            return (
+              <tr key={row.key}>
+                <td>{row.label}</td>
+                <td className="hint">{row.safeRange}</td>
+                <td><input type="number" style={{ width: 70 }} value={v.s || ''} onChange={(e) => onChange(row.key, 's', e.target.value)} /></td>
+                <td>
+                  {row.midNA ? 'N/A' : (
+                    <input type="number" style={{ width: 70 }} value={v.m || ''} onChange={(e) => onChange(row.key, 'm', e.target.value)} />
+                  )}
+                </td>
+                <td><input type="number" style={{ width: 70 }} value={v.e || ''} onChange={(e) => onChange(row.key, 'e', e.target.value)} /></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 export function OpeningClosingChecklist({ opening, closing, values, onToggle }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+    <div className="form-grid-2col">
       <div>
         <strong style={{ display: 'block', marginBottom: 8, fontSize: 13 }}>Opening tasks</strong>
         {opening.map((task, i) => (
@@ -100,32 +102,34 @@ export function OpeningClosingChecklist({ opening, closing, values, onToggle }) 
 export function RepeatableTable({ columns, rows, onChangeRow, onAddRow, onRemoveRow }) {
   return (
     <div>
-      <table>
-        <thead>
-          <tr>{columns.map((c) => <th key={c.key}>{c.label}</th>)}<th /></tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
-              {columns.map((c) => (
-                <td key={c.key}>
-                  {c.type === 'checkbox' ? (
-                    <input type="checkbox" checked={!!row[c.key]} onChange={(e) => onChangeRow(i, c.key, e.target.checked)} />
-                  ) : (
-                    <input
-                      type={c.type || 'text'}
-                      style={{ minWidth: c.width || 90 }}
-                      value={row[c.key] ?? ''}
-                      onChange={(e) => onChangeRow(i, c.key, e.target.value)}
-                    />
-                  )}
-                </td>
-              ))}
-              <td><button type="button" className="btn btn-small btn-danger" onClick={() => onRemoveRow(i)}>×</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>{columns.map((c) => <th key={c.key}>{c.label}</th>)}<th /></tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i}>
+                {columns.map((c) => (
+                  <td key={c.key}>
+                    {c.type === 'checkbox' ? (
+                      <input type="checkbox" checked={!!row[c.key]} onChange={(e) => onChangeRow(i, c.key, e.target.checked)} />
+                    ) : (
+                      <input
+                        type={c.type || 'text'}
+                        style={{ minWidth: c.width || 90 }}
+                        value={row[c.key] ?? ''}
+                        onChange={(e) => onChangeRow(i, c.key, e.target.value)}
+                      />
+                    )}
+                  </td>
+                ))}
+                <td><button type="button" className="btn btn-small btn-danger" onClick={() => onRemoveRow(i)}>×</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <button type="button" className="btn btn-secondary btn-small" style={{ marginTop: 8 }} onClick={onAddRow}>+ Add row</button>
     </div>
   );
@@ -137,61 +141,65 @@ export function RepeatableTable({ columns, rows, onChangeRow, onAddRow, onRemove
 // task that's only done at open and close, never mid-shift).
 export function FixedRowDataTable({ rows, columns, values, onChange }) {
   return (
-    <table>
-      <thead>
-        <tr><th>Item</th>{columns.map((c) => <th key={c.key}>{c.label}</th>)}</tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => {
-          const v = values[row.key] || {};
-          return (
-            <tr key={row.key}>
-              <td>{row.label}</td>
-              {columns.map((c) => {
-                const isNA = row.na?.includes(c.key);
-                return (
-                  <td key={c.key}>
-                    {isNA ? 'N/A' : c.type === 'checkbox' ? (
-                      <input type="checkbox" checked={!!v[c.key]} onChange={(e) => onChange(row.key, c.key, e.target.checked)} />
-                    ) : (
-                      <input
-                        type={c.type || 'text'}
-                        style={{ width: c.width || 70 }}
-                        value={v[c.key] ?? ''}
-                        onChange={(e) => onChange(row.key, c.key, e.target.value)}
-                      />
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <div className="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Item</th>{columns.map((c) => <th key={c.key}>{c.label}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const v = values[row.key] || {};
+            return (
+              <tr key={row.key}>
+                <td>{row.label}</td>
+                {columns.map((c) => {
+                  const isNA = row.na?.includes(c.key);
+                  return (
+                    <td key={c.key}>
+                      {isNA ? 'N/A' : c.type === 'checkbox' ? (
+                        <input type="checkbox" checked={!!v[c.key]} onChange={(e) => onChange(row.key, c.key, e.target.checked)} />
+                      ) : (
+                        <input
+                          type={c.type || 'text'}
+                          style={{ width: c.width || 70 }}
+                          value={v[c.key] ?? ''}
+                          onChange={(e) => onChange(row.key, c.key, e.target.value)}
+                        />
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 export function FixedRowStatusTable({ rows, values, onChange, statusOptions }) {
   return (
-    <table>
-      <thead><tr><th>Item</th><th>Status</th><th>Notes</th></tr></thead>
-      <tbody>
-        {rows.map((row) => {
-          const v = values[row.key] || {};
-          return (
-            <tr key={row.key}>
-              <td>{row.label}</td>
-              <td>
-                <select value={v.status || statusOptions[0].value} onChange={(e) => onChange(row.key, 'status', e.target.value)}>
-                  {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </td>
-              <td><input value={v.note || ''} onChange={(e) => onChange(row.key, 'note', e.target.value)} /></td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <div className="table-scroll">
+      <table>
+        <thead><tr><th>Item</th><th>Status</th><th>Notes</th></tr></thead>
+        <tbody>
+          {rows.map((row) => {
+            const v = values[row.key] || {};
+            return (
+              <tr key={row.key}>
+                <td>{row.label}</td>
+                <td>
+                  <select value={v.status || statusOptions[0].value} onChange={(e) => onChange(row.key, 'status', e.target.value)}>
+                    {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </td>
+                <td><input value={v.note || ''} onChange={(e) => onChange(row.key, 'note', e.target.value)} /></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

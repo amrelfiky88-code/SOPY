@@ -76,6 +76,29 @@ Open http://localhost:5173 and walk through: Landing → Get Started →
 Configure Your Data → Pricing → Checkout (demo mode works without Paddle
 keys) → Onboarding wizard → Dashboard.
 
+### Testing on a real phone
+
+The dev server binds to all network interfaces (`server: { host: true }`
+in `web/vite.config.js`), not just localhost, so you can open it from a
+phone on the same Wi-Fi network — useful for the camera-capture flow,
+which a desktop browser can fake but a phone exercises for real. Find
+this machine's LAN IP (`ipconfig` / `ifconfig`) and open
+`http://<that-ip>:5173` on the phone.
+
+Two things make this work that wouldn't with a naive `vite`/`express`
+setup:
+- **CORS** (`server/src/app.js`) reflects the request's origin instead of
+  hardcoding `http://localhost:5173`, but only outside `NODE_ENV=production`
+  — a phone hitting the dev server via its LAN IP has a different origin
+  than `localhost`, and the strict production check stays in place.
+- **Windows Firewall**: Node.js needs an inbound-allow rule for whatever
+  network profile your Wi-Fi is on (Windows treats most home networks as
+  "Public" by default). Check with `Get-NetFirewallRule -DisplayName
+  "Node.js JavaScript Runtime"` — if it's missing, either allow it via
+  the "Windows Defender Firewall has blocked some features" prompt the
+  first time you run the dev server, or add it yourself if you're
+  comfortable running an elevated PowerShell command.
+
 ## Tests
 
 ```bash

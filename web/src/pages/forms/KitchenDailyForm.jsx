@@ -150,7 +150,7 @@ export default function KitchenDailyForm() {
       {report.error && <div className="error-banner">{report.error}</div>}
 
       <Section title="A. Shift identification">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2col">
           <LabeledInput label="Report No. (KDR-)" value={form.shift.reportNo} onChange={(v) => patchNested('shift', 'reportNo', v)} />
           <LabeledSelect label="Shift" value={form.shift.shiftType} onChange={(v) => patchNested('shift', 'shiftType', v)}
             options={[['morning', 'Morning (Open)'], ['afternoon', 'Afternoon'], ['evening', 'Evening (Close)']]} />
@@ -168,7 +168,7 @@ export default function KitchenDailyForm() {
 
       <Section title="B. Temperature monitoring log">
         <TemperatureLogTable rows={TEMP_ROWS} values={form.temperatureLog} onChange={setTempReading} />
-        <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2col" style={{ marginTop: 12 }}>
           <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400 }}>
             <input type="checkbox" checked={form.tempDeviation.found} onChange={(e) => patch('tempDeviation', { found: e.target.checked })} />
             Deviation found
@@ -219,7 +219,7 @@ export default function KitchenDailyForm() {
       </Section>
 
       <Section title="I. Sign-off & authorization">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2col">
           <LabeledInput label="Kitchen Supervisor name" value={form.signOff.supervisorName} onChange={(v) => patchNested('signOff', 'supervisorName', v)} />
           <LabeledInput label="Operations Manager name" value={form.signOff.managerName} onChange={(v) => patchNested('signOff', 'managerName', v)} />
         </div>

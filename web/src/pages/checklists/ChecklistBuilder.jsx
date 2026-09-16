@@ -228,7 +228,8 @@ export default function ChecklistBuilder() {
           <button className="btn btn-secondary" type="submit">Assign</button>
         </form>
 
-        <table style={{ marginTop: 16 }}>
+        <div className="table-scroll" style={{ marginTop: 16 }}>
+        <table>
           <thead><tr><th>Checklist</th><th>Store</th><th>Role</th></tr></thead>
           <tbody>
             {assignments.map((a) => (
@@ -240,6 +241,7 @@ export default function ChecklistBuilder() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

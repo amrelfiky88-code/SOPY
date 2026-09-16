@@ -22,24 +22,26 @@ export default function StepAccessLevels({ onNext, onBack, finishing }) {
       <p>Decide how much each person can manage beyond completing their own checklists.</p>
 
       <div className="card">
-        <table>
-          <thead>
-            <tr><th>Name</th><th>Role</th><th>Access level</th></tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td>{u.full_name}</td>
-                <td>{ROLES.find((r) => r.value === u.role)?.label}</td>
-                <td>
-                  <select value={u.access_level} onChange={(e) => updateAccess(u.id, e.target.value)}>
-                    {ACCESS_LEVELS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Role</th><th>Access level</th></tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td>{u.full_name}</td>
+                  <td>{ROLES.find((r) => r.value === u.role)?.label}</td>
+                  <td>
+                    <select value={u.access_level} onChange={(e) => updateAccess(u.id, e.target.value)}>
+                      {ACCESS_LEVELS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>

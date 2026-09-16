@@ -19,6 +19,14 @@ html, body, #root {
   height: 100%;
 }
 
+html, body {
+  /* Safety net: clip rather than let one overflowing element (an
+     unwrapped table, a fixed-width inline grid) drag the whole page
+     into horizontal scroll and cut off the nav on narrow screens. */
+  overflow-x: hidden;
+  width: 100%;
+}
+
 body {
   margin: 0;
   font-family: var(--font);
@@ -195,7 +203,79 @@ th { color: var(--ink-soft); font-weight: 600; font-size: 13px; }
   font-size: 14px;
 }
 .sidebar a.active, .sidebar a:hover { background: rgba(255,255,255,0.08); color: white; }
-.main { flex: 1; padding: 24px 28px; max-width: 1080px; }
+.main { flex: 1; padding: 24px 28px; max-width: 1080px; min-width: 0; }
+
+/* Mobile top bar: hidden on desktop, shown only under the breakpoint below */
+.mobile-topbar {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--green);
+  color: var(--paper-white);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.mobile-topbar .brand { color: var(--paper-white); font-weight: 700; font-size: 18px; text-decoration: none; }
+.hamburger-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: var(--radius);
+  color: var(--paper-white);
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.sidebar-backdrop { display: none; }
+
+@media (max-width: 768px) {
+  .layout { display: block; }
+  .mobile-topbar { display: flex; }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 30;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    overflow-y: auto;
+    width: min(80vw, 280px);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-backdrop.open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 25;
+  }
+  .main { padding: 16px; max-width: 100%; }
+}
+
+/* Reusable 2-column form layout (shift-identification fields, sign-off
+   names, etc.) that actually collapses on narrow screens — replaces the
+   inline `gridTemplateColumns: '1fr 1fr'` styles that couldn't respond
+   to a media query on their own. */
+.form-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 600px) {
+  .form-grid-2col { grid-template-columns: 1fr; }
+}
+
+/* Wrap any table wider than its container in this so it scrolls
+   horizontally instead of blowing out the page width on a phone. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll table { min-width: 480px; }
 
 .kpi-grid {
   display: grid;
