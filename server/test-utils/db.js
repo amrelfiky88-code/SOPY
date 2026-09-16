@@ -20,6 +20,7 @@ export async function resetTestDb() {
   await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_cash_handling.sql'), 'utf8'));
   await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_health_inspection.sql'), 'utf8'));
   await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_additional_sops.sql'), 'utf8'));
+  await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_health_code_reference.sql'), 'utf8'));
 }
 
 export async function closeDb() {
