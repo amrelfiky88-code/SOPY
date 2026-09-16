@@ -1,0 +1,15 @@
+{
+  "name": "SOPY — Restaurant Perfect Operating Procedure System",
+  "short_name": "SOPY",
+  "description": "Digital SOP compliance platform for restaurants and cafés.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4efe6",
+  "theme_color": "#1c3d2e",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

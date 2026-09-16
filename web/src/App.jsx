@@ -1,0 +1,56 @@
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './auth/AuthContext.jsx';
+
+import Landing from './pages/Landing.jsx';
+import Login from './pages/Login.jsx';
+import WhoAreYou from './pages/WhoAreYou.jsx';
+import ConfigureData from './pages/ConfigureData.jsx';
+import Pricing from './pages/Pricing.jsx';
+import Checkout from './pages/Checkout.jsx';
+import OnboardingWizard from './pages/onboarding/OnboardingWizard.jsx';
+import AppLayout from './components/AppLayout.jsx';
+import DashboardRouter from './pages/dashboard/DashboardRouter.jsx';
+import KpiDashboard from './pages/dashboard/KpiDashboard.jsx';
+import ChecklistBuilder from './pages/checklists/ChecklistBuilder.jsx';
+import ChecklistRun from './pages/checklists/ChecklistRun.jsx';
+import KitchenDailyForm from './pages/forms/KitchenDailyForm.jsx';
+import BarDailyForm from './pages/forms/BarDailyForm.jsx';
+import Team from './pages/team/Team.jsx';
+import AcceptInvite from './pages/AcceptInvite.jsx';
+
+function RequireAuth({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/get-started" element={<WhoAreYou />} />
+      <Route path="/accept-invite" element={<AcceptInvite />} />
+
+      <Route path="/configure" element={<RequireAuth><ConfigureData /></RequireAuth>} />
+      <Route path="/pricing" element={<RequireAuth><Pricing /></RequireAuth>} />
+      <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
+      <Route path="/onboarding/*" element={<RequireAuth><OnboardingWizard /></RequireAuth>} />
+
+      <Route path="/app" element={<RequireAuth><AppLayout /></RequireAuth>}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardRouter />} />
+        <Route path="kpi" element={<KpiDashboard />} />
+        <Route path="checklists" element={<ChecklistBuilder />} />
+        <Route path="checklists/run/:submissionId" element={<ChecklistRun />} />
+        <Route path="forms/kitchen" element={<KitchenDailyForm />} />
+        <Route path="forms/bar" element={<BarDailyForm />} />
+        <Route path="team" element={<Team />} />
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
