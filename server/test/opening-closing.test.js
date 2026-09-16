@@ -30,7 +30,9 @@ test('opening/closing SOP has 8 opening + 7 closing items with the expected crit
   const closing = res.body.items.filter((i) => i.category.startsWith('SOP 2: Closing'));
   assert.equal(opening.length, 8);
   assert.equal(closing.length, 7);
-  assert.equal(res.body.items.filter((i) => i.is_critical).length, 5);
+  const criticalCount = (items) => items.filter((i) => i.is_critical).length;
+  assert.equal(criticalCount(opening), 2);
+  assert.equal(criticalCount(closing), 3);
 });
 
 test('opening procedure items come back in source-document order and carry their guidance in description', async () => {

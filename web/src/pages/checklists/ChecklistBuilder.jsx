@@ -8,7 +8,7 @@ const STANDARDS = [
   { value: 'ISO_22000', label: 'ISO 22000' },
   { value: 'LOCAL_CODE', label: 'Local code' },
   { value: 'INTERNAL_QC', label: 'Internal QC' },
-  { value: 'SOP', label: 'Opening/closing SOP' },
+  { value: 'SOP', label: 'SOP procedures' },
   { value: 'CUSTOM', label: 'Custom' },
 ];
 
