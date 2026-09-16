@@ -17,6 +17,7 @@ export async function resetTestDb() {
   await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_opening_closing.sql'), 'utf8'));
   await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_food_safety.sql'), 'utf8'));
   await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_front_of_house.sql'), 'utf8'));
+  await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_cash_handling.sql'), 'utf8'));
 }
 
 export async function closeDb() {
