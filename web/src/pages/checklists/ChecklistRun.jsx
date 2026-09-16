@@ -3,6 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api, getToken } from '../../api.js';
 import CameraCapture from '../../components/CameraCapture.jsx';
 
+const isObservationItem = (item) => item.category?.includes('Consumer Behavior');
+const isTemperatureItem = (item) => item.category?.toLowerCase().includes('temperature');
+
 export default function ChecklistRun() {
   const { submissionId } = useParams();
   const navigate = useNavigate();
@@ -13,6 +16,7 @@ export default function ChecklistRun() {
   const [activeCameraItem, setActiveCameraItem] = useState(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [scorecard, setScorecard] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -72,6 +76,7 @@ export default function ChecklistRun() {
 
   const allAnswered = items.every((item) => {
     const r = responses[item.id];
+    if (isObservationItem(item)) return !!r?.valueText?.trim();
     if (!r || r.isCompliant === undefined) return false;
     if (item.requires_photo && !r.photoBlob) return false;
     return true;
@@ -84,7 +89,8 @@ export default function ChecklistRun() {
       await withGps(async (lat, lng) => {
         await api.post(`/submissions/${submissionId}/submit`, { gpsLat: lat, gpsLng: lng });
       });
-      navigate('/app/dashboard');
+      const card = await api.get(`/submissions/${submissionId}/scorecard`);
+      setScorecard(card);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -94,6 +100,10 @@ export default function ChecklistRun() {
 
   if (!template) return <p>Loading checklist…</p>;
 
+  if (scorecard) {
+    return <Scorecard scorecard={scorecard} onDone={() => navigate('/app/dashboard')} />;
+  }
+
   return (
     <div>
       <h2>{template.name}</h2>
@@ -101,57 +111,84 @@ export default function ChecklistRun() {
 
       {items.map((item) => {
         const r = responses[item.id] || {};
+        const observation = isObservationItem(item);
+
         return (
           <div className="card" key={item.id}>
-            <p style={{ margin: '0 0 10px', color: 'var(--ink)' }}>{item.text}</p>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              <button
-                type="button"
-                className={`btn btn-small ${r.isCompliant === true ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => { setResponse(item.id, { isCompliant: true }); }}
-              >
-                Compliant
-              </button>
-              <button
-                type="button"
-                className={`btn btn-small ${r.isCompliant === false ? 'btn-danger' : 'btn-secondary'}`}
-                style={r.isCompliant === false ? { background: 'var(--red)', color: 'white' } : undefined}
-                onClick={() => { setResponse(item.id, { isCompliant: false }); }}
-              >
-                Not compliant
-              </button>
-            </div>
+            <p style={{ margin: '0 0 10px', color: 'var(--ink)' }}>
+              {item.text}{' '}
+              {item.is_critical && <span className="pill pill-red">critical</span>}
+            </p>
 
-            {item.category === 'temperature' && (
-              <div className="field" style={{ maxWidth: 160 }}>
-                <label>Reading (°C)</label>
-                <input
-                  type="number"
+            {observation ? (
+              <div className="field">
+                <textarea
+                  rows={2}
+                  placeholder="Today's finding…"
                   value={r.valueText || ''}
                   onChange={(e) => setResponse(item.id, { valueText: e.target.value })}
                   onBlur={() => saveTextResponse(item)}
                 />
               </div>
-            )}
+            ) : (
+              <>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <button
+                    type="button"
+                    className={`btn btn-small ${r.isCompliant === true ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setResponse(item.id, { isCompliant: true })}
+                  >
+                    Compliant
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-small ${r.isCompliant === false ? 'btn-danger' : 'btn-secondary'}`}
+                    style={r.isCompliant === false ? { background: 'var(--red)', color: 'white' } : undefined}
+                    onClick={() => setResponse(item.id, { isCompliant: false })}
+                  >
+                    Not compliant
+                  </button>
+                </div>
 
-            {item.requires_photo && (
-              <div style={{ marginTop: 10 }}>
-                {activeCameraItem === item.id ? (
-                  <CameraCapture onCapture={(blob) => savePhoto(item.id, blob)} captured={!!r.photoBlob} />
-                ) : r.photoBlob ? (
-                  <span className="pill pill-green">Photo captured</span>
-                ) : (
-                  <button type="button" className="btn btn-secondary btn-small" onClick={() => setActiveCameraItem(item.id)}>
-                    Open camera to capture evidence
+                {item.is_critical && r.isCompliant === false && (
+                  <div className="error-banner" style={{ marginBottom: 10 }}>
+                    This is a critical checkpoint — marking it non-compliant flags this checklist as an
+                    incident for escalation.
+                  </div>
+                )}
+
+                {isTemperatureItem(item) && (
+                  <div className="field" style={{ maxWidth: 160 }}>
+                    <label>Reading (°C)</label>
+                    <input
+                      type="number"
+                      value={r.valueText || ''}
+                      onChange={(e) => setResponse(item.id, { valueText: e.target.value })}
+                      onBlur={() => saveTextResponse(item)}
+                    />
+                  </div>
+                )}
+
+                {item.requires_photo && (
+                  <div style={{ marginTop: 10 }}>
+                    {activeCameraItem === item.id ? (
+                      <CameraCapture onCapture={(blob) => savePhoto(item.id, blob)} captured={!!r.photoBlob} />
+                    ) : r.photoBlob ? (
+                      <span className="pill pill-green">Photo captured</span>
+                    ) : (
+                      <button type="button" className="btn btn-secondary btn-small" onClick={() => setActiveCameraItem(item.id)}>
+                        Open camera to capture evidence
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {!item.requires_photo && r.isCompliant !== undefined && (
+                  <button type="button" className="btn btn-secondary btn-small" style={{ marginTop: 4 }} onClick={() => saveTextResponse(item)}>
+                    Save
                   </button>
                 )}
-              </div>
-            )}
-
-            {!item.requires_photo && r.isCompliant !== undefined && (
-              <button type="button" className="btn btn-secondary btn-small" style={{ marginTop: 4 }} onClick={() => saveTextResponse(item)}>
-                Save
-              </button>
+              </>
             )}
           </div>
         );
@@ -161,6 +198,54 @@ export default function ChecklistRun() {
         {submitting ? 'Submitting…' : 'Submit & sign off'}
       </button>
       {!allAnswered && <p className="hint">Answer every checkpoint (and capture required photos) to submit.</p>}
+    </div>
+  );
+}
+
+const RAG_LABEL = { green: 'Green — on standard', amber: 'Amber — action plan required', red: 'Red — escalate now' };
+const RAG_PILL_CLASS = { green: 'pill-green', amber: 'pill-amber', red: 'pill-red' };
+
+function Scorecard({ scorecard, onDone }) {
+  return (
+    <div>
+      <h2>Score summary</h2>
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 32, fontWeight: 700 }}>
+              {scorecard.percentage !== null ? `${scorecard.percentage}%` : '—'}
+            </div>
+            <div className="hint">{scorecard.totalCompliant} / {scorecard.totalScored} checkpoints compliant</div>
+          </div>
+          <span className={`pill ${RAG_PILL_CLASS[scorecard.ragStatus]}`} style={{ fontSize: 14, padding: '6px 14px' }}>
+            {RAG_LABEL[scorecard.ragStatus]}
+          </span>
+        </div>
+        {scorecard.criticalFails > 0 && (
+          <div className="error-banner">
+            {scorecard.criticalFails} critical checkpoint{scorecard.criticalFails === 1 ? '' : 's'} failed — this
+            run is flagged as an incident.
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginBottom: 12 }}>By section</h3>
+        <table>
+          <thead><tr><th>Section</th><th>Score</th><th>Critical fails</th></tr></thead>
+          <tbody>
+            {scorecard.sections.map((s) => (
+              <tr key={s.category}>
+                <td>{s.category}</td>
+                <td>{s.compliant} / {s.total} ({s.percentage}%)</td>
+                <td>{s.criticalFails || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <button className="btn btn-primary" onClick={onDone}>Back to dashboard</button>
     </div>
   );
 }

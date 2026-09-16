@@ -11,10 +11,12 @@ async function run() {
   console.log('Applying schema.sql ...');
   await pool.query(schema);
 
-  const seedPath = path.join(root, 'seed_library.sql');
-  if (fs.existsSync(seedPath)) {
-    console.log('Applying seed_library.sql ...');
-    await pool.query(fs.readFileSync(seedPath, 'utf8'));
+  for (const seedFile of ['seed_library.sql', 'seed_qc_system.sql']) {
+    const seedPath = path.join(root, seedFile);
+    if (fs.existsSync(seedPath)) {
+      console.log(`Applying ${seedFile} ...`);
+      await pool.query(fs.readFileSync(seedPath, 'utf8'));
+    }
   }
 
   console.log('Done.');

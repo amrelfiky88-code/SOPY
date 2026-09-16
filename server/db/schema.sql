@@ -89,9 +89,11 @@ CREATE TABLE checklist_items (
   tenant_id    UUID REFERENCES tenants(id) ON DELETE CASCADE, -- NULL = global library item
   text         TEXT NOT NULL,
   description  TEXT,
-  standard     TEXT NOT NULL,     -- 'HACCP' | 'ISO_22000' | 'LOCAL_CODE' | 'CUSTOM'
-  category     TEXT,              -- 'temperature' | 'hygiene' | 'receiving' | 'equipment' | 'closing' ...
+  standard     TEXT NOT NULL,     -- 'HACCP' | 'ISO_22000' | 'LOCAL_CODE' | 'INTERNAL_QC' | 'CUSTOM'
+  category     TEXT,              -- section grouping, e.g. 'Daily QC — B. Food Safety & Temperature'
   requires_photo BOOLEAN NOT NULL DEFAULT false,
+  is_critical  BOOLEAN NOT NULL DEFAULT false, -- a failing response here auto-flags the submission as an incident
+  sort_order   INTEGER NOT NULL DEFAULT 0, -- preserves source-document order within a category (INSERT row order isn't guaranteed)
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_checklist_items_tenant ON checklist_items(tenant_id);

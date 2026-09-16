@@ -35,11 +35,11 @@ dashboardRouter.get('/kpi', requireAuth, async (req, res) => {
   );
 
   const { rows: complianceRows } = await query(
-    `SELECT r.is_compliant, ci.category
+    `SELECT r.is_compliant, ci.category, ci.is_critical
      FROM checklist_submission_responses r
      JOIN checklist_submissions s ON s.id = r.submission_id
      JOIN checklist_items ci ON ci.id = r.item_id
-     WHERE s.tenant_id = $1 AND s.started_at >= $2 ${branchClause}`,
+     WHERE s.tenant_id = $1 AND s.started_at >= $2 ${branchClause} AND r.is_compliant IS NOT NULL`,
     params
   );
 
@@ -47,7 +47,14 @@ dashboardRouter.get('/kpi', requireAuth, async (req, res) => {
   const compliantResponses = complianceRows.filter((r) => r.is_compliant === true).length;
   const compliancePct = totalResponses ? Math.round((compliantResponses / totalResponses) * 1000) / 10 : null;
 
-  const temperatureDeviations = complianceRows.filter((r) => r.category === 'temperature' && r.is_compliant === false).length;
+  // Matches both the original placeholder category ('temperature') and
+  // the richer imported category names (e.g. "... Food Safety &
+  // Temperature Control") — substring, case-insensitive.
+  const temperatureDeviations = complianceRows.filter(
+    (r) => r.category?.toLowerCase().includes('temperature') && r.is_compliant === false
+  ).length;
+
+  const criticalFailCount = complianceRows.filter((r) => r.is_critical && r.is_compliant === false).length;
 
   const incidentCount = submissionRows.filter((s) => s.has_incident).length;
 
@@ -68,6 +75,7 @@ dashboardRouter.get('/kpi', requireAuth, async (req, res) => {
     temperatureDeviations,
     wasteValue: Math.round(wasteValue * 100) / 100,
     incidentCount,
+    criticalFailCount,
     submissionsCount: submissionRows.length,
   });
 });

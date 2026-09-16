@@ -89,13 +89,21 @@ npm run test:server
 by a dedicated `sopy_test` database (configured in `server/.env.test`, never
 your dev database — `resetTestDb()` drops and rebuilds its schema before
 each test file). Coverage includes auth, multi-tenant isolation, checklist
-submission end-to-end, and regression tests for three real bugs found
-while manually verifying this app against a live database:
+submission end-to-end, QC scoring/critical-fail logic, and regression
+tests for real bugs found while manually verifying this app against a
+live database:
 
 - an `UPDATE ... ORDER BY ... LIMIT` (invalid SQL — Postgres doesn't allow
   ordering/limiting an UPDATE directly) that crashed mock checkout completion,
 - a `CASE WHEN $n IS NOT NULL` clause that left Postgres unable to infer
   that parameter's type, crashing checklist submission,
+- `/api/billing/checkout` wasn't idempotent, so a re-fired effect (React
+  StrictMode, a refresh, back/forward nav) created duplicate `pending`
+  subscription rows and orphaned Paddle transactions,
+- a multi-row `INSERT` doesn't guarantee Postgres returns rows in the
+  order they were listed (and all rows in one statement share the same
+  `created_at`), so seeded checklist items came back scrambled within a
+  section until an explicit `sort_order` column was added,
 - and a permission gate that blocked non-managers from ever opening the
   Kitchen/Bar daily reports the first time (before a manager had happened
   to create the template).
@@ -107,9 +115,10 @@ isolation.
 
 ## Deploying to Hostinger Cloud Startup
 
-1. Provision a PostgreSQL database in hPanel and run `schema.sql` /
-   `seed_library.sql` against it (via phpPgAdmin, or `psql` if you have
-   shell access).
+1. Provision a PostgreSQL database in hPanel and run `schema.sql`,
+   `seed_library.sql`, and `seed_qc_system.sql` against it (via
+   phpPgAdmin, or `psql` if you have shell access) — or just run
+   `npm run db:migrate`, which applies all three.
 2. Build the frontend: `npm run build:web` (outputs `web/dist`).
 3. Set `NODE_ENV=production` and the same env vars as above on the
    Node.js app in hPanel; point its start command at
@@ -146,6 +155,50 @@ taper with volume:
 
 Adjust the floor/floorAt constants in `shared/pricing.js` if the real
 tapering schedule differs from this reading of the spec.
+
+## Imported QC content
+
+`server/db/seed_qc_system.sql` seeds the master checkpoint library with
+217 real checkpoints transcribed from the client's own documents:
+
+- **Daily QC Checklist** (QC-D-001) — 104 scored points across 12
+  sections (A–N, skipping the unscored "Consumer Behavior & Insights"
+  observation section), plus those 12 observation items.
+- **Weekly / Monthly / Quarterly Audit System** (QC-S-001) — 45 + 42 + 14
+  points.
+
+Each item's `is_critical` flag mirrors the ⚠ marks on individual items in
+the source documents exactly (not just section-level "⚠ CRITICAL"
+headings) — 13 critical items in the daily checklist, 4 weekly, 4
+monthly, 3 quarterly. A non-compliant response on a critical item
+auto-flags the submission as an incident (`POST
+/api/submissions/:id/responses`), and `GET
+/api/submissions/:id/scorecard` computes a section-by-section score,
+critical-fail count, and Green/Amber/Red status (≥95% Green, 85–94%
+Amber, below that or any critical fail forces Red — matching the
+compliance thresholds in the source documents almost exactly at every
+point total tested).
+
+Standard `INTERNAL_QC` distinguishes this company-specific framework from
+the generic HACCP/ISO 22000/local-code starter items. Search, filter by
+standard/category, and filter to critical-only from the Checklist
+Builder; "Select all shown" makes it fast to build the Daily QC
+Checklist, or the Weekly/Monthly/Quarterly audits, straight from the
+library (set frequency accordingly — quarterly is now an option).
+
+The Kitchen Daily Operation Report and Bar & Beverage Daily Operation
+Report pages (`web/src/pages/forms/KitchenDailyForm.jsx` /
+`BarDailyForm.jsx`) were rebuilt field-for-field against the client's
+KDR-001 / BDR-001 templates — fixed equipment lists with Start/Mid/End
+temperature readings and safe ranges, the exact receiving/production/
+waste/stock/sales/cleaning log columns, and the real opening/closing
+task text — rather than the earlier generic placeholder layout.
+
+The SOP Manual (policies, HACCP CCP table, disciplinary framework, etc.)
+was used as reference material to sanity-check the imported checkpoints
+but isn't itself surfaced anywhere in the app — SOPY doesn't have a
+policy-document/wiki feature. That'd be a separate, deliberate addition
+if wanted.
 
 ## Paddle Billing integration
 

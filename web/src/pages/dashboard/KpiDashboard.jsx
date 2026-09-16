@@ -46,6 +46,7 @@ export default function KpiDashboard() {
           <Tile label="Temperature deviations" value={kpi.temperatureDeviations} />
           <Tile label="Waste value" value={`$${kpi.wasteValue.toFixed(2)}`} />
           <Tile label="Incident count" value={kpi.incidentCount} />
+          <Tile label="Critical fails" value={kpi.criticalFailCount} />
         </div>
       )}
       {kpi && <p className="hint">Based on {kpi.submissionsCount} checklist run{kpi.submissionsCount === 1 ? '' : 's'} in this period.</p>}

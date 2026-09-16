@@ -71,18 +71,31 @@ submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), as
     photoPath = `/uploads/${req.auth.tenantId}/${req.params.id}/${filename}`;
   }
 
+  const compliant = isCompliant === undefined ? null : isCompliant === 'true' || isCompliant === true;
+
   const { rows } = await query(
     `INSERT INTO checklist_submission_responses
        (submission_id, item_id, is_compliant, value_text, photo_path, gps_lat, gps_lng, captured_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
     [
-      req.params.id, itemId,
-      isCompliant === undefined ? null : isCompliant === 'true' || isCompliant === true,
+      req.params.id, itemId, compliant,
       valueText || null, photoPath,
       gpsLat ? Number(gpsLat) : null, gpsLng ? Number(gpsLng) : null,
       capturedAt || new Date().toISOString(),
     ]
   );
+
+  // A failing response on a critical checkpoint (the ⚠ items from the
+  // source QC documents — e.g. fridge temps, fire extinguishers, mystery
+  // shop) auto-escalates: the submission is flagged as an incident the
+  // moment it happens, not only if someone remembers to tick the box.
+  if (compliant === false) {
+    const { rows: itemRows } = await query('SELECT is_critical FROM checklist_items WHERE id = $1', [itemId]);
+    if (itemRows[0]?.is_critical) {
+      await query('UPDATE checklist_submissions SET has_incident = true WHERE id = $1', [req.params.id]);
+    }
+  }
+
   res.status(201).json({ response: rows[0] });
 });
 
@@ -112,6 +125,73 @@ submissionsRouter.get('/:id', requireAuth, async (req, res) => {
     [req.params.id]
   );
   res.json({ submission: rows[0], responses });
+});
+
+// Section-by-section score, critical-fail count, and Green/Amber/Red
+// status — the "scoring discipline" from the source QC documents.
+// Grouped by the item's own category (e.g. "Daily QC — B. Food Safety &
+// Temperature Control") since that's where each item's section already
+// lives; items with no compliant/non-compliant answer (the free-text
+// "Consumer Behavior & Insights" observation points) don't count toward
+// the score, matching how the source document excludes that section from
+// its own point total.
+submissionsRouter.get('/:id/scorecard', requireAuth, async (req, res) => {
+  const { rows: subRows } = await query(
+    'SELECT * FROM checklist_submissions WHERE id = $1 AND tenant_id = $2',
+    [req.params.id, req.auth.tenantId]
+  );
+  const submission = subRows[0];
+  if (!submission) return res.status(404).json({ error: 'Not found' });
+
+  const { rows } = await query(
+    `SELECT ci.category, ci.is_critical, r.is_compliant
+     FROM checklist_template_items ti
+     JOIN checklist_items ci ON ci.id = ti.item_id
+     LEFT JOIN checklist_submission_responses r ON r.item_id = ci.id AND r.submission_id = $1
+     WHERE ti.template_id = $2`,
+    [req.params.id, submission.template_id]
+  );
+
+  const sections = {};
+  let totalScored = 0, totalCompliant = 0, criticalFails = 0;
+
+  for (const row of rows) {
+    const key = row.category || 'General';
+    sections[key] = sections[key] || { total: 0, compliant: 0, criticalFails: 0 };
+    if (row.is_compliant !== null) {
+      sections[key].total += 1;
+      totalScored += 1;
+      if (row.is_compliant) {
+        sections[key].compliant += 1;
+        totalCompliant += 1;
+      } else if (row.is_critical) {
+        sections[key].criticalFails += 1;
+        criticalFails += 1;
+      }
+    }
+  }
+
+  const percentage = totalScored ? Math.round((totalCompliant / totalScored) * 1000) / 10 : null;
+  let ragStatus = 'red';
+  if (criticalFails === 0 && percentage !== null) {
+    if (percentage >= 95) ragStatus = 'green';
+    else if (percentage >= 85) ragStatus = 'amber';
+  }
+
+  res.json({
+    percentage,
+    totalScored,
+    totalCompliant,
+    criticalFails,
+    ragStatus,
+    sections: Object.entries(sections).map(([category, s]) => ({
+      category,
+      total: s.total,
+      compliant: s.compliant,
+      criticalFails: s.criticalFails,
+      percentage: s.total ? Math.round((s.compliant / s.total) * 1000) / 10 : null,
+    })),
+  });
 });
 
 submissionsRouter.get('/', requireAuth, async (req, res) => {

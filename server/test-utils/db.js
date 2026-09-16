@@ -13,6 +13,7 @@ export async function resetTestDb() {
   await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
   await pool.query(fs.readFileSync(path.join(dbRoot, 'schema.sql'), 'utf8'));
   await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_library.sql'), 'utf8'));
+  await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_qc_system.sql'), 'utf8'));
 }
 
 export async function closeDb() {

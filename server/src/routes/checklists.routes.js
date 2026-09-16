@@ -14,7 +14,7 @@ async function requireOnboardingComplete(req, res, next) {
 
 // --- Master checkpoint library: search + filter by standard/category ---
 checklistsRouter.get('/library', requireAuth, requireOnboardingComplete, async (req, res) => {
-  const { q, standard, category } = req.query;
+  const { q, standard, category, critical } = req.query;
   const clauses = ['(tenant_id IS NULL OR tenant_id = $1)'];
   const params = [req.auth.tenantId];
   let i = 2;
@@ -22,21 +22,26 @@ checklistsRouter.get('/library', requireAuth, requireOnboardingComplete, async (
   if (q) { clauses.push(`text ILIKE $${i++}`); params.push(`%${q}%`); }
   if (standard) { clauses.push(`standard = $${i++}`); params.push(standard); }
   if (category) { clauses.push(`category = $${i++}`); params.push(category); }
+  if (critical === 'true') { clauses.push('is_critical = true'); }
 
   const { rows } = await query(
-    `SELECT * FROM checklist_items WHERE ${clauses.join(' AND ')} ORDER BY standard, category, text`,
+    // sort_order (not text) as the tiebreaker: seeded items carry an
+    // explicit ordinal matching the source document's own sequence — a
+    // multi-row INSERT doesn't guarantee row order on its own, and
+    // created_at ties within one statement, so this is the real ordering.
+    `SELECT * FROM checklist_items WHERE ${clauses.join(' AND ')} ORDER BY standard, category, sort_order`,
     params
   );
   res.json({ items: rows });
 });
 
 checklistsRouter.post('/library', requireAuth, requireRole('business_owner', 'operations_manager'), async (req, res) => {
-  const { text, description, standard, category, requiresPhoto } = req.body;
+  const { text, description, standard, category, requiresPhoto, isCritical } = req.body;
   if (!text || !standard) return res.status(400).json({ error: 'text and standard are required' });
   const { rows } = await query(
-    `INSERT INTO checklist_items (tenant_id, text, description, standard, category, requires_photo)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [req.auth.tenantId, text, description || null, standard, category || null, !!requiresPhoto]
+    `INSERT INTO checklist_items (tenant_id, text, description, standard, category, requires_photo, is_critical)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [req.auth.tenantId, text, description || null, standard, category || null, !!requiresPhoto, !!isCritical]
   );
   res.status(201).json({ item: rows[0] });
 });

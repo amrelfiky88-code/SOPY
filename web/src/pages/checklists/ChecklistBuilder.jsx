@@ -7,6 +7,7 @@ const STANDARDS = [
   { value: 'HACCP', label: 'HACCP' },
   { value: 'ISO_22000', label: 'ISO 22000' },
   { value: 'LOCAL_CODE', label: 'Local code' },
+  { value: 'INTERNAL_QC', label: 'Internal QC' },
   { value: 'CUSTOM', label: 'Custom' },
 ];
 
@@ -14,6 +15,7 @@ export default function ChecklistBuilder() {
   const [items, setItems] = useState([]);
   const [q, setQ] = useState('');
   const [standard, setStandard] = useState('');
+  const [criticalOnly, setCriticalOnly] = useState(false);
   const [selected, setSelected] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [templateName, setTemplateName] = useState('');
@@ -31,6 +33,7 @@ export default function ChecklistBuilder() {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (standard) params.set('standard', standard);
+    if (criticalOnly) params.set('critical', 'true');
     const { items } = await api.get(`/checklists/library?${params.toString()}`);
     setItems(items);
   };
@@ -45,7 +48,7 @@ export default function ChecklistBuilder() {
     setAssignments(assignments);
   };
 
-  useEffect(() => { loadItems(); }, [q, standard]);
+  useEffect(() => { loadItems(); }, [q, standard, criticalOnly]);
   useEffect(() => {
     loadTemplates();
     loadAssignments();
@@ -55,6 +58,12 @@ export default function ChecklistBuilder() {
   const toggleItem = (id) => {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   };
+
+  const selectAllShown = () => {
+    setSelected((s) => Array.from(new Set([...s, ...items.map((i) => i.id)])));
+  };
+
+  const clearSelection = () => setSelected([]);
 
   const createTemplate = async (e) => {
     e.preventDefault();
@@ -105,21 +114,48 @@ export default function ChecklistBuilder() {
               {s.label}
             </button>
           ))}
+          <button className={criticalOnly ? 'active' : ''} onClick={() => setCriticalOnly((c) => !c)}>
+            Critical only
+          </button>
         </div>
-        <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-          {items.map((item) => (
-            <label key={item.id} className="checklist-row" style={{ cursor: 'pointer' }}>
-              <div>
-                <div>{item.text}</div>
-                <div className="hint">
-                  <span className="pill">{item.standard}</span>{' '}
-                  {item.category && <span className="pill">{item.category}</span>}
-                  {item.requires_photo && <span className="pill pill-amber">photo required</span>}
-                </div>
-              </div>
-              <input type="checkbox" checked={selected.includes(item.id)} onChange={() => toggleItem(item.id)} />
-            </label>
-          ))}
+
+        {items.length > 0 && (
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <button type="button" className="btn btn-secondary btn-small" onClick={selectAllShown}>
+              Select all shown ({items.length})
+            </button>
+            {selected.length > 0 && (
+              <button type="button" className="btn btn-secondary btn-small" onClick={clearSelection}>
+                Clear selection ({selected.length})
+              </button>
+            )}
+          </div>
+        )}
+
+        <div style={{ maxHeight: 380, overflowY: 'auto' }}>
+          {items.map((item, idx) => {
+            const showHeader = item.category && item.category !== items[idx - 1]?.category;
+            return (
+              <React.Fragment key={item.id}>
+                {showHeader && (
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink-soft)', marginTop: 12, marginBottom: 4 }}>
+                    {item.category}
+                  </div>
+                )}
+                <label className="checklist-row" style={{ cursor: 'pointer' }}>
+                  <div>
+                    <div>{item.text}</div>
+                    <div className="hint">
+                      <span className="pill">{item.standard}</span>{' '}
+                      {item.requires_photo && <span className="pill pill-amber">photo required</span>}{' '}
+                      {item.is_critical && <span className="pill pill-red">critical</span>}
+                    </div>
+                  </div>
+                  <input type="checkbox" checked={selected.includes(item.id)} onChange={() => toggleItem(item.id)} />
+                </label>
+              </React.Fragment>
+            );
+          })}
           {items.length === 0 && <div className="empty-state">No checkpoints match your filters.</div>}
         </div>
       </div>
@@ -136,6 +172,7 @@ export default function ChecklistBuilder() {
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
           </select>
         </div>
         <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save checklist'}</button>
