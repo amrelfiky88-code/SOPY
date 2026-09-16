@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
+import {
+  GridIcon,
+  BarChartIcon,
+  StoveIcon,
+  CoffeeIcon,
+  ClipboardCheckIcon,
+  StorefrontIcon,
+  LogOutIcon,
+} from './icons.jsx';
 
 const STEP_TO_PATH = {
   who_are_you: '/get-started',
@@ -49,13 +58,16 @@ export default function AppLayout() {
 
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <span className="brand">SOPY</span>
-        <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>Dashboard</NavLink>
-        <NavLink to="/app/kpi" className={({ isActive }) => (isActive ? 'active' : '')}>KPI dashboard</NavLink>
-        <NavLink to="/app/forms/kitchen" className={({ isActive }) => (isActive ? 'active' : '')}>Kitchen daily report</NavLink>
-        <NavLink to="/app/forms/bar" className={({ isActive }) => (isActive ? 'active' : '')}>Bar &amp; beverage report</NavLink>
-        {canManage && <NavLink to="/app/checklists" className={({ isActive }) => (isActive ? 'active' : '')}>Checklist builder</NavLink>}
-        {canManage && <NavLink to="/app/team" className={({ isActive }) => (isActive ? 'active' : '')}>Team &amp; stores</NavLink>}
-        <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }} style={{ marginTop: 16 }}>Log out</a>
+        <nav>
+          <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}><GridIcon size={18} /> Dashboard</NavLink>
+          <NavLink to="/app/kpi" className={({ isActive }) => (isActive ? 'active' : '')}><BarChartIcon size={18} /> KPI dashboard</NavLink>
+          <NavLink to="/app/forms/kitchen" className={({ isActive }) => (isActive ? 'active' : '')}><StoveIcon size={18} /> Kitchen daily report</NavLink>
+          <NavLink to="/app/forms/bar" className={({ isActive }) => (isActive ? 'active' : '')}><CoffeeIcon size={18} /> Bar &amp; beverage report</NavLink>
+          {canManage && <NavLink to="/app/checklists" className={({ isActive }) => (isActive ? 'active' : '')}><ClipboardCheckIcon size={18} /> Checklist builder</NavLink>}
+          {canManage && <NavLink to="/app/team" className={({ isActive }) => (isActive ? 'active' : '')}><StorefrontIcon size={18} /> Team &amp; stores</NavLink>}
+          <div className="sidebar-divider" />
+          <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}><LogOutIcon size={18} /> Log out</a>
+        </nav>
       </div>
       <div className="main">
         <div style={{ marginBottom: 20, color: 'var(--ink-soft)', fontSize: 14 }}>

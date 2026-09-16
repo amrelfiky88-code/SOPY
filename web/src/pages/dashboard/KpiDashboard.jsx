@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
+import { CheckCircleIcon, ThermometerIcon, TrashIcon, AlertTriangleIcon, XCircleIcon } from '../../components/icons.jsx';
 
 const PERIODS = [
   { value: 'daily', label: 'Daily' },
@@ -42,11 +43,11 @@ export default function KpiDashboard() {
 
       {kpi && (
         <div className="kpi-grid">
-          <Tile label="Compliance %" value={kpi.compliancePct !== null ? `${kpi.compliancePct}%` : 'No data yet'} />
-          <Tile label="Temperature deviations" value={kpi.temperatureDeviations} />
-          <Tile label="Waste value" value={`$${kpi.wasteValue.toFixed(2)}`} />
-          <Tile label="Incident count" value={kpi.incidentCount} />
-          <Tile label="Critical fails" value={kpi.criticalFailCount} />
+          <Tile icon={CheckCircleIcon} tone="green" label="Compliance %" value={kpi.compliancePct !== null ? `${kpi.compliancePct}%` : 'No data yet'} />
+          <Tile icon={ThermometerIcon} tone="amber" label="Temperature deviations" value={kpi.temperatureDeviations} />
+          <Tile icon={TrashIcon} tone="amber" label="Waste value" value={`$${kpi.wasteValue.toFixed(2)}`} />
+          <Tile icon={AlertTriangleIcon} tone="red" label="Incident count" value={kpi.incidentCount} />
+          <Tile icon={XCircleIcon} tone="red" label="Critical fails" value={kpi.criticalFailCount} />
         </div>
       )}
       {kpi && <p className="hint">Based on {kpi.submissionsCount} checklist run{kpi.submissionsCount === 1 ? '' : 's'} in this period.</p>}
@@ -54,11 +55,14 @@ export default function KpiDashboard() {
   );
 }
 
-function Tile({ label, value }) {
+function Tile({ icon: Icon, tone, label, value }) {
   return (
     <div className="kpi-tile">
-      <div className="label">{label}</div>
-      <div className="value">{value}</div>
+      <div className={`icon-circle icon-circle-${tone}`}><Icon size={18} /></div>
+      <div>
+        <div className="label">{label}</div>
+        <div className="value">{value}</div>
+      </div>
     </div>
   );
 }
