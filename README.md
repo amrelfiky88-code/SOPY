@@ -186,6 +186,43 @@ Builder; "Select all shown" makes it fast to build the Daily QC
 Checklist, or the Weekly/Monthly/Quarterly audits, straight from the
 library (set frequency accordingly — quarterly is now an option).
 
+### The 20-SOP library (standard = `SOP`)
+
+Beyond the QC audit content above, the library also has 162 items across
+20 numbered SOPs — but they're not all the same kind of source:
+
+- **SOP 1–11** (`seed_opening_closing.sql`, `seed_food_safety.sql`,
+  `seed_front_of_house.sql`, `seed_cash_handling.sql`,
+  `seed_health_inspection.sql`) were transcribed from the client's own
+  SOP documents, one item per numbered phase (with sub-steps captured in
+  `description`), except SOP 11's "Daily Checklist" section, which lists
+  independent parallel facts under each category rather than sequential
+  steps — the same shape as the Daily QC Checklist above — so each bullet
+  became its own item there instead.
+- **SOP 12–20** (`seed_additional_sops.sql`) were **researched, not
+  transcribed** — the client provided only titles for these nine SOPs
+  (Recipe Standardization, Kitchen Cleaning Schedule, Inventory
+  Management, Waste Reduction, Alcohol Service, Allergen Awareness,
+  Emergency Procedures, New Employee Onboarding, Daily Manager
+  Checklist), at their explicit request to draft this content from
+  current industry-standard guidance (FDA Food Code, TIPS/responsible
+  alcohol service training, established restaurant-operations sources)
+  rather than invent it from scratch. **This is a sourced starting
+  point, not the client's own verified material** — review and adapt it
+  to actual house rules and local legal requirements (alcohol service
+  age, licensing, and health-code specifics all vary by jurisdiction)
+  before relying on it operationally. The seed file's own header comment
+  carries this same caveat.
+
+`is_critical` across all 20 SOPs follows one consistent rule, applied by
+judgment where the source has no explicit marker: a phase is critical
+when getting it wrong is a direct safety, security, food-safety, or
+fraud/legal-liability risk requiring escalation — not general quality or
+service-consistency guidance. That's why SOP 4 (temperature monitoring),
+SOP 10 (cash handling), SOP 16 (alcohol service), and SOP 18 (emergency
+procedures) are almost entirely critical, while SOP 12 (recipe
+standardization) and SOP 15 (waste reduction) have none.
+
 The Kitchen Daily Operation Report and Bar & Beverage Daily Operation
 Report pages (`web/src/pages/forms/KitchenDailyForm.jsx` /
 `BarDailyForm.jsx`) were rebuilt field-for-field against the client's
