@@ -14,6 +14,7 @@ import {
   SearchIcon,
   MapPinIcon,
   BriefcaseIcon,
+  UserIcon,
 } from './icons.jsx';
 
 const STEP_TO_PATH = {
@@ -77,6 +78,7 @@ export default function AppLayout() {
           {canManage && <NavLink to="/app/forms/area-manager-visit" className={({ isActive }) => (isActive ? 'active' : '')}><MapPinIcon size={18} /> Area manager visit report</NavLink>}
           {canManage && <NavLink to="/app/forms/ops-manager-visit" className={({ isActive }) => (isActive ? 'active' : '')}><BriefcaseIcon size={18} /> Ops manager visit report</NavLink>}
           <div className="sidebar-divider" />
+          <NavLink to="/app/account" className={({ isActive }) => (isActive ? 'active' : '')}><UserIcon size={18} /> Profile &amp; billing</NavLink>
           <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}><LogOutIcon size={18} /> Log out</a>
         </nav>
       </div>

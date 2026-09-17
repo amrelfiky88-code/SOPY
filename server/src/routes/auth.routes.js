@@ -97,6 +97,31 @@ authRouter.get('/me', requireAuth, async (req, res) => {
   res.json({ user: publicUser(rows[0]), tenant: tenantRows[0] });
 });
 
+// Lets a signed-in user edit their own profile from the account page.
+// Email is deliberately not editable here: it's the login identity and
+// carries a global unique index, so changing it is an account-recovery
+// flow rather than a profile edit.
+authRouter.patch('/me', requireAuth, async (req, res) => {
+  const { fullName, title, phone } = req.body;
+
+  const fields = [];
+  const values = [];
+  let i = 1;
+
+  if (fullName !== undefined) {
+    if (!String(fullName).trim()) return res.status(400).json({ error: 'Name cannot be empty' });
+    fields.push(`full_name = $${i++}`); values.push(String(fullName).trim());
+  }
+  if (title !== undefined) { fields.push(`title = $${i++}`); values.push(String(title).trim() || null); }
+  if (phone !== undefined) { fields.push(`phone = $${i++}`); values.push(String(phone).trim() || null); }
+
+  if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
+
+  values.push(req.auth.userId);
+  const { rows } = await query(`UPDATE users SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`, values);
+  res.json({ user: publicUser(rows[0]) });
+});
+
 function publicUser(u) {
   return {
     id: u.id,

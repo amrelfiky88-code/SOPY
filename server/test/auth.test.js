@@ -56,6 +56,34 @@ test('login with correct credentials returns the same tenant', async () => {
   assert.equal(res.body.tenant.restaurant_name, owner.restaurantName);
 });
 
+// Backs the "Your profile" card on the account page. Email is left out
+// on purpose — it's the login identity with a global unique index, so
+// it must not be changeable through a profile edit.
+test('a user can edit their own profile, but not their email', async () => {
+  const login = await api('POST', '/api/auth/login', { body: { email: owner.email, password: owner.password } });
+  const token = login.body.token;
+
+  const res = await api('PATCH', '/api/auth/me', {
+    token,
+    body: { fullName: 'Amina Y. Hassan', title: 'Founder', phone: '+201234567890', email: 'hijack@example.com' },
+  });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.user.fullName, 'Amina Y. Hassan');
+  assert.equal(res.body.user.title, 'Founder');
+  assert.equal(res.body.user.phone, '+201234567890');
+  assert.equal(res.body.user.email, owner.email, 'email must be ignored by the profile edit');
+
+  const me = await api('GET', '/api/auth/me', { token });
+  assert.equal(me.body.user.fullName, 'Amina Y. Hassan');
+  assert.equal(me.body.user.email, owner.email);
+});
+
+test('a profile edit cannot blank out the name', async () => {
+  const login = await api('POST', '/api/auth/login', { body: { email: owner.email, password: owner.password } });
+  const res = await api('PATCH', '/api/auth/me', { token: login.body.token, body: { fullName: '   ' } });
+  assert.equal(res.status, 400);
+});
+
 test('protected routes reject requests with no token', async () => {
   const res = await api('GET', '/api/auth/me');
   assert.equal(res.status, 401);
