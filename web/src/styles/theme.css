@@ -20,6 +20,7 @@
   --shadow-card: 0 1px 3px rgba(28, 35, 31, 0.07), 0 1px 1px rgba(28, 35, 31, 0.05);
   --shadow-raised: 0 6px 16px rgba(28, 35, 31, 0.12);
   --ease: 150ms ease;
+  --tabbar-height: 58px;
 }
 
 * { box-sizing: border-box; }
@@ -164,6 +165,14 @@ input[type="checkbox"], input[type="radio"] {
 
 .btn-small { padding: 7px 12px; font-size: 14px; width: auto; }
 
+/* A primary CTA outside a form (landing page hero, etc.) is normally
+   auto-width, but on a phone a small button is a small target — go
+   full-width under the mobile breakpoint so it's easy to tap. */
+.cta-btn { display: inline-flex; width: auto; }
+@media (max-width: 600px) {
+  .cta-btn { display: flex; width: 100%; }
+}
+
 .card {
   background: var(--paper-white);
   border: 1px solid var(--line);
@@ -297,6 +306,11 @@ tbody tr:hover { background: var(--paper); }
 }
 .sidebar-backdrop { display: none; }
 
+/* Bottom tab bar: a thumb-reachable shortcut to the pages staff use most
+   during a shift (dashboard, the two daily reports, KPI). Hidden on
+   desktop, where the sidebar already covers navigation. */
+.mobile-tabbar { display: none; }
+
 @media (max-width: 768px) {
   .layout { display: block; }
   .mobile-topbar { display: flex; }
@@ -319,7 +333,60 @@ tbody tr:hover { background: var(--paper); }
     background: rgba(0,0,0,0.4);
     z-index: 25;
   }
-  .main { padding: 16px; max-width: 100%; }
+  .main { padding: 16px; padding-bottom: calc(16px + var(--tabbar-height) + env(safe-area-inset-bottom)); max-width: 100%; }
+
+  .mobile-tabbar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    height: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--paper-white);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -2px 8px rgba(28, 35, 31, 0.08);
+  }
+  .mobile-tabbar a {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .mobile-tabbar a.active { color: var(--green); }
+  .mobile-tabbar a svg { opacity: 0.75; }
+  .mobile-tabbar a.active svg { opacity: 1; }
+
+  /* Fatter touch targets for pill/small buttons that are dense enough
+     on desktop with a mouse, but too cramped for a fingertip. */
+  .filter-row button { padding: 9px 16px; min-height: 40px; }
+  .btn-small { padding: 10px 14px; min-height: 40px; }
+}
+
+/* Keeps the submit/save action reachable without scrolling to the end of
+   a long checklist — used on the checklist-run page. Inert on desktop. */
+.sticky-action-bar { margin-top: 20px; }
+@media (max-width: 768px) {
+  .sticky-action-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+    z-index: 15;
+    margin-top: 0;
+    background: var(--paper);
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -2px 8px rgba(28, 35, 31, 0.08);
+  }
+  .has-sticky-actions { padding-bottom: 96px; }
 }
 
 /* Reusable 2-column form layout (shift-identification fields, sign-off

@@ -120,7 +120,7 @@ export default function ChecklistRun() {
   );
 
   return (
-    <div>
+    <div className="has-sticky-actions">
       <h2>{template.name}</h2>
       {error && <div className="error-banner">{error}</div>}
 
@@ -199,10 +199,12 @@ export default function ChecklistRun() {
         );
       })}
 
-      <button className="btn btn-primary" onClick={handleSubmit} disabled={!allAnswered || submitting}>
-        {submitting ? 'Submitting…' : 'Submit & sign off'}
-      </button>
-      {!allAnswered && <p className="hint">Answer every checkpoint (and capture required photos) to submit.</p>}
+      <div className="sticky-action-bar">
+        <button className="btn btn-primary" onClick={handleSubmit} disabled={!allAnswered || submitting}>
+          {submitting ? 'Submitting…' : 'Submit & sign off'}
+        </button>
+        {!allAnswered && <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>Answer every checkpoint (and capture required photos) to submit.</p>}
+      </div>
     </div>
   );
 }

@@ -75,6 +75,25 @@ export default function AppLayout() {
         </div>
         <Outlet />
       </div>
+
+      <nav className="mobile-tabbar">
+        <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <GridIcon size={20} />
+          Home
+        </NavLink>
+        <NavLink to="/app/forms/kitchen" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <StoveIcon size={20} />
+          Kitchen
+        </NavLink>
+        <NavLink to="/app/forms/bar" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <CoffeeIcon size={20} />
+          Bar
+        </NavLink>
+        <NavLink to="/app/kpi" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <BarChartIcon size={20} />
+          KPI
+        </NavLink>
+      </nav>
     </div>
   );
 }

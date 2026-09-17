@@ -63,7 +63,7 @@ export default function Landing() {
           <p style={{ margin: 0 }}>You see compliance in real time — not after an inspection finds the gap.</p>
         </div>
 
-        <Link to="/get-started" className="btn btn-primary" style={{ display: 'inline-block', width: 'auto', marginTop: 12 }}>
+        <Link to="/get-started" className="btn btn-primary cta-btn" style={{ marginTop: 12 }}>
           Get Started
         </Link>
 
@@ -82,7 +82,7 @@ export default function Landing() {
           ))}
         </div>
 
-        <Link to="/get-started" className="btn btn-primary" style={{ display: 'inline-block', width: 'auto', marginTop: 24 }}>
+        <Link to="/get-started" className="btn btn-primary cta-btn" style={{ marginTop: 24 }}>
           Get Started
         </Link>
       </div>
