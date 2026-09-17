@@ -14,6 +14,34 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
   const tenant = tenantRows[0];
   const { rows: userRows } = await query('SELECT email FROM users WHERE id = $1', [req.auth.userId]);
 
+  // Never start a second checkout for a tenant that has already paid.
+  // Without this, simply re-opening /checkout (back button, bookmark,
+  // refresh after paying) inserted a fresh 'pending' row — and since
+  // GET /subscription returns the newest row, that pending row masked
+  // the customer's active subscription. With real Paddle keys it would
+  // also mint a second transaction the customer could pay a second time.
+  const { rows: activeRows } = await query(
+    "SELECT * FROM subscriptions WHERE tenant_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1",
+    [req.auth.tenantId]
+  );
+  if (activeRows[0]) {
+    const active = activeRows[0];
+    return res.json({
+      alreadyActive: true,
+      subscription: active,
+      pricing: calculatePricing({ branches: active.branch_count, users: active.user_count }),
+      mock: !process.env.PADDLE_API_KEY,
+    });
+  }
+
+  // A plan needs at least one branch and one user. The tapered schedule
+  // happily returns $0.00 for zero of each, which would provision a free
+  // account — the Pricing page guards this too, but it's the server's
+  // call to make, not the browser's.
+  if (!(tenant.branch_count >= 1) || !(tenant.user_count >= 1)) {
+    return res.status(400).json({ error: 'Your plan needs at least 1 branch and 1 user before checkout.' });
+  }
+
   const pricing = calculatePricing({ branches: tenant.branch_count, users: tenant.user_count });
 
   try {

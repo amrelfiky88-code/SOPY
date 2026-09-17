@@ -71,6 +71,14 @@ input[type="checkbox"], input[type="radio"] {
   height: 18px;
 }
 
+/* Range sliders default to the browser's own blue, which clashes with
+   everything else on the page — accent-color re-themes the track and
+   thumb the same way it does for checkboxes. */
+input[type="range"] {
+  accent-color: var(--green);
+  width: 100%;
+}
+
 .screen {
   max-width: var(--max-width);
   margin: 0 auto;
@@ -505,3 +513,90 @@ tbody tr:hover { background: var(--paper); }
   margin-bottom: 16px;
   font-size: 14px;
 }
+
+/* A button that reads as a link — for inline actions inside prose or a
+   banner, where a full .btn would be far too heavy. */
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--green);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Order-summary line items (pricing + checkout). A flex row rather than a
+   table: at 375px a two-column table forces the amount to wrap awkwardly
+   under a long label, and this keeps the amount pinned right. */
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.summary-row:last-child { border-bottom: none; }
+.summary-row > span:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.summary-row .hint { display: block; margin-top: 2px; }
+.summary-total {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  border-bottom: none;
+  font-weight: 700;
+}
+.summary-total > span:last-child {
+  font-family: var(--font-serif);
+  font-size: 24px;
+}
+
+.secure-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+/* −/+ quantity control. The bare number input it replaces was a
+   full-width box that was easy to fat-finger and duplicated the value
+   already shown in the label. */
+.qty-stepper {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.qty-stepper button {
+  width: 48px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  background: var(--paper-white);
+  border-radius: var(--radius-sm);
+  font-size: 22px;
+  line-height: 1;
+  color: var(--green);
+  cursor: pointer;
+  transition: background-color var(--ease), border-color var(--ease);
+}
+.qty-stepper button:hover:not(:disabled) { background: var(--green-tint); border-color: var(--green); }
+.qty-stepper button:disabled { color: var(--ink-soft); opacity: 0.45; cursor: not-allowed; }
+.qty-stepper input {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-family: inherit;
+  background: var(--paper-white);
+  color: var(--ink);
+}
+.qty-stepper input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-tint);
+}
+.qty-range { margin-top: 10px; }

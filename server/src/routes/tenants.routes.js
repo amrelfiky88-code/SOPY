@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { query } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
+import { PLAN_LIMITS, clampPlanCount } from '../../../shared/pricing.js';
 
 export const tenantsRouter = Router();
 
@@ -14,8 +15,20 @@ tenantsRouter.patch('/current', requireAuth, requireRole('business_owner', 'oper
   const values = [];
   let i = 1;
 
-  if (branchCount !== undefined) { fields.push(`branch_count = $${i++}`); values.push(Number(branchCount)); }
-  if (userCount !== undefined) { fields.push(`user_count = $${i++}`); values.push(Number(userCount)); }
+  // Clamp rather than trust the client: `Number('abc')` is NaN (which the
+  // integer column rejects outright) and a negative or zero count would
+  // price out at $0.00. Limits live in shared/pricing.js so the Pricing
+  // page and checkout enforce exactly the same range.
+  if (branchCount !== undefined) {
+    const n = clampPlanCount(branchCount, PLAN_LIMITS.branches);
+    if (n === null) return res.status(400).json({ error: 'branchCount must be a number' });
+    fields.push(`branch_count = $${i++}`); values.push(n);
+  }
+  if (userCount !== undefined) {
+    const n = clampPlanCount(userCount, PLAN_LIMITS.users);
+    if (n === null) return res.status(400).json({ error: 'userCount must be a number' });
+    fields.push(`user_count = $${i++}`); values.push(n);
+  }
   if (businessType !== undefined) { fields.push(`business_type = $${i++}`); values.push(businessType); }
   if (onboardingStep !== undefined) { fields.push(`onboarding_step = $${i++}`); values.push(onboardingStep); }
 

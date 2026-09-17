@@ -17,6 +17,24 @@ export const RATE_SCHEDULE = {
   user: { first: 9, floor: 5, floorAt: 20 },
 };
 
+// A plan needs at least one of each — the tapered schedule returns $0.00
+// for zero branches and zero users, which would hand out a free account.
+// The upper bounds just keep a typo ("99999 users") from turning into a
+// half-million-dollar invoice. Shared so the Pricing page, the tenant
+// PATCH, and checkout all enforce the same range.
+export const PLAN_LIMITS = {
+  branches: { min: 1, max: 500 },
+  users: { min: 1, max: 2000 },
+};
+
+// Returns null for input that isn't a usable count, so callers can tell
+// "not a number" apart from "a number I clamped".
+export function clampPlanCount(value, { min, max }) {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return null;
+  return Math.min(max, Math.max(min, n));
+}
+
 function lineTotal(count, schedule) {
   let total = 0;
   const perUnit = [];
