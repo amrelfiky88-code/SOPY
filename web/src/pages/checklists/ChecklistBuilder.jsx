@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { ROLES } from '../onboarding/roles.js';
 import { ClipboardEmptyIcon } from '../../components/icons.jsx';
+import { useT } from '../../i18n/index.jsx';
 
 const STANDARDS = [
   { value: '', label: 'All standards' },
@@ -14,6 +15,7 @@ const STANDARDS = [
 ];
 
 export default function ChecklistBuilder() {
+  const t = useT();
   const [items, setItems] = useState([]);
   const [q, setQ] = useState('');
   const [standard, setStandard] = useState('');
@@ -24,6 +26,7 @@ export default function ChecklistBuilder() {
   const [templateName, setTemplateName] = useState('');
   const [frequency, setFrequency] = useState('daily');
   const [error, setError] = useState('');
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [assignTemplateId, setAssignTemplateId] = useState('');
@@ -32,13 +35,25 @@ export default function ChecklistBuilder() {
   const [branches, setBranches] = useState([]);
   const [assignments, setAssignments] = useState([]);
 
+  // The library response is the biggest in the app (~160KB for 403
+  // checkpoints), so it's the one most likely to be cut short by a flaky
+  // connection. Without this catch a failed load left `items` empty and
+  // the page rendered "No checkpoints match your filters" forever — no
+  // error, no way back except a manual refresh.
   const loadItems = async () => {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (standard) params.set('standard', standard);
     if (criticalOnly) params.set('critical', 'true');
-    const { items } = await api.get(`/checklists/library?${params.toString()}`);
-    setItems(items);
+    setLoadFailed(false);
+    try {
+      const { items } = await api.get(`/checklists/library?${params.toString()}`);
+      setItems(items);
+    } catch (err) {
+      setItems([]);
+      setLoadFailed(true);
+      setError(err.message);
+    }
   };
 
   const loadTemplates = async () => {
@@ -112,13 +127,13 @@ export default function ChecklistBuilder() {
 
   return (
     <div>
-      <h2>Checklist builder</h2>
+      <h2>{t('builder.title')}</h2>
       {error && <div className="error-banner">{error}</div>}
 
       <div className="card">
-        <h3 style={{ marginBottom: 12 }}>1. Pick checkpoints from the master library</h3>
+        <h3 style={{ marginBottom: 12 }}>{t('builder.pickCheckpoints')}</h3>
         <div className="field">
-          <input placeholder="Search checkpoints…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input placeholder={t('builder.search')} value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <div className="filter-row">
           {STANDARDS.map((s) => (
@@ -127,18 +142,18 @@ export default function ChecklistBuilder() {
             </button>
           ))}
           <button className={criticalOnly ? 'active' : ''} onClick={() => setCriticalOnly((c) => !c)}>
-            Critical only
+            {t('builder.criticalOnly')}
           </button>
         </div>
 
         {items.length > 0 && (
           <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
             <button type="button" className="btn btn-secondary btn-small" onClick={selectAllShown}>
-              Select all shown ({items.length})
+              {t('builder.selectAllShown')} ({items.length})
             </button>
             {selected.length > 0 && (
               <button type="button" className="btn btn-secondary btn-small" onClick={clearSelection}>
-                Clear selection ({selected.length})
+                {t('builder.clearSelection')} ({selected.length})
               </button>
             )}
           </div>
@@ -164,8 +179,8 @@ export default function ChecklistBuilder() {
                     <div>{item.text}</div>
                     <div className="hint">
                       <span className="pill">{item.standard}</span>{' '}
-                      {item.requires_photo && <span className="pill pill-amber">photo required</span>}{' '}
-                      {item.is_critical && <span className="pill pill-red">critical</span>}
+                      {item.requires_photo && <span className="pill pill-amber">{t('builder.photoRequired')}</span>}{' '}
+                      {item.is_critical && <span className="pill pill-red">{t('run.critical')}</span>}
                       {item.description && (
                         <button
                           type="button"
@@ -173,7 +188,7 @@ export default function ChecklistBuilder() {
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleExpanded(item.id); }}
                           style={{ marginLeft: 8 }}
                         >
-                          {expanded.has(item.id) ? 'Hide detail' : 'Show detail'}
+                          {expanded.has(item.id) ? t('builder.hideDetail') : t('builder.showDetail')}
                         </button>
                       )}
                     </div>
@@ -189,7 +204,12 @@ export default function ChecklistBuilder() {
           {items.length === 0 && (
             <div className="empty-state">
               <ClipboardEmptyIcon size={32} />
-              <span>No checkpoints match your filters.</span>
+              <span>{loadFailed ? t('builder.loadFailed') : t('builder.noMatch')}</span>
+              {loadFailed && (
+                <button type="button" className="btn btn-secondary btn-small" onClick={loadItems}>
+                  {t('common.tryAgain')}
+                </button>
+              )}
             </div>
           )}
         </div>

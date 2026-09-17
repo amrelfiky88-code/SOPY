@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api, getToken } from '../../api.js';
 import CameraCapture from '../../components/CameraCapture.jsx';
 import { CameraIcon } from '../../components/icons.jsx';
+import { useT } from '../../i18n/index.jsx';
 
 const isObservationItem = (item) => item.category?.includes('Consumer Behavior');
 const isTemperatureItem = (item) => item.category?.toLowerCase().includes('temperature');
@@ -10,6 +11,7 @@ const isTemperatureItem = (item) => item.category?.toLowerCase().includes('tempe
 export default function ChecklistRun() {
   const { submissionId } = useParams();
   const navigate = useNavigate();
+  const t = useT();
   const [submission, setSubmission] = useState(null);
   const [template, setTemplate] = useState(null);
   const [items, setItems] = useState([]);
@@ -102,7 +104,7 @@ export default function ChecklistRun() {
     }
   };
 
-  if (!template) return <p>Loading checklist…</p>;
+  if (!template) return <p>{t('run.loadingChecklist')}</p>;
 
   if (scorecard) {
     return <Scorecard scorecard={scorecard} onDone={() => navigate('/app/dashboard')} />;
@@ -113,10 +115,10 @@ export default function ChecklistRun() {
       {activeCameraItem === item.id ? (
         <CameraCapture onCapture={(blob) => savePhoto(item.id, blob)} captured={!!r.photoBlob} />
       ) : r.photoBlob ? (
-        <span className="pill pill-green">Photo captured</span>
+        <span className="pill pill-green">{t('run.photoCaptured')}</span>
       ) : (
         <button type="button" className="btn btn-secondary btn-small" onClick={() => setActiveCameraItem(item.id)}>
-          <CameraIcon size={14} /> Open camera to capture evidence
+          <CameraIcon size={14} /> {t('run.openCamera')}
         </button>
       )}
     </div>
@@ -135,7 +137,7 @@ export default function ChecklistRun() {
           <div className="card" key={item.id}>
             <p style={{ margin: '0 0 10px', color: 'var(--ink)' }}>
               {item.text}{' '}
-              {item.is_critical && <span className="pill pill-red">critical</span>}
+              {item.is_critical && <span className="pill pill-red">{t('run.critical')}</span>}
             </p>
             {item.description && <p className="hint" style={{ marginTop: -6 }}>{item.description}</p>}
 
@@ -143,7 +145,7 @@ export default function ChecklistRun() {
               <div className="field">
                 <textarea
                   rows={2}
-                  placeholder="Today's finding…"
+                  placeholder={t('run.finding')}
                   value={r.valueText || ''}
                   onChange={(e) => setResponse(item.id, { valueText: e.target.value })}
                   onBlur={() => saveTextResponse(item)}
@@ -158,7 +160,7 @@ export default function ChecklistRun() {
                     className={`btn btn-small ${r.isCompliant === true ? 'btn-primary' : 'btn-secondary'}`}
                     onClick={() => setResponse(item.id, { isCompliant: true })}
                   >
-                    Compliant
+                    {t('run.compliant')}
                   </button>
                   <button
                     type="button"
@@ -166,20 +168,19 @@ export default function ChecklistRun() {
                     style={r.isCompliant === false ? { background: 'var(--red)', color: 'white' } : undefined}
                     onClick={() => setResponse(item.id, { isCompliant: false })}
                   >
-                    Not compliant
+                    {t('run.notCompliant')}
                   </button>
                 </div>
 
                 {item.is_critical && r.isCompliant === false && (
                   <div className="error-banner" style={{ marginBottom: 10 }}>
-                    This is a critical checkpoint — marking it non-compliant flags this checklist as an
-                    incident for escalation.
+                    {t('run.criticalWarning')}
                   </div>
                 )}
 
                 {isTemperatureItem(item) && (
                   <div className="field" style={{ maxWidth: 160 }}>
-                    <label>Reading (°C)</label>
+                    <label>{t('run.reading')}</label>
                     <input
                       type="number"
                       value={r.valueText || ''}
@@ -198,9 +199,9 @@ export default function ChecklistRun() {
 
       <div className="sticky-action-bar">
         <button className="btn btn-primary" onClick={handleSubmit} disabled={!allAnswered || submitting}>
-          {submitting ? 'Submitting…' : 'Submit & sign off'}
+          {submitting ? t('common.submitting') : t('common.submitSignOff')}
         </button>
-        {!allAnswered && <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>Answer every checkpoint and capture a photo for each one to submit.</p>}
+        {!allAnswered && <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>{t('run.answerAll')}</p>}
       </div>
     </div>
   );

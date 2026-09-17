@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
+import { translateRows, requestLanguage } from '../i18n/translateContent.js';
+
+const TRANSLATABLE_ITEM_FIELDS = ['text', 'description', 'category'];
 
 export const checklistsRouter = Router();
 
@@ -32,7 +35,10 @@ checklistsRouter.get('/library', requireAuth, requireOnboardingComplete, async (
     `SELECT * FROM checklist_items WHERE ${clauses.join(' AND ')} ORDER BY standard, category, sort_order`,
     params
   );
-  res.json({ items: rows });
+  // Order by the English category deliberately: it keeps the source
+  // document's grouping stable no matter which language is rendered.
+  const items = await translateRows(rows, await requestLanguage(req), TRANSLATABLE_ITEM_FIELDS);
+  res.json({ items });
 });
 
 checklistsRouter.post('/library', requireAuth, requireRole('business_owner', 'operations_manager'), async (req, res) => {
@@ -72,7 +78,8 @@ checklistsRouter.get('/templates/:id', requireAuth, async (req, res) => {
      ORDER BY ti.sort_order`,
     [req.params.id]
   );
-  res.json({ template: templateRows[0], items: itemRows });
+  const items = await translateRows(itemRows, await requestLanguage(req), TRANSLATABLE_ITEM_FIELDS);
+  res.json({ template: templateRows[0], items });
 });
 
 // Custom checklists (built in the Checklist Builder) require manager access.

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { query, withTransaction } from '../db.js';
 import { signToken } from '../auth/jwt.js';
 import { requireAuth } from '../auth/middleware.js';
+import { isSupportedLanguage, DEFAULT_LANGUAGE } from '../../../shared/languages.js';
 
 export const authRouter = Router();
 
@@ -102,11 +103,16 @@ authRouter.get('/me', requireAuth, async (req, res) => {
 // carries a global unique index, so changing it is an account-recovery
 // flow rather than a profile edit.
 authRouter.patch('/me', requireAuth, async (req, res) => {
-  const { fullName, title, phone } = req.body;
+  const { fullName, title, phone, language } = req.body;
 
   const fields = [];
   const values = [];
   let i = 1;
+
+  if (language !== undefined) {
+    if (!isSupportedLanguage(language)) return res.status(400).json({ error: 'Unsupported language' });
+    fields.push(`language = $${i++}`); values.push(language);
+  }
 
   if (fullName !== undefined) {
     if (!String(fullName).trim()) return res.status(400).json({ error: 'Name cannot be empty' });
@@ -131,6 +137,7 @@ function publicUser(u) {
     email: u.email,
     phone: u.phone,
     role: u.role,
+    language: u.language || DEFAULT_LANGUAGE,
     accessLevel: u.access_level,
     status: u.status,
   };

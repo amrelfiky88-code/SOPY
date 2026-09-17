@@ -48,6 +48,7 @@ CREATE TABLE users (
   phone         TEXT,
   password_hash TEXT NOT NULL,
   role          user_role NOT NULL DEFAULT 'employee',
+  language      TEXT NOT NULL DEFAULT 'en',       -- UI language: 'en' | 'ar' | 'fr'
   access_level  TEXT NOT NULL DEFAULT 'standard', -- 'admin' | 'manager' | 'standard'
   status        TEXT NOT NULL DEFAULT 'active',   -- 'invited' | 'active' | 'disabled'
   invite_token  TEXT,
@@ -98,6 +99,22 @@ CREATE TABLE checklist_items (
 );
 CREATE INDEX idx_checklist_items_tenant ON checklist_items(tenant_id);
 CREATE INDEX idx_checklist_items_standard ON checklist_items(standard);
+
+-- Translations of library content, keyed by the English source string
+-- rather than by item id. Two reasons: the seeded items get fresh UUIDs
+-- on every re-seed, and the same phrase (a category heading, a repeated
+-- checkpoint) then only needs translating once. English rows stay the
+-- source of truth in checklist_items and are never overwritten — the
+-- client transcribed SOP 1-11 and the QC audit content from their own
+-- documents, so a translation is an additional view of that text, not a
+-- replacement for it. `source` marks whether a human has reviewed it.
+CREATE TABLE content_translations (
+  lang        TEXT NOT NULL,             -- 'ar' | 'fr'
+  source_text TEXT NOT NULL,             -- the exact English string
+  translated  TEXT NOT NULL,
+  source      TEXT NOT NULL DEFAULT 'machine', -- 'machine' | 'reviewed'
+  PRIMARY KEY (lang, source_text)
+);
 
 CREATE TABLE checklist_templates (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

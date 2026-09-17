@@ -236,7 +236,9 @@ input[type="range"] {
 .stepper .dot.done { background: var(--green); }
 
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
-th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--line); }
+/* `start` rather than `left` so tables read correctly in Arabic without
+   a separate RTL rule. */
+th, td { text-align: start; padding: 10px; border-bottom: 1px solid var(--line); }
 th { color: var(--ink-soft); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
 tbody tr { transition: background-color var(--ease); }
 tbody tr:hover { background: var(--paper); }
@@ -334,6 +336,10 @@ tbody tr:hover { background: var(--paper); }
     width: min(80vw, 280px);
   }
   .sidebar.open { transform: translateX(0); }
+  /* In Arabic the drawer belongs on the right, and it has to slide out
+     that way too — otherwise it opens from under the wrong edge. */
+  [dir='rtl'] .sidebar { left: auto; right: 0; transform: translateX(100%); }
+  [dir='rtl'] .sidebar.open { transform: translateX(0); }
   .sidebar-backdrop.open {
     display: block;
     position: fixed;

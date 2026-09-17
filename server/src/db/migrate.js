@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pool } from '../db.js';
+import { loadTranslations } from './loadTranslations.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '../../db');
@@ -26,6 +27,9 @@ async function run() {
   // ("photo required" pill) stays consistent with actual behavior.
   console.log('Setting requires_photo = true on all checklist items ...');
   await pool.query('UPDATE checklist_items SET requires_photo = true WHERE requires_photo IS DISTINCT FROM true');
+
+  const translated = await loadTranslations();
+  console.log(`Loaded ${translated} content translations.`);
 
   console.log('Done.');
   await pool.end();

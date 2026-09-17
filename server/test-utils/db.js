@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pool } from '../src/db.js';
+import { loadTranslations } from '../src/db/loadTranslations.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbRoot = path.resolve(__dirname, '../db');
@@ -25,6 +26,7 @@ export async function resetTestDb() {
   // mandatory for every checkpoint, not just the ones the source
   // documents originally flagged.
   await pool.query('UPDATE checklist_items SET requires_photo = true WHERE requires_photo IS DISTINCT FROM true');
+  await loadTranslations();
 }
 
 export async function closeDb() {

@@ -5,9 +5,11 @@ import { api } from '../../api.js';
 import MyChecklistsToday from './MyChecklistsToday.jsx';
 import KpiSnapshot from './KpiSnapshot.jsx';
 import { ClipboardCheckIcon, CheckCircleIcon, StorefrontIcon, UserIcon } from '../../components/icons.jsx';
+import { useT } from '../../i18n/index.jsx';
 
 export default function DashboardRouter() {
   const { user, tenant } = useAuth();
+  const t = useT();
   const [summary, setSummary] = useState(null);
 
   useEffect(() => {
@@ -18,14 +20,14 @@ export default function DashboardRouter() {
 
   return (
     <div>
-      <h2>Welcome back{tenant ? `, ${tenant.restaurant_name}` : ''}</h2>
+      <h2>{t('dashboard.welcome')}{tenant ? `, ${tenant.restaurant_name}` : ''}</h2>
 
       {summary && (
         <div className="kpi-grid">
-          <SummaryTile icon={ClipboardCheckIcon} tone="green" label="Assigned to you" value={summary.assignedChecklists} />
-          <SummaryTile icon={CheckCircleIcon} tone="green" label="You submitted (24h)" value={summary.submittedLast24h} />
-          {isManager && <SummaryTile icon={StorefrontIcon} tone="amber" label="Active stores" value={summary.branchCount} />}
-          {isManager && <SummaryTile icon={UserIcon} tone="amber" label="Team members" value={summary.userCount} />}
+          <SummaryTile icon={ClipboardCheckIcon} tone="green" label={t('dashboard.assigned')} value={summary.assignedChecklists} />
+          <SummaryTile icon={CheckCircleIcon} tone="green" label={t('dashboard.submitted24h')} value={summary.submittedLast24h} />
+          {isManager && <SummaryTile icon={StorefrontIcon} tone="amber" label={t('dashboard.activeStores')} value={summary.branchCount} />}
+          {isManager && <SummaryTile icon={UserIcon} tone="amber" label={t('dashboard.teamMembers')} value={summary.userCount} />}
         </div>
       )}
 
@@ -35,11 +37,11 @@ export default function DashboardRouter() {
         <>
           <KpiSnapshot />
           <div className="card">
-            <h3 style={{ marginBottom: 12 }}>Manage</h3>
+            <h3 style={{ marginBottom: 12 }}>{t('dashboard.manage')}</h3>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <Link className="btn btn-secondary btn-small" to="/app/checklists">Checklist builder</Link>
-              <Link className="btn btn-secondary btn-small" to="/app/team">Team &amp; stores</Link>
-              <Link className="btn btn-secondary btn-small" to="/app/kpi">Full KPI dashboard</Link>
+              <Link className="btn btn-secondary btn-small" to="/app/checklists">{t('nav.builder')}</Link>
+              <Link className="btn btn-secondary btn-small" to="/app/team">{t('nav.team')}</Link>
+              <Link className="btn btn-secondary btn-small" to="/app/kpi">{t('dashboard.fullKpi')}</Link>
             </div>
           </div>
         </>
