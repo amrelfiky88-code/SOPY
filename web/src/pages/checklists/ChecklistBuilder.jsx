@@ -11,6 +11,7 @@ const STANDARDS = [
   { value: 'LOCAL_CODE', label: 'Local code' },
   { value: 'INTERNAL_QC', label: 'Internal QC' },
   { value: 'SOP', label: 'SOP procedures' },
+  { value: 'C_STORE', label: 'Convenience store' },
   { value: 'CUSTOM', label: 'Custom' },
 ];
 

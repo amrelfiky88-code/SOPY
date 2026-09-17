@@ -12,7 +12,7 @@ async function run() {
   console.log('Applying schema.sql ...');
   await pool.query(schema);
 
-  for (const seedFile of ['seed_library.sql', 'seed_qc_system.sql', 'seed_opening_closing.sql', 'seed_food_safety.sql', 'seed_front_of_house.sql', 'seed_cash_handling.sql', 'seed_health_inspection.sql', 'seed_additional_sops.sql', 'seed_health_code_reference.sql']) {
+  for (const seedFile of ['seed_library.sql', 'seed_qc_system.sql', 'seed_opening_closing.sql', 'seed_food_safety.sql', 'seed_front_of_house.sql', 'seed_cash_handling.sql', 'seed_health_inspection.sql', 'seed_additional_sops.sql', 'seed_health_code_reference.sql', 'seed_convenience_store.sql']) {
     const seedPath = path.join(root, seedFile);
     if (fs.existsSync(seedPath)) {
       console.log(`Applying ${seedFile} ...`);

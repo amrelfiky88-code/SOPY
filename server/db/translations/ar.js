@@ -10,9 +10,12 @@
 // database once a native speaker has checked it and the loader will stop
 // overwriting it.
 import { sopCategoryTranslations } from './sopCategories.js';
+import { cStoreCategories, cStoreItems } from './cStore.js';
 
 export default {
   ...sopCategoryTranslations().ar,
+  ...cStoreCategories.ar,
+  ...cStoreItems.ar,
 
   // --- QC audit system categories -----------------------------------
   // The A/B/C and W1/M1/Q1 letters are kept as-is: they're the client's
