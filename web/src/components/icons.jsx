@@ -174,3 +174,34 @@ export const LayersIcon = (props) => (
     <polyline points="2,17.5 12,22.5 22,17.5" />
   </Base>
 );
+
+export const UserIcon = (props) => (
+  <Base {...props}>
+    <circle cx="12" cy="8" r="4" />
+    <polygon points="4,21 4,18 8,15 16,15 20,18 20,21" />
+  </Base>
+);
+
+export const CalendarIcon = (props) => (
+  <Base {...props}>
+    <rect x="3" y="5" width="18" height="16" rx="2" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+    <line x1="7" y1="2" x2="7" y2="6" />
+    <line x1="17" y1="2" x2="17" y2="6" />
+  </Base>
+);
+
+export const PlayIcon = (props) => (
+  <Base {...props}>
+    <polygon points="6,4 20,12 6,20" fill="currentColor" stroke="none" />
+  </Base>
+);
+
+export const ClipboardEmptyIcon = (props) => (
+  <Base {...props}>
+    <rect x="5" y="4" width="14" height="17" rx="2" />
+    <rect x="9" y="2" width="6" height="3" rx="1" />
+    <line x1="9" y1="12" x2="15" y2="12" />
+    <line x1="9" y1="16" x2="13" y2="16" />
+  </Base>
+);

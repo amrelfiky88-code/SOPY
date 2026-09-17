@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { ROLES } from '../onboarding/roles.js';
+import { ClipboardEmptyIcon } from '../../components/icons.jsx';
 
 const STANDARDS = [
   { value: '', label: 'All standards' },
@@ -179,7 +180,12 @@ export default function ChecklistBuilder() {
               </React.Fragment>
             );
           })}
-          {items.length === 0 && <div className="empty-state">No checkpoints match your filters.</div>}
+          {items.length === 0 && (
+            <div className="empty-state">
+              <ClipboardEmptyIcon size={32} />
+              <span>No checkpoints match your filters.</span>
+            </div>
+          )}
         </div>
       </div>
 

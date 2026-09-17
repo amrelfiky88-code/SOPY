@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
 import { Section, TemperatureLogTable, OpeningClosingChecklist, FixedRowDataTable, FixedRowStatusTable, LabeledInput, LabeledSelect, LabeledTextarea } from './OpsFormParts.jsx';
+import { CheckCircleIcon } from '../../components/icons.jsx';
 
 const TITLE = 'Bar & Beverage Daily Operation Report';
 const KIND = 'bar_daily';
@@ -146,7 +147,12 @@ export default function BarDailyForm() {
   }
 
   if (report.status === 'submitted') {
-    return <div className="card empty-state"><p style={{ margin: 0 }}>Bar & Beverage Daily Report submitted (BDR-{form.shift.reportNo || '—'}). Retain per policy for 90 days.</p></div>;
+    return (
+      <div className="card empty-state">
+        <CheckCircleIcon size={32} style={{ color: 'var(--green)', opacity: 1 }} />
+        <p style={{ margin: 0 }}>Bar & Beverage Daily Report submitted (BDR-{form.shift.reportNo || '—'}). Retain per policy for 90 days.</p>
+      </div>
+    );
   }
 
   return (

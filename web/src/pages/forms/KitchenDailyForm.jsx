@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
 import { Section, TemperatureLogTable, OpeningClosingChecklist, RepeatableTable, FixedRowStatusTable, LabeledInput, LabeledSelect, LabeledTextarea } from './OpsFormParts.jsx';
+import { CheckCircleIcon } from '../../components/icons.jsx';
 
 const TITLE = 'Kitchen Daily Operation Report';
 const KIND = 'kitchen_daily';
@@ -141,7 +142,12 @@ export default function KitchenDailyForm() {
   }
 
   if (report.status === 'submitted') {
-    return <div className="card empty-state"><p style={{ margin: 0 }}>Kitchen Daily Report submitted (KDR-{form.shift.reportNo || '—'}). Retain per policy for 90 days.</p></div>;
+    return (
+      <div className="card empty-state">
+        <CheckCircleIcon size={32} style={{ color: 'var(--green)', opacity: 1 }} />
+        <p style={{ margin: 0 }}>Kitchen Daily Report submitted (KDR-{form.shift.reportNo || '—'}). Retain per policy for 90 days.</p>
+      </div>
+    );
   }
 
   return (

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { ACCESS_LEVELS, ROLES } from '../onboarding/roles.js';
+import { StorefrontIcon } from '../../components/icons.jsx';
 
 export default function Team() {
   const [branches, setBranches] = useState([]);
@@ -66,7 +67,12 @@ export default function Team() {
                 <button className="btn btn-small btn-danger" onClick={() => removeBranch(b.id)}>Remove</button>
               </div>
             ))}
-            {branches.length === 0 && <div className="empty-state">No stores yet.</div>}
+            {branches.length === 0 && (
+              <div className="empty-state">
+                <StorefrontIcon size={32} />
+                <span>No stores yet.</span>
+              </div>
+            )}
           </div>
           <form onSubmit={addBranch} className="card">
             <div className="field">

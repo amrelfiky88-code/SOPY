@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/AuthContext.jsx';
 import { api } from '../../api.js';
 import MyChecklistsToday from './MyChecklistsToday.jsx';
 import KpiSnapshot from './KpiSnapshot.jsx';
+import { ClipboardCheckIcon, CheckCircleIcon, StorefrontIcon, UserIcon } from '../../components/icons.jsx';
 
 export default function DashboardRouter() {
   const { user, tenant } = useAuth();
@@ -21,10 +22,10 @@ export default function DashboardRouter() {
 
       {summary && (
         <div className="kpi-grid">
-          <SummaryTile label="Assigned to you" value={summary.assignedChecklists} />
-          <SummaryTile label="You submitted (24h)" value={summary.submittedLast24h} />
-          {isManager && <SummaryTile label="Active stores" value={summary.branchCount} />}
-          {isManager && <SummaryTile label="Team members" value={summary.userCount} />}
+          <SummaryTile icon={ClipboardCheckIcon} tone="green" label="Assigned to you" value={summary.assignedChecklists} />
+          <SummaryTile icon={CheckCircleIcon} tone="green" label="You submitted (24h)" value={summary.submittedLast24h} />
+          {isManager && <SummaryTile icon={StorefrontIcon} tone="amber" label="Active stores" value={summary.branchCount} />}
+          {isManager && <SummaryTile icon={UserIcon} tone="amber" label="Team members" value={summary.userCount} />}
         </div>
       )}
 
@@ -47,11 +48,14 @@ export default function DashboardRouter() {
   );
 }
 
-function SummaryTile({ label, value }) {
+function SummaryTile({ icon: Icon, tone, label, value }) {
   return (
     <div className="kpi-tile">
-      <div className="label">{label}</div>
-      <div className="value">{value}</div>
+      <div className={`icon-circle icon-circle-${tone}`}><Icon size={18} /></div>
+      <div>
+        <div className="label">{label}</div>
+        <div className="value">{value}</div>
+      </div>
     </div>
   );
 }

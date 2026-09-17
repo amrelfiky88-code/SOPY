@@ -120,7 +120,10 @@ input[type="checkbox"], input[type="radio"] {
 .field .error { font-size: 13px; color: var(--red); margin-top: 4px; }
 
 .btn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 12px 22px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
@@ -132,6 +135,7 @@ input[type="checkbox"], input[type="radio"] {
   font-family: inherit;
   transition: background-color var(--ease), border-color var(--ease), transform var(--ease), box-shadow var(--ease);
 }
+.btn svg { flex-shrink: 0; }
 .btn:active { transform: translateY(1px); }
 .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--green-tint); }
 
@@ -215,8 +219,10 @@ input[type="checkbox"], input[type="radio"] {
 .stepper .dot.done { background: var(--green); }
 
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
-th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
-th { color: var(--ink-soft); font-weight: 600; font-size: 13px; }
+th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--line); }
+th { color: var(--ink-soft); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+tbody tr { transition: background-color var(--ease); }
+tbody tr:hover { background: var(--paper); }
 
 .layout {
   display: flex;
@@ -413,8 +419,16 @@ th { color: var(--ink-soft); font-weight: 600; font-size: 13px; }
 }
 .checklist-row:last-child { border-bottom: none; }
 
-.empty-state { text-align: center; padding: 40px 20px; color: var(--ink-soft); }
-.empty-state svg { margin-bottom: 10px; opacity: 0.5; }
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--ink-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.empty-state svg { opacity: 0.45; }
 
 .error-banner {
   background: var(--red-tint);

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api.js';
+import { PlayIcon, ClipboardEmptyIcon } from '../../components/icons.jsx';
 
 export default function MyChecklistsToday() {
   const [assignments, setAssignments] = useState([]);
@@ -33,14 +34,19 @@ export default function MyChecklistsToday() {
     <div className="card">
       <h3 style={{ marginBottom: 12 }}>My checklists today</h3>
       {error && <div className="error-banner">{error}</div>}
-      {assignments.length === 0 && <div className="empty-state">Nothing assigned to you right now.</div>}
+      {assignments.length === 0 && (
+        <div className="empty-state">
+          <ClipboardEmptyIcon size={32} />
+          <span>Nothing assigned to you right now.</span>
+        </div>
+      )}
       {assignments.map((a) => (
         <div className="checklist-row" key={a.id}>
           <div>
             <strong>{a.template_name}</strong>
             <div className="hint">{a.branch_name || 'All stores'} · {a.frequency}</div>
           </div>
-          <button className="btn btn-small btn-primary" onClick={() => start(a)}>Start</button>
+          <button className="btn btn-small btn-primary" onClick={() => start(a)}><PlayIcon size={14} /> Start</button>
         </div>
       ))}
     </div>
