@@ -205,3 +205,11 @@ export const ClipboardEmptyIcon = (props) => (
     <line x1="9" y1="16" x2="13" y2="16" />
   </Base>
 );
+
+export const CameraIcon = (props) => (
+  <Base {...props}>
+    <rect x="3" y="7" width="18" height="13" rx="2" />
+    <polygon points="9,7 10,4 14,4 15,7" />
+    <circle cx="12" cy="13.5" r="3.8" />
+  </Base>
+);

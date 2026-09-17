@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, getToken } from '../../api.js';
 import CameraCapture from '../../components/CameraCapture.jsx';
+import { CameraIcon } from '../../components/icons.jsx';
 
 const isObservationItem = (item) => item.category?.includes('Consumer Behavior');
 const isTemperatureItem = (item) => item.category?.toLowerCase().includes('temperature');
@@ -104,6 +105,20 @@ export default function ChecklistRun() {
     return <Scorecard scorecard={scorecard} onDone={() => navigate('/app/dashboard')} />;
   }
 
+  const renderPhotoControl = (item, r) => (
+    <div style={{ marginTop: 10 }}>
+      {activeCameraItem === item.id ? (
+        <CameraCapture onCapture={(blob) => savePhoto(item.id, blob)} captured={!!r.photoBlob} />
+      ) : r.photoBlob ? (
+        <span className="pill pill-green">Photo captured</span>
+      ) : (
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => setActiveCameraItem(item.id)}>
+          <CameraIcon size={14} /> {item.requires_photo ? 'Open camera to capture evidence' : 'Add photo evidence (optional)'}
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div>
       <h2>{template.name}</h2>
@@ -130,6 +145,7 @@ export default function ChecklistRun() {
                   onChange={(e) => setResponse(item.id, { valueText: e.target.value })}
                   onBlur={() => saveTextResponse(item)}
                 />
+                {renderPhotoControl(item, r)}
               </div>
             ) : (
               <>
@@ -170,19 +186,7 @@ export default function ChecklistRun() {
                   </div>
                 )}
 
-                {item.requires_photo && (
-                  <div style={{ marginTop: 10 }}>
-                    {activeCameraItem === item.id ? (
-                      <CameraCapture onCapture={(blob) => savePhoto(item.id, blob)} captured={!!r.photoBlob} />
-                    ) : r.photoBlob ? (
-                      <span className="pill pill-green">Photo captured</span>
-                    ) : (
-                      <button type="button" className="btn btn-secondary btn-small" onClick={() => setActiveCameraItem(item.id)}>
-                        Open camera to capture evidence
-                      </button>
-                    )}
-                  </div>
-                )}
+                {renderPhotoControl(item, r)}
 
                 {!item.requires_photo && r.isCompliant !== undefined && (
                   <button type="button" className="btn btn-secondary btn-small" style={{ marginTop: 4 }} onClick={() => saveTextResponse(item)}>
