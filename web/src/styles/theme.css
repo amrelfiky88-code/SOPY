@@ -415,6 +415,18 @@ tbody tr:hover { background: var(--paper); }
 .table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  /* Edge shadows that appear only on the side with more content, so on a
+     phone it's obvious a wide table scrolls sideways rather than being
+     cut off. The `local` layers mask the `scroll` shadows once you reach
+     either end. */
+  background:
+    linear-gradient(to right, var(--paper-white) 30%, rgba(255, 255, 255, 0)) left center,
+    linear-gradient(to left, var(--paper-white) 30%, rgba(255, 255, 255, 0)) right center,
+    radial-gradient(farthest-side at 0 50%, rgba(28, 35, 31, 0.16), rgba(28, 35, 31, 0)) left center,
+    radial-gradient(farthest-side at 100% 50%, rgba(28, 35, 31, 0.16), rgba(28, 35, 31, 0)) right center;
+  background-repeat: no-repeat;
+  background-size: 28px 100%, 28px 100%, 12px 100%, 12px 100%;
+  background-attachment: local, local, scroll, scroll;
 }
 .table-scroll table { min-width: 480px; }
 
@@ -524,6 +536,25 @@ tbody tr:hover { background: var(--paper); }
   color: var(--green);
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* Inline links sit at text height (~19px), well under a comfortable
+   touch target. Rather than pad them — which would push the surrounding
+   prose around — extend the hit area with a pseudo-element, so the tap
+   zone grows but the layout doesn't move. */
+@media (max-width: 768px) {
+  .link-btn,
+  p > a,
+  .hint > a {
+    position: relative;
+  }
+  .link-btn::after,
+  p > a::after,
+  .hint > a::after {
+    content: '';
+    position: absolute;
+    inset: -11px -6px;
+  }
 }
 
 /* Order-summary line items (pricing + checkout). A flex row rather than a

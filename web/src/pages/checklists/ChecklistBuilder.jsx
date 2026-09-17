@@ -154,7 +154,12 @@ export default function ChecklistBuilder() {
                     {item.category}
                   </div>
                 )}
-                <label className="checklist-row" style={{ cursor: 'pointer' }}>
+                {/* htmlFor is load-bearing, not decorative: a label binds to
+                    the first *labelable* element in tree order, and the
+                    "Show detail" <button> below qualifies — so with implicit
+                    association the row's tap target became that button and
+                    tapping the row no longer selected the checkpoint. */}
+                <label className="checklist-row" htmlFor={`pick-${item.id}`} style={{ cursor: 'pointer' }}>
                   <div>
                     <div>{item.text}</div>
                     <div className="hint">
@@ -164,8 +169,9 @@ export default function ChecklistBuilder() {
                       {item.description && (
                         <button
                           type="button"
+                          className="link-btn"
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleExpanded(item.id); }}
-                          style={{ background: 'none', border: 'none', padding: 0, marginLeft: 8, color: 'var(--green)', cursor: 'pointer', font: 'inherit', textDecoration: 'underline' }}
+                          style={{ marginLeft: 8 }}
                         >
                           {expanded.has(item.id) ? 'Hide detail' : 'Show detail'}
                         </button>
@@ -175,7 +181,7 @@ export default function ChecklistBuilder() {
                       <p style={{ marginTop: 6, marginBottom: 0 }}>{item.description}</p>
                     )}
                   </div>
-                  <input type="checkbox" checked={selected.includes(item.id)} onChange={() => toggleItem(item.id)} />
+                  <input id={`pick-${item.id}`} type="checkbox" checked={selected.includes(item.id)} onChange={() => toggleItem(item.id)} />
                 </label>
               </React.Fragment>
             );
