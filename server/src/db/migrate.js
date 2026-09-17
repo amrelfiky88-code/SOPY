@@ -19,6 +19,14 @@ async function run() {
     }
   }
 
+  // Photo evidence is now mandatory for every checkpoint (not just the
+  // subset the source documents originally flagged) — the checklist-run
+  // page already enforces this regardless of this column, but keeping
+  // the column itself universally true too so the library/builder UI
+  // ("photo required" pill) stays consistent with actual behavior.
+  console.log('Setting requires_photo = true on all checklist items ...');
+  await pool.query('UPDATE checklist_items SET requires_photo = true WHERE requires_photo IS DISTINCT FROM true');
+
   console.log('Done.');
   await pool.end();
 }

@@ -21,6 +21,10 @@ export async function resetTestDb() {
   await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_health_inspection.sql'), 'utf8'));
   await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_additional_sops.sql'), 'utf8'));
   await pool.query(fs.readFileSync(path.join(dbRoot, 'seed_health_code_reference.sql'), 'utf8'));
+  // Mirrors the same policy applied in migrate.js: photo evidence is
+  // mandatory for every checkpoint, not just the ones the source
+  // documents originally flagged.
+  await pool.query('UPDATE checklist_items SET requires_photo = true WHERE requires_photo IS DISTINCT FROM true');
 }
 
 export async function closeDb() {

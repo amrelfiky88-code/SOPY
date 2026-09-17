@@ -38,10 +38,12 @@ checklistsRouter.get('/library', requireAuth, requireOnboardingComplete, async (
 checklistsRouter.post('/library', requireAuth, requireRole('business_owner', 'operations_manager'), async (req, res) => {
   const { text, description, standard, category, requiresPhoto, isCritical } = req.body;
   if (!text || !standard) return res.status(400).json({ error: 'text and standard are required' });
+  // Photo evidence is mandatory for every checkpoint — default new
+  // custom items to true unless the caller explicitly opts out.
   const { rows } = await query(
     `INSERT INTO checklist_items (tenant_id, text, description, standard, category, requires_photo, is_critical)
      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-    [req.auth.tenantId, text, description || null, standard, category || null, !!requiresPhoto, !!isCritical]
+    [req.auth.tenantId, text, description || null, standard, category || null, requiresPhoto !== false, !!isCritical]
   );
   res.status(201).json({ item: rows[0] });
 });
