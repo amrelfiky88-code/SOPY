@@ -213,3 +213,32 @@ export const CameraIcon = (props) => (
     <circle cx="12" cy="13.5" r="3.8" />
   </Base>
 );
+
+export const DoorClosedIcon = (props) => (
+  <Base {...props}>
+    <rect x="5" y="3" width="14" height="18" />
+    <circle cx="15" cy="12" r="0.9" fill="currentColor" />
+  </Base>
+);
+
+export const SearchIcon = (props) => (
+  <Base {...props}>
+    <circle cx="10" cy="10" r="6" />
+    <line x1="14.5" y1="14.5" x2="20" y2="20" />
+  </Base>
+);
+
+export const MapPinIcon = (props) => (
+  <Base {...props}>
+    <polygon points="12,2 18,9 12,21 6,9" />
+    <circle cx="12" cy="9" r="2.5" />
+  </Base>
+);
+
+export const BriefcaseIcon = (props) => (
+  <Base {...props}>
+    <rect x="3" y="8" width="18" height="12" rx="1" />
+    <rect x="8" y="4" width="8" height="4" rx="1" />
+    <line x1="3" y1="14" x2="21" y2="14" />
+  </Base>
+);

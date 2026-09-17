@@ -9,6 +9,11 @@ import {
   ClipboardCheckIcon,
   StorefrontIcon,
   LogOutIcon,
+  DoorOpenIcon,
+  DoorClosedIcon,
+  SearchIcon,
+  MapPinIcon,
+  BriefcaseIcon,
 } from './icons.jsx';
 
 const STEP_TO_PATH = {
@@ -63,8 +68,14 @@ export default function AppLayout() {
           <NavLink to="/app/kpi" className={({ isActive }) => (isActive ? 'active' : '')}><BarChartIcon size={18} /> KPI dashboard</NavLink>
           <NavLink to="/app/forms/kitchen" className={({ isActive }) => (isActive ? 'active' : '')}><StoveIcon size={18} /> Kitchen daily report</NavLink>
           <NavLink to="/app/forms/bar" className={({ isActive }) => (isActive ? 'active' : '')}><CoffeeIcon size={18} /> Bar &amp; beverage report</NavLink>
+          <NavLink to="/app/forms/opening" className={({ isActive }) => (isActive ? 'active' : '')}><DoorOpenIcon size={18} /> Daily opening report</NavLink>
+          <NavLink to="/app/forms/closing" className={({ isActive }) => (isActive ? 'active' : '')}><DoorClosedIcon size={18} /> Daily closing report</NavLink>
+          <div className="sidebar-divider" />
           {canManage && <NavLink to="/app/checklists" className={({ isActive }) => (isActive ? 'active' : '')}><ClipboardCheckIcon size={18} /> Checklist builder</NavLink>}
           {canManage && <NavLink to="/app/team" className={({ isActive }) => (isActive ? 'active' : '')}><StorefrontIcon size={18} /> Team &amp; stores</NavLink>}
+          {canManage && <NavLink to="/app/forms/qc-visit" className={({ isActive }) => (isActive ? 'active' : '')}><SearchIcon size={18} /> QC visit report</NavLink>}
+          {canManage && <NavLink to="/app/forms/area-manager-visit" className={({ isActive }) => (isActive ? 'active' : '')}><MapPinIcon size={18} /> Area manager visit report</NavLink>}
+          {canManage && <NavLink to="/app/forms/ops-manager-visit" className={({ isActive }) => (isActive ? 'active' : '')}><BriefcaseIcon size={18} /> Ops manager visit report</NavLink>}
           <div className="sidebar-divider" />
           <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}><LogOutIcon size={18} /> Log out</a>
         </nav>

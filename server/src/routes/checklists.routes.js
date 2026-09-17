@@ -76,11 +76,20 @@ checklistsRouter.get('/templates/:id', requireAuth, async (req, res) => {
 });
 
 // Custom checklists (built in the Checklist Builder) require manager access.
-// The two built-in daily operation report kinds are auto-provisioned the
-// first time any authenticated user opens that report, so they're exempt.
+// The built-in pinned report "kinds" are auto-provisioned the first time
+// an appropriately-roled user opens that report, so they're exempt from
+// the business_owner/operations_manager-only rule below — but the three
+// manager visit-report kinds still need a manager-level role, just not
+// specifically business_owner/operations_manager (an area manager, for
+// instance, needs to be able to start their own visit report).
+const OPEN_TO_ANYONE_REPORT_KINDS = new Set(['kitchen_daily', 'bar_daily', 'opening_daily', 'closing_daily']);
+const MANAGER_VISIT_REPORT_ROLES = ['business_owner', 'operations_manager', 'area_manager'];
+const MANAGER_VISIT_REPORT_KINDS = new Set(['qc_visit', 'area_manager_visit', 'ops_manager_visit']);
+
 function requireManagerUnlessBuiltinDailyReport(req, res, next) {
-  const builtin = req.body.kind === 'kitchen_daily' || req.body.kind === 'bar_daily';
-  if (builtin) return next();
+  const kind = req.body.kind;
+  if (OPEN_TO_ANYONE_REPORT_KINDS.has(kind)) return next();
+  if (MANAGER_VISIT_REPORT_KINDS.has(kind)) return requireRole(...MANAGER_VISIT_REPORT_ROLES)(req, res, next);
   return requireRole('business_owner', 'operations_manager')(req, res, next);
 }
 

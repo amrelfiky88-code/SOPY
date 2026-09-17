@@ -16,6 +16,11 @@ import ChecklistBuilder from './pages/checklists/ChecklistBuilder.jsx';
 import ChecklistRun from './pages/checklists/ChecklistRun.jsx';
 import KitchenDailyForm from './pages/forms/KitchenDailyForm.jsx';
 import BarDailyForm from './pages/forms/BarDailyForm.jsx';
+import OpeningDailyForm from './pages/forms/OpeningDailyForm.jsx';
+import ClosingDailyForm from './pages/forms/ClosingDailyForm.jsx';
+import QcVisitForm from './pages/forms/QcVisitForm.jsx';
+import AreaManagerVisitForm from './pages/forms/AreaManagerVisitForm.jsx';
+import OpsManagerVisitForm from './pages/forms/OpsManagerVisitForm.jsx';
 import Team from './pages/team/Team.jsx';
 import AcceptInvite from './pages/AcceptInvite.jsx';
 
@@ -47,6 +52,11 @@ export default function App() {
         <Route path="checklists/run/:submissionId" element={<ChecklistRun />} />
         <Route path="forms/kitchen" element={<KitchenDailyForm />} />
         <Route path="forms/bar" element={<BarDailyForm />} />
+        <Route path="forms/opening" element={<OpeningDailyForm />} />
+        <Route path="forms/closing" element={<ClosingDailyForm />} />
+        <Route path="forms/qc-visit" element={<QcVisitForm />} />
+        <Route path="forms/area-manager-visit" element={<AreaManagerVisitForm />} />
+        <Route path="forms/ops-manager-visit" element={<OpsManagerVisitForm />} />
         <Route path="team" element={<Team />} />
       </Route>
 
