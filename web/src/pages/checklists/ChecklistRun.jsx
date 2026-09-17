@@ -75,11 +75,14 @@ export default function ChecklistRun() {
       );
     });
 
+  // Photo evidence is mandatory for every checkpoint, not just the ones
+  // the library flags requires_photo — a checkpoint isn't "answered"
+  // until a photo has been captured for it.
   const allAnswered = items.every((item) => {
     const r = responses[item.id];
+    if (!r?.photoBlob) return false;
     if (isObservationItem(item)) return !!r?.valueText?.trim();
-    if (!r || r.isCompliant === undefined) return false;
-    if (item.requires_photo && !r.photoBlob) return false;
+    if (r.isCompliant === undefined) return false;
     return true;
   });
 
@@ -113,7 +116,7 @@ export default function ChecklistRun() {
         <span className="pill pill-green">Photo captured</span>
       ) : (
         <button type="button" className="btn btn-secondary btn-small" onClick={() => setActiveCameraItem(item.id)}>
-          <CameraIcon size={14} /> {item.requires_photo ? 'Open camera to capture evidence' : 'Add photo evidence (optional)'}
+          <CameraIcon size={14} /> Open camera to capture evidence
         </button>
       )}
     </div>
@@ -187,12 +190,6 @@ export default function ChecklistRun() {
                 )}
 
                 {renderPhotoControl(item, r)}
-
-                {!item.requires_photo && r.isCompliant !== undefined && (
-                  <button type="button" className="btn btn-secondary btn-small" style={{ marginTop: 4 }} onClick={() => saveTextResponse(item)}>
-                    Save
-                  </button>
-                )}
               </>
             )}
           </div>
@@ -203,7 +200,7 @@ export default function ChecklistRun() {
         <button className="btn btn-primary" onClick={handleSubmit} disabled={!allAnswered || submitting}>
           {submitting ? 'Submitting…' : 'Submit & sign off'}
         </button>
-        {!allAnswered && <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>Answer every checkpoint (and capture required photos) to submit.</p>}
+        {!allAnswered && <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>Answer every checkpoint and capture a photo for each one to submit.</p>}
       </div>
     </div>
   );
