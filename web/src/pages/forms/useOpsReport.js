@@ -1,23 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api.js';
 
 // Shared start/save/submit lifecycle for the Kitchen Daily and Bar &
 // Beverage Daily Operation Report pages — everything about them that
 // ISN'T the specific fields (those diverge enough between KDR-001 and
 // BDR-001 that each page owns its own field layout and form_data shape).
-export function useOpsReport({ kind, title }) {
+//
+// onResume(formData) is called when the user picks up a draft they saved
+// earlier today, so the page can put its fields back.
+export function useOpsReport({ kind, title, onResume }) {
   const [branches, setBranches] = useState([]);
   const [branchId, setBranchId] = useState('');
   const [submissionId, setSubmissionId] = useState(null);
+  const [draft, setDraft] = useState(null);
   const [status, setStatus] = useState('idle'); // idle | started | saving | submitted
   const [error, setError] = useState('');
+  const [justSaved, setJustSaved] = useState(false);
+  const savedTimer = useRef(null);
+  useEffect(() => () => clearTimeout(savedTimer.current), []);
 
   useEffect(() => {
-    api.get('/tenants/branches').then((d) => {
-      setBranches(d.branches);
-      if (d.branches.length) setBranchId(d.branches[0].id);
-    });
+    api.get('/tenants/branches')
+      .then((d) => {
+        setBranches(d.branches);
+        if (d.branches.length) setBranchId(d.branches[0].id);
+      })
+      .catch((err) => setError(err.message));
   }, []);
+
+  useEffect(() => {
+    setDraft(null);
+    if (!branchId) return undefined;
+    let cancelled = false;
+    api.get(`/submissions/draft?kind=${encodeURIComponent(kind)}&branchId=${encodeURIComponent(branchId)}`)
+      .then((d) => { if (!cancelled) setDraft(d.submission); })
+      .catch(() => {}); // no draft lookup just means starting fresh
+    return () => { cancelled = true; };
+  }, [branchId, kind]);
 
   const ensureTemplate = async () => {
     const { templates } = await api.get('/checklists/templates');
@@ -29,6 +48,12 @@ export function useOpsReport({ kind, title }) {
 
   const start = async () => {
     setError('');
+    if (draft) {
+      setSubmissionId(draft.id);
+      onResume?.(draft.form_data || {});
+      setStatus('started');
+      return;
+    }
     try {
       const templateId = await ensureTemplate();
       const { submission } = await api.post('/submissions', { templateId, branchId });
@@ -40,10 +65,15 @@ export function useOpsReport({ kind, title }) {
   };
 
   const save = async (formData, hasIncident) => {
+    setError('');
     setStatus('saving');
     try {
       await api.patch(`/submissions/${submissionId}`, { formData, hasIncident: !!hasIncident });
       setStatus('started');
+      // Brief confirmation — without it a successful save looked like nothing happened.
+      setJustSaved(true);
+      clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => setJustSaved(false), 2500);
     } catch (err) {
       setError(err.message);
       setStatus('started');
@@ -71,5 +101,5 @@ export function useOpsReport({ kind, title }) {
     }
   };
 
-  return { branches, branchId, setBranchId, status, error, setError, start, save, submit };
+  return { branches, branchId, setBranchId, status, error, setError, start, save, submit, hasDraft: !!draft, justSaved };
 }

@@ -15,19 +15,39 @@ export default function ChecklistRun() {
   const [submission, setSubmission] = useState(null);
   const [template, setTemplate] = useState(null);
   const [items, setItems] = useState([]);
-  const [responses, setResponses] = useState({}); // itemId -> { isCompliant, valueText, photoBlob, savedResponseId }
+  // itemId -> { isCompliant, valueText, hasPhoto }
+  const [responses, setResponses] = useState({});
   const [activeCameraItem, setActiveCameraItem] = useState(null);
+  const [uploadingItem, setUploadingItem] = useState(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [scorecard, setScorecard] = useState(null);
 
   useEffect(() => {
     (async () => {
-      const { submission } = await api.get(`/submissions/${submissionId}`);
-      setSubmission(submission);
-      const { template, items } = await api.get(`/checklists/templates/${submission.template_id}`);
-      setTemplate(template);
-      setItems(items);
+      try {
+        const { submission, responses: saved } = await api.get(`/submissions/${submissionId}`);
+        setSubmission(submission);
+        // Already signed off: show the result, not an editable form.
+        if (submission.status === 'submitted') {
+          setScorecard(await api.get(`/submissions/${submissionId}/scorecard`));
+        }
+        // Put back anything answered before a reload or a dropped connection.
+        const restored = {};
+        for (const r of saved || []) {
+          restored[r.item_id] = {
+            ...(r.is_compliant === null ? {} : { isCompliant: r.is_compliant }),
+            ...(r.value_text === null ? {} : { valueText: r.value_text }),
+            hasPhoto: !!r.photo_path,
+          };
+        }
+        setResponses(restored);
+        const { template, items } = await api.get(`/checklists/templates/${submission.template_id}`);
+        setTemplate(template);
+        setItems(items);
+      } catch (err) {
+        setError(err.message);
+      }
     })();
   }, [submissionId]);
 
@@ -35,54 +55,81 @@ export default function ChecklistRun() {
     setResponses((r) => ({ ...r, [itemId]: { ...r[itemId], ...patch } }));
   };
 
-  const savePhoto = async (itemId, blob) => {
-    setResponse(itemId, { photoBlob: blob });
-    if (!blob) return;
+  // Each save sends only its own fields; the server merges them into the
+  // checkpoint's single response. Throws on failure so callers can tell
+  // the user instead of showing the checkpoint as done.
+  const postResponse = async (fields) => {
     const form = new FormData();
-    form.append('itemId', itemId);
-    form.append('photo', blob, 'evidence.jpg');
-    if (responses[itemId]?.isCompliant !== undefined) form.append('isCompliant', responses[itemId].isCompliant);
-    await withGps(async (lat, lng) => {
-      if (lat) form.append('gpsLat', lat);
-      if (lng) form.append('gpsLng', lng);
-      await fetch(`/api/submissions/${submissionId}/responses`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
-        body: form,
-      });
-    });
-    setActiveCameraItem(null);
-  };
-
-  const saveTextResponse = async (item) => {
-    const r = responses[item.id] || {};
-    const form = new FormData();
-    form.append('itemId', item.id);
-    if (r.isCompliant !== undefined) form.append('isCompliant', r.isCompliant);
-    if (r.valueText !== undefined) form.append('valueText', r.valueText);
-    await fetch(`/api/submissions/${submissionId}/responses`, {
+    for (const [key, value] of Object.entries(fields)) {
+      if (value !== undefined && value !== null) form.append(key, value);
+    }
+    const res = await fetch(`/api/submissions/${submissionId}/responses`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${getToken()}` },
       body: form,
     });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || t('run.saveFailed'));
+    }
   };
 
+  const savePhoto = async (itemId, blob) => {
+    if (!blob) return;
+    setError('');
+    setUploadingItem(itemId);
+    try {
+      await withGps((lat, lng) => postResponse({ itemId, photo: blob, gpsLat: lat, gpsLng: lng }));
+      setResponse(itemId, { hasPhoto: true });
+      setActiveCameraItem(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploadingItem(null);
+    }
+  };
+
+  const saveAnswer = async (itemId, isCompliant) => {
+    const previous = responses[itemId]?.isCompliant;
+    setResponse(itemId, { isCompliant });
+    setError('');
+    try {
+      await postResponse({ itemId, isCompliant: String(isCompliant) });
+    } catch (err) {
+      setResponse(itemId, { isCompliant: previous });
+      setError(err.message);
+    }
+  };
+
+  const saveTextResponse = async (item) => {
+    const r = responses[item.id] || {};
+    if (r.valueText === undefined) return;
+    setError('');
+    try {
+      await postResponse({ itemId: item.id, valueText: r.valueText });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // Location is best-effort. Chained with .then so a failure inside fn
+  // reaches the caller — before, a failed upload left the promise pending forever.
   const withGps = (fn) =>
     new Promise((resolve) => {
-      if (!navigator.geolocation) return fn().then(resolve);
+      if (!navigator.geolocation) return resolve({});
       navigator.geolocation.getCurrentPosition(
-        (pos) => fn(pos.coords.latitude, pos.coords.longitude).then(resolve),
-        () => fn().then(resolve),
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => resolve({}),
         { timeout: 4000 }
       );
-    });
+    }).then(({ lat, lng }) => fn(lat, lng));
 
   // Photo evidence is mandatory for every checkpoint, not just the ones
   // the library flags requires_photo — a checkpoint isn't "answered"
   // until a photo has been captured for it.
   const allAnswered = items.every((item) => {
     const r = responses[item.id];
-    if (!r?.photoBlob) return false;
+    if (!r?.hasPhoto) return false;
     if (isObservationItem(item)) return !!r?.valueText?.trim();
     if (r.isCompliant === undefined) return false;
     return true;
@@ -104,7 +151,7 @@ export default function ChecklistRun() {
     }
   };
 
-  if (!template) return <p>{t('run.loadingChecklist')}</p>;
+  if (!template) return error ? <div className="error-banner">{error}</div> : <p>{t('run.loadingChecklist')}</p>;
 
   if (scorecard) {
     return <Scorecard scorecard={scorecard} onDone={() => navigate('/app/dashboard')} />;
@@ -112,9 +159,11 @@ export default function ChecklistRun() {
 
   const renderPhotoControl = (item, r) => (
     <div style={{ marginTop: 10 }}>
-      {activeCameraItem === item.id ? (
-        <CameraCapture onCapture={(blob) => savePhoto(item.id, blob)} captured={!!r.photoBlob} />
-      ) : r.photoBlob ? (
+      {uploadingItem === item.id ? (
+        <span className="hint">{t('run.uploadingPhoto')}</span>
+      ) : activeCameraItem === item.id ? (
+        <CameraCapture onCapture={(blob) => savePhoto(item.id, blob)} captured={!!r.hasPhoto} />
+      ) : r.hasPhoto ? (
         <span className="pill pill-green">{t('run.photoCaptured')}</span>
       ) : (
         <button type="button" className="btn btn-secondary btn-small" onClick={() => setActiveCameraItem(item.id)}>
@@ -158,7 +207,7 @@ export default function ChecklistRun() {
                   <button
                     type="button"
                     className={`btn btn-small ${r.isCompliant === true ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setResponse(item.id, { isCompliant: true })}
+                    onClick={() => saveAnswer(item.id, true)}
                   >
                     {t('run.compliant')}
                   </button>
@@ -166,7 +215,7 @@ export default function ChecklistRun() {
                     type="button"
                     className={`btn btn-small ${r.isCompliant === false ? 'btn-danger' : 'btn-secondary'}`}
                     style={r.isCompliant === false ? { background: 'var(--red)', color: 'white' } : undefined}
-                    onClick={() => setResponse(item.id, { isCompliant: false })}
+                    onClick={() => saveAnswer(item.id, false)}
                   >
                     {t('run.notCompliant')}
                   </button>

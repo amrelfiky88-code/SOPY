@@ -12,8 +12,8 @@ export default function MyChecklistsToday() {
   const t = useT();
 
   useEffect(() => {
-    api.get('/checklists/my-assignments').then((d) => setAssignments(d.assignments));
-    api.get('/tenants/branches').then((d) => setBranches(d.branches));
+    api.get('/checklists/my-assignments').then((d) => setAssignments(d.assignments)).catch((err) => setError(err.message));
+    api.get('/tenants/branches').then((d) => setBranches(d.branches)).catch(() => {});
   }, []);
 
   const start = async (assignment) => {

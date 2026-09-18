@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
+import './asyncErrors.js';
 
 import { authRouter } from './routes/auth.routes.js';
 import { tenantsRouter } from './routes/tenants.routes.js';
@@ -55,8 +56,12 @@ export function createApp() {
 
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
+    // Malformed ids (e.g. /submissions/abc) are a client mistake, not a crash.
+    if (err.code === '22P02') return res.status(400).json({ error: 'Invalid id' });
     console.error(err);
-    res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+    const status = err.status || err.statusCode || (err.name === 'MulterError' || err.expose ? 400 : 500);
+    // Don't echo database internals back on unexpected failures.
+    res.status(status).json({ error: status >= 500 ? 'Internal server error' : err.message });
   });
 
   return app;

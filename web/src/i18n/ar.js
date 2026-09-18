@@ -77,6 +77,8 @@ export default {
   'run.notCompliant': 'غير مطابق',
   'run.critical': 'حرج',
   'run.openCamera': 'افتح الكاميرا لالتقاط الدليل',
+  'run.uploadingPhoto': 'جارٍ رفع الصورة…',
+  'run.saveFailed': 'تعذّر الحفظ — تحقّق من الاتصال وحاول مرة أخرى.',
   'run.photoCaptured': 'تم التقاط الصورة',
   'run.retake': 'إعادة التقاط',
   'run.reading': 'القراءة (°م)',

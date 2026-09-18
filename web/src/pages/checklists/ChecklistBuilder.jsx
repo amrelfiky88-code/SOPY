@@ -27,6 +27,8 @@ export default function ChecklistBuilder() {
   const [templateName, setTemplateName] = useState('');
   const [frequency, setFrequency] = useState('daily');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [assignError, setAssignError] = useState('');
   const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -102,10 +104,13 @@ export default function ChecklistBuilder() {
     }
     setSaving(true);
     try {
-      await api.post('/checklists/templates', { name: templateName, frequency, itemIds: selected });
+      const { template } = await api.post('/checklists/templates', { name: templateName, frequency, itemIds: selected });
       setTemplateName('');
       setSelected([]);
       await loadTemplates();
+      // Ready for step 3 straight away.
+      setAssignTemplateId(template.id);
+      setNotice(`Saved “${template.name}”. Assign it below.`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -116,15 +121,37 @@ export default function ChecklistBuilder() {
   const assign = async (e) => {
     e.preventDefault();
     if (!assignTemplateId) return;
-    await api.post('/checklists/assignments', {
-      templateId: assignTemplateId,
-      branchId: assignBranchId || null,
-      role: assignRole || null,
-    });
-    setAssignBranchId('');
-    setAssignRole('');
-    await loadAssignments();
+    setAssignError('');
+    setNotice('');
+    try {
+      await api.post('/checklists/assignments', {
+        templateId: assignTemplateId,
+        branchId: assignBranchId || null,
+        role: assignRole || null,
+      });
+      setAssignBranchId('');
+      setAssignRole('');
+      setNotice('Assigned. It now shows under “My checklists today” for the people it applies to.');
+      await loadAssignments();
+    } catch (err) {
+      setAssignError(err.message);
+    }
   };
+
+  const unassign = async (id) => {
+    setAssignError('');
+    setNotice('');
+    try {
+      await api.del(`/checklists/assignments/${id}`);
+      await loadAssignments();
+    } catch (err) {
+      setAssignError(err.message);
+    }
+  };
+
+  // The pinned daily/visit reports create their own templates behind the
+  // scenes; they have no checkpoints, so they aren't assignable checklists.
+  const assignableTemplates = templates.filter((tpl) => !tpl.kind || tpl.kind === 'custom');
 
   return (
     <div>
@@ -236,12 +263,14 @@ export default function ChecklistBuilder() {
 
       <div className="card">
         <h3 style={{ marginBottom: 12 }}>3. Assign checklists</h3>
+        {notice && <div className="success-banner" role="status">{notice}</div>}
+        {assignError && <div className="error-banner">{assignError}</div>}
         <form onSubmit={assign}>
           <div className="field">
             <label htmlFor="atpl">Checklist</label>
             <select id="atpl" value={assignTemplateId} onChange={(e) => setAssignTemplateId(e.target.value)} required>
               <option value="" disabled>Select a checklist</option>
-              {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {assignableTemplates.map((tpl) => <option key={tpl.id} value={tpl.id}>{tpl.name}</option>)}
             </select>
           </div>
           <div className="field">
@@ -263,15 +292,23 @@ export default function ChecklistBuilder() {
 
         <div className="table-scroll" style={{ marginTop: 16 }}>
         <table>
-          <thead><tr><th>Checklist</th><th>Store</th><th>Role</th></tr></thead>
+          <thead><tr><th>Checklist</th><th>Store</th><th>Role</th><th aria-label="Actions" /></tr></thead>
           <tbody>
             {assignments.map((a) => (
               <tr key={a.id}>
                 <td>{a.template_name}</td>
                 <td>{a.branch_name || 'All stores'}</td>
                 <td>{a.role ? ROLES.find((r) => r.value === a.role)?.label : 'Any role'}</td>
+                <td>
+                  <button type="button" className="btn btn-small btn-secondary" onClick={() => unassign(a.id)} aria-label={`Unassign ${a.template_name}`}>
+                    Unassign
+                  </button>
+                </td>
               </tr>
             ))}
+            {assignments.length === 0 && (
+              <tr><td colSpan={4} className="hint">Nothing assigned yet.</td></tr>
+            )}
           </tbody>
         </table>
         </div>

@@ -43,7 +43,7 @@ const emptyState = () => ({
 });
 
 export default function OpsManagerVisitForm() {
-  const report = useOpsReport({ kind: KIND, title: TITLE });
+  const report = useOpsReport({ kind: KIND, title: TITLE, onResume: (saved) => setForm({ ...emptyState(), ...saved }) });
   const [form, setForm] = useState(emptyState());
 
   const patchNested = (section, key, value) => setForm((f) => ({ ...f, [section]: { ...f[section], [key]: value } }));
@@ -75,7 +75,7 @@ export default function OpsManagerVisitForm() {
               {report.branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
-          <button className="btn btn-primary" onClick={report.start} disabled={!report.branchId}>Start visit report</button>
+          <button className="btn btn-primary" onClick={report.start} disabled={!report.branchId}>{report.hasDraft ? 'Continue saved draft' : "Start visit report"}</button>
           {report.branches.length === 0 && <p className="hint">Add a store first, under Team &amp; stores.</p>}
         </div>
       </div>
@@ -141,7 +141,7 @@ export default function OpsManagerVisitForm() {
       </Section>
 
       <div style={{ display: 'flex', gap: 10 }}>
-        <button className="btn btn-secondary" onClick={() => report.save(form, hasIncident)} disabled={report.status === 'saving'}>Save progress</button>
+        <button className="btn btn-secondary" onClick={() => report.save(form, hasIncident)} disabled={report.status === 'saving'}>{report.status === 'saving' ? 'Saving…' : report.justSaved ? 'Saved ✓' : 'Save progress'}</button>
         <button className="btn btn-primary" onClick={() => report.submit(form, hasIncident)} disabled={report.status === 'saving' || !form.signOff.opsManagerName.trim()}>
           Submit &amp; sign off
         </button>

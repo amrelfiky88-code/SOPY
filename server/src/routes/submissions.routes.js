@@ -16,16 +16,49 @@ const upload = multer({
     // always produces image/jpeg or image/png blobs. Reject anything else
     // so a swapped-in file-picker can't be used to slip past this check.
     if (!/^image\/(jpeg|png)$/.test(file.mimetype)) {
-      return cb(new Error('Only camera-captured JPEG/PNG images are accepted'));
+      return cb(Object.assign(new Error('Only camera-captured JPEG/PNG images are accepted'), { status: 400 }));
     }
     cb(null, true);
   },
 });
 
+// Writes are only allowed on this tenant's submissions, and only while
+// they're still in progress — a submitted report is a record, not a draft.
+async function findOpenSubmission(req, res) {
+  const { rows } = await query(
+    'SELECT id, status, template_id FROM checklist_submissions WHERE id = $1 AND tenant_id = $2',
+    [req.params.id, req.auth.tenantId]
+  );
+  if (!rows[0]) { res.status(404).json({ error: 'Not found' }); return null; }
+  if (rows[0].status !== 'in_progress') { res.status(409).json({ error: 'This report has already been submitted' }); return null; }
+  return rows[0];
+}
+
 // Start a checklist run
 submissionsRouter.post('/', requireAuth, async (req, res) => {
   const { templateId, branchId, assignmentId } = req.body;
   if (!templateId || !branchId) return res.status(400).json({ error: 'templateId and branchId are required' });
+
+  const { rows: owned } = await query(
+    `SELECT
+       EXISTS (SELECT 1 FROM checklist_templates WHERE id = $1 AND tenant_id = $3) AS template_ok,
+       EXISTS (SELECT 1 FROM branches WHERE id = $2 AND tenant_id = $3 AND is_active) AS branch_ok`,
+    [templateId, branchId, req.auth.tenantId]
+  );
+  if (!owned[0].template_ok || !owned[0].branch_ok) return res.status(404).json({ error: 'Checklist or store not found' });
+
+  // Tapping Start on an assigned checklist again today picks up the run
+  // already underway rather than opening a second, empty one.
+  if (assignmentId) {
+    const { rows: open } = await query(
+      `SELECT * FROM checklist_submissions
+       WHERE tenant_id = $1 AND assignment_id = $2 AND branch_id = $3 AND submitted_by = $4
+         AND status = 'in_progress' AND started_at >= date_trunc('day', now())
+       ORDER BY started_at DESC LIMIT 1`,
+      [req.auth.tenantId, assignmentId, branchId, req.auth.userId]
+    );
+    if (open[0]) return res.status(200).json({ submission: open[0], resumed: true });
+  }
 
   const { rows } = await query(
     `INSERT INTO checklist_submissions (tenant_id, assignment_id, template_id, branch_id, submitted_by)
@@ -33,6 +66,23 @@ submissionsRouter.post('/', requireAuth, async (req, res) => {
     [req.auth.tenantId, assignmentId || null, templateId, branchId, req.auth.userId]
   );
   res.status(201).json({ submission: rows[0] });
+});
+
+// The caller's own unfinished report of this kind at this store, started
+// today — lets "Save progress" survive a reload instead of orphaning the
+// draft. Must stay above '/:id' so 'draft' isn't read as an id.
+submissionsRouter.get('/draft', requireAuth, async (req, res) => {
+  const { kind, branchId } = req.query;
+  if (!kind || !branchId) return res.status(400).json({ error: 'kind and branchId are required' });
+  const { rows } = await query(
+    `SELECT s.* FROM checklist_submissions s
+     JOIN checklist_templates t ON t.id = s.template_id
+     WHERE s.tenant_id = $1 AND s.submitted_by = $2 AND s.branch_id = $3 AND t.kind = $4
+       AND s.status = 'in_progress' AND s.started_at >= date_trunc('day', now())
+     ORDER BY s.started_at DESC LIMIT 1`,
+    [req.auth.tenantId, req.auth.userId, branchId, kind]
+  );
+  res.json({ submission: rows[0] || null });
 });
 
 // Autosave structured form data (temperature_log, receiving_log, waste_log, equipment_status, notes)
@@ -44,6 +94,7 @@ submissionsRouter.patch('/:id', requireAuth, async (req, res) => {
   if (formData !== undefined) { fields.push(`form_data = $${i++}`); values.push(JSON.stringify(formData)); }
   if (hasIncident !== undefined) { fields.push(`has_incident = $${i++}`); values.push(!!hasIncident); }
   if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
+  if (!(await findOpenSubmission(req, res))) return;
 
   values.push(req.params.id, req.auth.tenantId);
   const { rows } = await query(
@@ -60,6 +111,14 @@ submissionsRouter.patch('/:id', requireAuth, async (req, res) => {
 submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), async (req, res) => {
   const { itemId, isCompliant, valueText, gpsLat, gpsLng, capturedAt } = req.body;
   if (!itemId) return res.status(400).json({ error: 'itemId is required' });
+  const submission = await findOpenSubmission(req, res);
+  if (!submission) return;
+
+  const { rows: inTemplate } = await query(
+    'SELECT 1 FROM checklist_template_items WHERE template_id = $1 AND item_id = $2',
+    [submission.template_id, itemId]
+  );
+  if (!inTemplate[0]) return res.status(400).json({ error: 'That checkpoint is not part of this checklist' });
 
   let photoPath = null;
   if (req.file) {
@@ -73,17 +132,39 @@ submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), as
 
   const compliant = isCompliant === undefined ? null : isCompliant === 'true' || isCompliant === true;
 
-  const { rows } = await query(
-    `INSERT INTO checklist_submission_responses
-       (submission_id, item_id, is_compliant, value_text, photo_path, gps_lat, gps_lng, captured_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-    [
-      req.params.id, itemId, compliant,
-      valueText || null, photoPath,
-      gpsLat ? Number(gpsLat) : null, gpsLng ? Number(gpsLng) : null,
-      capturedAt || new Date().toISOString(),
-    ]
+  // One response per checkpoint. The run page saves the answer, the
+  // reading and the photo as separate calls, in whatever order the user
+  // taps them, so each call only overwrites the fields it actually sent.
+  // (Inserting a row per call left an answer given after the photo
+  // unsaved, and duplicate rows skewed the scorecard.)
+  const { rows: existing } = await query(
+    `SELECT id FROM checklist_submission_responses WHERE submission_id = $1 AND item_id = $2
+     ORDER BY created_at DESC LIMIT 1`,
+    [req.params.id, itemId]
   );
+  const gps = [gpsLat ? Number(gpsLat) : null, gpsLng ? Number(gpsLng) : null];
+  let rows;
+  if (existing[0]) {
+    ({ rows } = await query(
+      `UPDATE checklist_submission_responses SET
+         is_compliant = CASE WHEN $2::boolean IS NULL THEN is_compliant ELSE $2::boolean END,
+         value_text   = CASE WHEN $3::boolean THEN $4 ELSE value_text END,
+         photo_path   = COALESCE($5, photo_path),
+         gps_lat      = COALESCE($6, gps_lat),
+         gps_lng      = COALESCE($7, gps_lng),
+         captured_at  = CASE WHEN $5::text IS NULL THEN captured_at ELSE $8::timestamptz END
+       WHERE id = $1 RETURNING *`,
+      [existing[0].id, compliant, valueText !== undefined, valueText || null, photoPath, ...gps,
+        capturedAt || new Date().toISOString()]
+    ));
+  } else {
+    ({ rows } = await query(
+      `INSERT INTO checklist_submission_responses
+         (submission_id, item_id, is_compliant, value_text, photo_path, gps_lat, gps_lng, captured_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [req.params.id, itemId, compliant, valueText || null, photoPath, ...gps, capturedAt || new Date().toISOString()]
+    ));
+  }
 
   // A failing response on a critical checkpoint (the ⚠ items from the
   // source QC documents — e.g. fridge temps, fire extinguishers, mystery
@@ -100,13 +181,14 @@ submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), as
 });
 
 submissionsRouter.post('/:id/submit', requireAuth, async (req, res) => {
-  const { gpsLat, gpsLng, signedOffBy } = req.body;
+  const { gpsLat, gpsLng } = req.body;
+  if (!(await findOpenSubmission(req, res))) return;
   const { rows } = await query(
     `UPDATE checklist_submissions
      SET status = 'submitted', submitted_at = now(), gps_lat = $1, gps_lng = $2,
          signed_off_by = $3, signed_off_at = now()
      WHERE id = $4 AND tenant_id = $5 RETURNING *`,
-    [gpsLat || null, gpsLng || null, signedOffBy || req.auth.userId, req.params.id, req.auth.tenantId]
+    [gpsLat || null, gpsLng || null, req.auth.userId, req.params.id, req.auth.tenantId]
   );
   if (!rows[0]) return res.status(404).json({ error: 'Not found' });
   res.json({ submission: rows[0] });
@@ -147,7 +229,12 @@ submissionsRouter.get('/:id/scorecard', requireAuth, async (req, res) => {
     `SELECT ci.category, ci.is_critical, r.is_compliant
      FROM checklist_template_items ti
      JOIN checklist_items ci ON ci.id = ti.item_id
-     LEFT JOIN checklist_submission_responses r ON r.item_id = ci.id AND r.submission_id = $1
+     LEFT JOIN LATERAL (
+       -- latest answer per checkpoint; older runs could hold duplicates
+       SELECT is_compliant FROM checklist_submission_responses
+       WHERE item_id = ci.id AND submission_id = $1
+       ORDER BY created_at DESC LIMIT 1
+     ) r ON true
      WHERE ti.template_id = $2`,
     [req.params.id, submission.template_id]
   );
@@ -196,13 +283,15 @@ submissionsRouter.get('/:id/scorecard', requireAuth, async (req, res) => {
 
 submissionsRouter.get('/', requireAuth, async (req, res) => {
   const { branchId, from, to, status } = req.query;
-  const clauses = ['tenant_id = $1'];
+  // Qualified with s. — branches, users and templates share these column
+  // names, and unqualified they made every call fail as ambiguous.
+  const clauses = ['s.tenant_id = $1'];
   const params = [req.auth.tenantId];
   let i = 2;
-  if (branchId) { clauses.push(`branch_id = $${i++}`); params.push(branchId); }
-  if (from) { clauses.push(`started_at >= $${i++}`); params.push(from); }
-  if (to) { clauses.push(`started_at <= $${i++}`); params.push(to); }
-  if (status) { clauses.push(`status = $${i++}`); params.push(status); }
+  if (branchId) { clauses.push(`s.branch_id = $${i++}`); params.push(branchId); }
+  if (from) { clauses.push(`s.started_at >= $${i++}`); params.push(from); }
+  if (to) { clauses.push(`s.started_at <= $${i++}`); params.push(to); }
+  if (status) { clauses.push(`s.status = $${i++}`); params.push(status); }
 
   const { rows } = await query(
     `SELECT s.*, t.name AS template_name, t.kind, b.name AS branch_name, u.full_name AS submitted_by_name

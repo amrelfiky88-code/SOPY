@@ -83,6 +83,70 @@ test('KPI dashboard reflects the submitted, fully-compliant run', async () => {
   assert.equal(res.body.submissionsCount, 1);
 });
 
+test('a submitted report can no longer be edited, answered or re-submitted', async () => {
+  const patch = await api('PATCH', `/api/submissions/${submissionId}`, { token, body: { formData: { notes: 'late edit' } } });
+  assert.equal(patch.status, 409);
+  const response = await postResponse(submissionId, { itemId, isCompliant: 'false' });
+  assert.equal(response.status, 409);
+  const resubmit = await api('POST', `/api/submissions/${submissionId}/submit`, { token, body: {} });
+  assert.equal(resubmit.status, 409);
+});
+
+test('the submissions list works with filters (columns were ambiguous across the joins)', async () => {
+  const res = await api('GET', `/api/submissions?branchId=${branchId}&status=submitted`, { token });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.submissions.length, 1);
+});
+
+test('a malformed id is a 400, not a server crash', async () => {
+  const res = await api('GET', '/api/submissions/not-a-uuid', { token });
+  assert.equal(res.status, 400);
+  // …and the server is still up afterwards.
+  const again = await api('GET', `/api/submissions/${submissionId}`, { token });
+  assert.equal(again.status, 200);
+});
+
+test('a checklist run cannot be started against another tenant\'s store or checklist', async () => {
+  const other = await api('POST', '/api/auth/signup', {
+    body: { fullName: 'Omar', email: 'omar-sub@example.com', password: 'SopyDemo123', restaurantName: 'Other Place', country: 'Egypt', branchCount: 1, userCount: 1 },
+  });
+  const res = await api('POST', '/api/submissions', { token: other.body.token, body: { templateId, branchId } });
+  assert.equal(res.status, 404);
+  const answer = await fetch(`${baseUrl}/api/submissions/${submissionId}/responses`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${other.body.token}` },
+    body: (() => { const f = new FormData(); f.append('itemId', itemId); f.append('isCompliant', 'true'); return f; })(),
+  });
+  assert.equal(answer.status, 404);
+});
+
+// Regression: "Save progress" on a daily report stored form_data, but
+// after a reload nothing looked it up again, so the draft was orphaned
+// and starting over created a second submission.
+test('a saved daily-report draft can be found again and resumed', async () => {
+  const tpl = await api('POST', '/api/checklists/templates', {
+    token, body: { name: 'Kitchen Daily Operation Report', kind: 'kitchen_daily', frequency: 'daily', itemIds: [] },
+  });
+  assert.equal(tpl.status, 201, JSON.stringify(tpl.body));
+
+  const none = await api('GET', `/api/submissions/draft?kind=kitchen_daily&branchId=${branchId}`, { token });
+  assert.equal(none.status, 200);
+  assert.equal(none.body.submission, null);
+
+  const start = await api('POST', '/api/submissions', { token, body: { templateId: tpl.body.template.id, branchId } });
+  const draftId = start.body.submission.id;
+  await api('PATCH', `/api/submissions/${draftId}`, { token, body: { formData: { shift: { reportNo: '0042' } } } });
+
+  const found = await api('GET', `/api/submissions/draft?kind=kitchen_daily&branchId=${branchId}`, { token });
+  assert.equal(found.body.submission.id, draftId);
+  assert.equal(found.body.submission.form_data.shift.reportNo, '0042');
+
+  // Once submitted it is no longer a draft.
+  await api('POST', `/api/submissions/${draftId}/submit`, { token, body: {} });
+  const after = await api('GET', `/api/submissions/draft?kind=kitchen_daily&branchId=${branchId}`, { token });
+  assert.equal(after.body.submission, null);
+});
+
 test('a non-compliant temperature response counts as a deviation', async () => {
   const start = await api('POST', '/api/submissions', { token, body: { templateId, branchId } });
   const sub2 = start.body.submission.id;

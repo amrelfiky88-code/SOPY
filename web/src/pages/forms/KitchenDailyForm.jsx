@@ -93,7 +93,7 @@ const emptyState = () => ({
 });
 
 export default function KitchenDailyForm() {
-  const report = useOpsReport({ kind: KIND, title: TITLE });
+  const report = useOpsReport({ kind: KIND, title: TITLE, onResume: (saved) => setForm({ ...emptyState(), ...saved }) });
   const [form, setForm] = useState(emptyState());
 
   const patch = (section, value) => setForm((f) => ({ ...f, [section]: typeof value === 'function' ? value(f[section]) : { ...f[section], ...value } }));
@@ -134,7 +134,7 @@ export default function KitchenDailyForm() {
               {report.branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
-          <button className="btn btn-primary" onClick={report.start} disabled={!report.branchId}>Start today's report</button>
+          <button className="btn btn-primary" onClick={report.start} disabled={!report.branchId}>{report.hasDraft ? 'Continue saved draft' : "Start today's report"}</button>
           {report.branches.length === 0 && <p className="hint">Add a store first, under Team &amp; stores.</p>}
         </div>
       </div>
@@ -232,7 +232,7 @@ export default function KitchenDailyForm() {
       </Section>
 
       <div style={{ display: 'flex', gap: 10 }}>
-        <button className="btn btn-secondary" onClick={() => report.save(form, hasIncident)} disabled={report.status === 'saving'}>Save progress</button>
+        <button className="btn btn-secondary" onClick={() => report.save(form, hasIncident)} disabled={report.status === 'saving'}>{report.status === 'saving' ? 'Saving…' : report.justSaved ? 'Saved ✓' : 'Save progress'}</button>
         <button className="btn btn-primary" onClick={() => report.submit(form, hasIncident)} disabled={report.status === 'saving' || !form.signOff.supervisorName.trim()}>
           Submit &amp; sign off
         </button>

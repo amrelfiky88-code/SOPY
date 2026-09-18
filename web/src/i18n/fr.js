@@ -77,6 +77,8 @@ export default {
   'run.notCompliant': 'Non conforme',
   'run.critical': 'critique',
   'run.openCamera': "Ouvrir l'appareil photo pour la preuve",
+  'run.uploadingPhoto': 'Envoi de la photo…',
+  'run.saveFailed': 'Enregistrement impossible — vérifiez votre connexion et réessayez.',
   'run.photoCaptured': 'Photo prise',
   'run.retake': 'Reprendre',
   'run.reading': 'Relevé (°C)',

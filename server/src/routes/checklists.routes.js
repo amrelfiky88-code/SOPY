@@ -2,6 +2,11 @@ import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
 import { translateRows, requestLanguage } from '../i18n/translateContent.js';
+import { isValidRole } from '../auth/roles.js';
+
+// Roles that oversee every store, so store-specific assignments reach them
+// even without a user_branches link.
+const ALL_STORE_ROLES = ['business_owner', 'operations_manager'];
 
 const TRANSLATABLE_ITEM_FIELDS = ['text', 'description', 'category'];
 
@@ -102,21 +107,32 @@ function requireManagerUnlessBuiltinDailyReport(req, res, next) {
 
 checklistsRouter.post('/templates', requireAuth, requireOnboardingComplete, requireManagerUnlessBuiltinDailyReport, async (req, res) => {
   const { name, description, kind, frequency, itemIds } = req.body;
-  if (!name) return res.status(400).json({ error: 'name is required' });
+  if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
+
+  // Library checkpoints are global (tenant_id NULL) or this tenant's own
+  // custom ones — never another tenant's.
+  const ids = Array.isArray(itemIds) ? [...new Set(itemIds)] : [];
+  if (ids.length) {
+    const { rows } = await query(
+      'SELECT count(*)::int AS n FROM checklist_items WHERE id = ANY($1::uuid[]) AND (tenant_id IS NULL OR tenant_id = $2)',
+      [ids, req.auth.tenantId]
+    );
+    if (rows[0].n !== ids.length) return res.status(400).json({ error: 'Some checkpoints were not found' });
+  }
 
   const result = await withTransaction(async (client) => {
     const templateRes = await client.query(
       `INSERT INTO checklist_templates (tenant_id, name, description, kind, frequency, created_by)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [req.auth.tenantId, name, description || null, kind || 'custom', frequency || 'daily', req.auth.userId]
+      [req.auth.tenantId, name.trim(), description || null, kind || 'custom', frequency || 'daily', req.auth.userId]
     );
     const template = templateRes.rows[0];
 
-    if (Array.isArray(itemIds) && itemIds.length) {
-      const values = itemIds.map((_, idx) => `($1, $${idx + 2}, ${idx})`).join(', ');
+    if (ids.length) {
+      const values = ids.map((_, idx) => `($1, $${idx + 2}, ${idx})`).join(', ');
       await client.query(
         `INSERT INTO checklist_template_items (template_id, item_id, sort_order) VALUES ${values}`,
-        [template.id, ...itemIds]
+        [template.id, ...ids]
       );
     }
     return template;
@@ -147,6 +163,17 @@ checklistsRouter.get('/assignments', requireAuth, async (req, res) => {
 checklistsRouter.post('/assignments', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
   const { templateId, branchId, userId, role, dueTime } = req.body;
   if (!templateId) return res.status(400).json({ error: 'templateId is required' });
+  if (role && !isValidRole(role)) return res.status(400).json({ error: 'Invalid role' });
+  const { rows: owned } = await query(
+    `SELECT
+       EXISTS (SELECT 1 FROM checklist_templates WHERE id = $1 AND tenant_id = $4) AS template_ok,
+       ($2::uuid IS NULL OR EXISTS (SELECT 1 FROM branches WHERE id = $2 AND tenant_id = $4 AND is_active)) AS branch_ok,
+       ($3::uuid IS NULL OR EXISTS (SELECT 1 FROM users WHERE id = $3 AND tenant_id = $4)) AS user_ok`,
+    [templateId, branchId || null, userId || null, req.auth.tenantId]
+  );
+  if (!owned[0].template_ok || !owned[0].branch_ok || !owned[0].user_ok) {
+    return res.status(404).json({ error: 'Checklist, store or user not found' });
+  }
   const { rows } = await query(
     `INSERT INTO checklist_assignments (tenant_id, template_id, branch_id, user_id, role, due_time)
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
@@ -169,9 +196,15 @@ checklistsRouter.get('/my-assignments', requireAuth, async (req, res) => {
      LEFT JOIN branches b ON b.id = a.branch_id
      LEFT JOIN user_branches ub ON ub.branch_id = a.branch_id AND ub.user_id = $2
      WHERE a.tenant_id = $1 AND a.active
-       AND (a.user_id = $2 OR a.role = $3 OR a.branch_id IS NULL OR ub.user_id IS NOT NULL)
+       -- Every condition the assignment sets must fit this user. These were
+       -- OR'd, so e.g. "Store Managers, all stores" reached every employee
+       -- just because it wasn't tied to one store.
+       AND (a.user_id IS NULL OR a.user_id = $2)
+       AND (a.role IS NULL OR a.role::text = $3::text)
+       AND (a.branch_id IS NULL OR ub.user_id IS NOT NULL OR $3::text = ANY($4::text[]))
+       AND (b.id IS NULL OR b.is_active)
      ORDER BY a.due_time NULLS LAST`,
-    [req.auth.tenantId, req.auth.userId, req.auth.role]
+    [req.auth.tenantId, req.auth.userId, req.auth.role, ALL_STORE_ROLES]
   );
   res.json({ assignments: rows });
 });

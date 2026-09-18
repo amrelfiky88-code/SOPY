@@ -117,6 +117,34 @@ input[type="range"] {
   transition: border-color var(--ease), box-shadow var(--ease);
 }
 
+/* Controls that sit outside a .field — the report tables and 2-column
+   grids — were browser defaults: 18px tall selects and <16px text, which
+   also makes iOS Safari zoom the page on every tap into a cell.
+   :where() keeps this below .field's own rules. */
+.card :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 16px;
+  background: var(--paper-white);
+  color: var(--ink);
+  max-width: 100%;
+}
+.card :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-tint);
+}
+.form-grid-2col > :where(input, select, textarea) { width: 100%; }
+
+@media (max-width: 768px) {
+  /* Whole checkbox row is the tap target; give it finger height. */
+  .card label:has(> input[type="checkbox"]) { min-height: 40px; align-items: center; }
+  .card td input[type="checkbox"] { width: 24px; height: 24px; }
+}
+
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
@@ -565,6 +593,15 @@ tbody tr:hover { background: var(--paper); }
 }
 .empty-state svg { opacity: 0.45; }
 
+.success-banner {
+  background: var(--green-tint);
+  color: var(--green);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
 .error-banner {
   background: var(--red-tint);
   color: var(--red);
@@ -629,6 +666,19 @@ tbody tr:hover { background: var(--paper); }
 .summary-total > span:last-child {
   font-family: var(--font-serif);
   font-size: 24px;
+}
+
+.invite-link-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  /* A URL is one unbreakable "word"; without this it runs off a phone
+     screen and gets clipped. */
+  overflow-wrap: anywhere;
+  user-select: all;
 }
 
 .secure-note {
