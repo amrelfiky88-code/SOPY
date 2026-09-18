@@ -8,6 +8,8 @@ import { PLAN_LIMITS, clampPlanCount } from '../../../shared/pricing.js';
 
 export const tenantsRouter = Router();
 
+const CLIENT_SETTABLE_STEPS = ['pricing', 'checkout'];
+
 // Step 3: "Configure Your Data" — confirm branch/user counts and business type
 tenantsRouter.patch('/current', requireAuth, requireRole('business_owner', 'operations_manager'), async (req, res) => {
   const { branchCount, userCount, businessType, onboardingStep } = req.body;
@@ -31,7 +33,18 @@ tenantsRouter.patch('/current', requireAuth, requireRole('business_owner', 'oper
     fields.push(`user_count = $${i++}`); values.push(n);
   }
   if (businessType !== undefined) { fields.push(`business_type = $${i++}`); values.push(businessType); }
-  if (onboardingStep !== undefined) { fields.push(`onboarding_step = $${i++}`); values.push(onboardingStep); }
+  // The client may only walk forward through the pre-payment steps
+  // (configure → pricing → checkout). Anything past checkout is the
+  // server's to set once payment is confirmed; accepting any value let a
+  // signup PATCH itself straight to 'complete' without paying, and let a
+  // paying business that tapped "Change plan" get locked back into checkout.
+  if (onboardingStep !== undefined) {
+    if (!CLIENT_SETTABLE_STEPS.includes(onboardingStep)) {
+      return res.status(400).json({ error: 'Invalid onboarding step' });
+    }
+    fields.push(`onboarding_step = CASE WHEN onboarding_step IN ('configure_data', 'pricing', 'checkout') THEN $${i++} ELSE onboarding_step END`);
+    values.push(onboardingStep);
+  }
 
   if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../../api.js';
 import { ROLES } from '../onboarding/roles.js';
 import { ClipboardEmptyIcon } from '../../components/icons.jsx';
@@ -30,6 +30,7 @@ export default function ChecklistBuilder() {
   const [notice, setNotice] = useState('');
   const [assignError, setAssignError] = useState('');
   const [loadFailed, setLoadFailed] = useState(false);
+  const [loadingItems, setLoadingItems] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [assignTemplateId, setAssignTemplateId] = useState('');
@@ -43,33 +44,60 @@ export default function ChecklistBuilder() {
   // connection. Without this catch a failed load left `items` empty and
   // the page rendered "No checkpoints match your filters" forever — no
   // error, no way back except a manual refresh.
+  //
+  // While a load is in flight the list shows a loading state — it used to
+  // show "No checkpoints match" instead, which on a slow phone connection
+  // looked like the library was empty. Each keystroke starts a new load;
+  // only the latest one's answer is used, so a slow reply for an older
+  // search can't overwrite the current results.
+  const loadSeq = useRef(0);
   const loadItems = async () => {
+    const seq = ++loadSeq.current;
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (standard) params.set('standard', standard);
     if (criticalOnly) params.set('critical', 'true');
     setLoadFailed(false);
+    setLoadingItems(true);
     try {
       const { items } = await api.get(`/checklists/library?${params.toString()}`);
+      if (seq !== loadSeq.current) return;
       setItems(items);
+      setError('');
     } catch (err) {
+      if (seq !== loadSeq.current) return;
       setItems([]);
       setLoadFailed(true);
       setError(err.message);
+    } finally {
+      if (seq === loadSeq.current) setLoadingItems(false);
     }
   };
 
   const loadTemplates = async () => {
-    const { templates } = await api.get('/checklists/templates');
-    setTemplates(templates);
+    try {
+      const { templates } = await api.get('/checklists/templates');
+      setTemplates(templates);
+    } catch (err) {
+      setAssignError(err.message);
+    }
   };
 
   const loadAssignments = async () => {
-    const { assignments } = await api.get('/checklists/assignments');
-    setAssignments(assignments);
+    try {
+      const { assignments } = await api.get('/checklists/assignments');
+      setAssignments(assignments);
+    } catch (err) {
+      setAssignError(err.message);
+    }
   };
 
-  useEffect(() => { loadItems(); }, [q, standard, criticalOnly]);
+  // Wait for a pause in typing before searching, rather than sending one
+  // library request per keystroke over a mobile connection.
+  useEffect(() => {
+    const id = setTimeout(loadItems, q ? 300 : 0);
+    return () => clearTimeout(id);
+  }, [q, standard, criticalOnly]);
   useEffect(() => {
     loadTemplates();
     loadAssignments();
@@ -187,7 +215,7 @@ export default function ChecklistBuilder() {
           </div>
         )}
 
-        <div style={{ maxHeight: 380, overflowY: 'auto' }}>
+        <div style={{ maxHeight: 380, overflowY: 'auto', opacity: loadingItems && items.length ? 0.5 : 1, transition: 'opacity 0.15s' }} aria-busy={loadingItems}>
           {items.map((item, idx) => {
             const showHeader = item.category && item.category !== items[idx - 1]?.category;
             return (
@@ -229,7 +257,13 @@ export default function ChecklistBuilder() {
               </React.Fragment>
             );
           })}
-          {items.length === 0 && (
+          {items.length === 0 && loadingItems && (
+            <div className="empty-state" role="status">
+              <ClipboardEmptyIcon size={32} />
+              <span>{t('builder.loading')}</span>
+            </div>
+          )}
+          {items.length === 0 && !loadingItems && (
             <div className="empty-state">
               <ClipboardEmptyIcon size={32} />
               <span>{loadFailed ? t('builder.loadFailed') : t('builder.noMatch')}</span>

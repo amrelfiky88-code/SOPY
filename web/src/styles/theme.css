@@ -511,7 +511,9 @@ tbody tr:hover { background: var(--paper); }
     border-top: 1px solid var(--line);
     box-shadow: 0 -2px 8px rgba(28, 35, 31, 0.08);
   }
-  .has-sticky-actions { padding-bottom: 96px; }
+  /* The bar is ~96px, plus its two-line hint until everything's answered;
+     leave room so the last checkpoint's camera buttons aren't hidden under it. */
+  .has-sticky-actions { padding-bottom: 170px; }
 }
 
 /* Reusable 2-column form layout (shift-identification fields, sign-off

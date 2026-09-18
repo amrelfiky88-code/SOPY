@@ -1,7 +1,7 @@
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resetTestDb, closeDb } from '../test-utils/db.js';
-import { startTestServer, makeClient } from '../test-utils/server.js';
+import { startTestServer, makeClient, completeSetup } from '../test-utils/server.js';
 
 let close, api, ownerToken, storeManagerToken;
 
@@ -15,7 +15,7 @@ before(async () => {
     body: { fullName: 'Amina', email: 'amina@example.com', password: 'SopyDemo123', restaurantName: 'The Nile Bistro', country: 'Egypt', branchCount: 1, userCount: 2 },
   });
   ownerToken = signup.body.token;
-  await api('POST', '/api/onboarding/complete', { token: ownerToken, body: {} });
+  await completeSetup(api, ownerToken);
 
   const invite = await api('POST', '/api/tenants/users/invite', {
     token: ownerToken,

@@ -1,7 +1,7 @@
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resetTestDb, closeDb } from '../test-utils/db.js';
-import { startTestServer, makeClient } from '../test-utils/server.js';
+import { startTestServer, makeClient, completeSetup } from '../test-utils/server.js';
 
 let close, api, baseUrl, token, branchId, templateId, itemId, submissionId;
 
@@ -18,7 +18,7 @@ before(async () => {
   token = signup.body.token;
 
   // Onboarding must be complete before templates can be created.
-  await api('POST', '/api/onboarding/complete', { token, body: {} });
+  await completeSetup(api, token);
 
   const branch = await api('POST', '/api/tenants/branches', { token, body: { name: 'Downtown' } });
   branchId = branch.body.branch.id;

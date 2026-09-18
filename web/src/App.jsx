@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
 
 import Landing from './pages/Landing.jsx';
@@ -27,8 +27,11 @@ import AcceptInvite from './pages/AcceptInvite.jsx';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return null;
-  if (!user) return <Navigate to="/login" replace />;
+  // Remember where they were headed (e.g. a checklist reopened in Chrome
+  // to get camera access) so logging in lands them back there.
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   return children;
 }
 

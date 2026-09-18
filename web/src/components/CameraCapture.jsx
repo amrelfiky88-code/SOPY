@@ -11,12 +11,29 @@ import React, { useEffect, useRef, useState } from 'react';
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent)
   || (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1);
 
+const isAndroid = () => /Android/.test(navigator.userAgent);
+
+// Links opened from chat/social apps land in that app's embedded browser
+// (an Android WebView, or a Chrome "custom tab" with an ✕ bar), which
+// often refuses the camera outright without ever asking. The fix is to
+// open the page in the real browser.
+const isEmbeddedBrowser = () =>
+  /\bwv\b|FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|TikTok|GSA\//i.test(navigator.userAgent);
+
+// Android intent link that opens this exact page in Chrome proper —
+// works from a WebView or custom tab, where the permission prompt can't
+// be shown. (iOS has no equivalent; users use the in-app browser's menu.)
+export const openInChromeHref = () =>
+  `intent://${location.host}${location.pathname}${location.search}#Intent;scheme=https;package=com.android.chrome;end`;
+
 function permissionHelp() {
   if (isIOS()) {
-    return 'Camera permission was denied. In Safari, tap “aA” in the address bar → Website Settings → Camera → Allow (or Settings → Safari → Camera), then try again.';
+    return isEmbeddedBrowser()
+      ? 'This app’s built-in browser can’t use the camera. Tap the ••• or share menu → Open in Safari, then try again.'
+      : 'Camera permission was denied. In Safari, tap “aA” in the address bar → Website Settings → Camera → Allow (or iPhone Settings → Safari → Camera → Allow), then try again.';
   }
-  if (/Android/.test(navigator.userAgent)) {
-    return 'Camera permission was denied. Tap the icon to the left of the address bar → Permissions → Camera → Allow, then try again. If it stays blocked, allow Camera for your browser in Android Settings → Apps.';
+  if (isAndroid()) {
+    return 'The camera was blocked. If this page opened inside another app (an ✕ bar at the top or bottom), tap “Open in Chrome” below. In Chrome, tap the icon left of the address bar → Permissions → Camera → Allow. If it’s still blocked, allow Camera for Chrome in Android Settings → Apps → Chrome → Permissions.';
   }
   return 'Camera permission was denied. Open this site’s settings in your browser (tap the lock/info icon next to the address bar) and set Camera to Allow, then try again.';
 }
@@ -129,12 +146,18 @@ export default function CameraCapture({ onCapture }) {
   };
 
   if (error) {
+    const blocked = /permission|blocked|built-in browser|support in-app/i.test(error);
     return (
       <div>
         <div className="error-banner">{error}</div>
-        <button type="button" className="btn btn-secondary btn-small" style={{ marginTop: 8 }} onClick={() => { setPreviewUrl(null); setAttempt((a) => a + 1); }}>
-          Try again
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+          {blocked && isAndroid() && (
+            <a className="btn btn-primary btn-small" href={openInChromeHref()}>Open in Chrome</a>
+          )}
+          <button type="button" className="btn btn-secondary btn-small" onClick={() => { setPreviewUrl(null); setAttempt((a) => a + 1); }}>
+            Try again
+          </button>
+        </div>
       </div>
     );
   }

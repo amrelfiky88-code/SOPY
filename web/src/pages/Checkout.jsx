@@ -139,10 +139,15 @@ export default function Checkout() {
     );
   }
 
+  // A business that already finished setup comes here from Profile &
+  // billing, not the signup funnel — no signup stepper, and "back to the
+  // app" rather than "continue to setup".
+  const setUp = tenant?.onboarding_step === 'complete';
+
   if (alreadyActive) {
     return (
       <div className="screen-narrow">
-        <CheckoutStepper />
+        {!setUp && <CheckoutStepper />}
         <h2>Checkout</h2>
         <div className="card empty-state">
           <CheckCircleIcon size={32} style={{ color: 'var(--green)', opacity: 1 }} />
@@ -151,14 +156,15 @@ export default function Checkout() {
             You won't be charged again here.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={finish}>Continue to setup</button>
+        <button className="btn btn-primary" onClick={finish}>{setUp ? 'Back to the app' : 'Continue to setup'}</button>
       </div>
     );
   }
 
   return (
     <div className="screen-narrow">
-      <CheckoutStepper />
+      {!setUp && <CheckoutStepper />}
+      {setUp && <Link to="/app/account" className="auth-brand" style={{ fontSize: 15, marginBottom: 12 }}>← Profile &amp; billing</Link>}
       <h2>Checkout</h2>
       <p>Review your plan, then pay to activate {tenant?.restaurant_name || 'your account'}.</p>
 

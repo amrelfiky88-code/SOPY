@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { calculatePricing, PLAN_LIMITS, clampPlanCount } from '../../../../shared/pricing.js';
@@ -205,6 +206,13 @@ function SubscriptionCard({ user, tenant }) {
         <h3 style={{ fontSize: 16, marginBottom: 8 }}>{t('account.subscription')}</h3>
         <p style={{ margin: 0 }}>{t('account.noSubscription')}</p>
         {error && <div className="error-banner" style={{ marginTop: 12 }}>{error}</div>}
+        {isOwner ? (
+          <Link to="/checkout" className="btn btn-primary" style={{ marginTop: 14, width: '100%' }}>
+            {t('account.choosePlan')}
+          </Link>
+        ) : (
+          <p className="hint" style={{ marginTop: 10 }}>{t('account.ownerOnly')}</p>
+        )}
       </div>
     );
   }
@@ -318,6 +326,11 @@ function SubscriptionCard({ user, tenant }) {
                 </button>
               )}
             </div>
+          )}
+          {isOwner && subscription.status === 'canceled' && (
+            <Link to="/checkout" className="btn btn-primary" style={{ marginTop: 4, width: '100%' }}>
+              {t('account.resubscribe')}
+            </Link>
           )}
           {confirmingCancel && <p className="hint">{t('account.cancelNote')}</p>}
           {!isOwner && <p className="hint">{t('account.ownerOnly')}</p>}

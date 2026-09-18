@@ -24,10 +24,14 @@ onboardingRouter.get('/status', requireAuth, async (req, res) => {
   });
 });
 
+// Only once checkout is paid (step 'onboarding') — otherwise a fresh
+// signup could call this and use the app without ever subscribing.
 onboardingRouter.post('/complete', requireAuth, requireRole('business_owner', 'operations_manager'), async (req, res) => {
   const { rows } = await query(
-    "UPDATE tenants SET onboarding_step = 'complete', onboarding_completed_at = now() WHERE id = $1 RETURNING *",
+    `UPDATE tenants SET onboarding_step = 'complete', onboarding_completed_at = COALESCE(onboarding_completed_at, now())
+     WHERE id = $1 AND onboarding_step IN ('onboarding', 'complete') RETURNING *`,
     [req.auth.tenantId]
   );
+  if (!rows[0]) return res.status(403).json({ error: 'Choose a plan and complete checkout first' });
   res.json({ tenant: rows[0] });
 });

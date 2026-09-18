@@ -87,6 +87,17 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
   }
 });
 
+// Paying moves a new signup on to the setup wizard. A business that
+// already finished setup (resubscribing from the Account page after a
+// cancel, or never having had a subscription) must stay where it is —
+// unconditionally setting 'onboarding' sent it back through the wizard.
+function advancePastCheckout(tenantId) {
+  return query(
+    "UPDATE tenants SET onboarding_step = 'onboarding' WHERE id = $1 AND onboarding_step IN ('configure_data', 'pricing', 'checkout')",
+    [tenantId]
+  );
+}
+
 function mockTransaction(pricing) {
   return { id: `mock_txn_${Date.now()}`, pricing };
 }
@@ -103,7 +114,8 @@ billingRouter.post('/mock-complete', requireAuth, requireRole('business_owner'),
      RETURNING *`,
     [req.auth.tenantId]
   );
-  await query("UPDATE tenants SET onboarding_step = 'onboarding' WHERE id = $1", [req.auth.tenantId]);
+  if (!rows[0]) return res.status(409).json({ error: 'No checkout in progress' });
+  await advancePastCheckout(req.auth.tenantId);
   res.json({ subscription: rows[0] });
 });
 
@@ -186,7 +198,7 @@ export async function paddleWebhookHandler(req, res) {
           "UPDATE subscriptions SET status = 'active', paddle_customer_id = $1 WHERE tenant_id = $2 AND paddle_transaction_id = $3",
           [event.data.customer_id, tenantId, event.data.id]
         );
-        await query("UPDATE tenants SET onboarding_step = 'onboarding' WHERE id = $1", [tenantId]);
+        await advancePastCheckout(tenantId);
       }
       break;
     }

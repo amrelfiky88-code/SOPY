@@ -1,7 +1,7 @@
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resetTestDb, closeDb } from '../test-utils/db.js';
-import { startTestServer, makeClient } from '../test-utils/server.js';
+import { startTestServer, makeClient, completeSetup } from '../test-utils/server.js';
 
 // End-to-end behaviour of running an assigned checklist: who sees which
 // assignment, how answers/photos merge into one response per checkpoint,
@@ -42,7 +42,7 @@ before(async () => {
     body: { fullName: 'Owner', email: 'runs-owner@example.com', password: 'OwnerPass123', restaurantName: 'Runs Cafe', country: 'Egypt', branchCount: 2, userCount: 5 },
   });
   owner.token = signup.body.token;
-  await api('POST', '/api/onboarding/complete', { token: owner.token, body: {} });
+  await completeSetup(api, owner.token);
   branchId = (await api('POST', '/api/tenants/branches', { token: owner.token, body: { name: 'Main' } })).body.branch.id;
   otherBranchId = (await api('POST', '/api/tenants/branches', { token: owner.token, body: { name: 'Second' } })).body.branch.id;
 

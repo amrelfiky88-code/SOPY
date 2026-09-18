@@ -1,7 +1,7 @@
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resetTestDb, closeDb } from '../test-utils/db.js';
-import { startTestServer, makeClient } from '../test-utils/server.js';
+import { startTestServer, makeClient, completeSetup } from '../test-utils/server.js';
 
 let close, api, token;
 
@@ -17,7 +17,7 @@ before(async () => {
   token = signup.body.token;
   await api('POST', '/api/billing/checkout', { token, body: {} });
   await api('POST', '/api/billing/mock-complete', { token, body: {} });
-  await api('PATCH', '/api/tenants/current', { token, body: { onboardingStep: 'complete' } });
+  await completeSetup(api, token);
 });
 
 after(async () => {

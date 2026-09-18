@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -23,7 +24,11 @@ export default function Login() {
         checkout: '/checkout',
         onboarding: '/onboarding',
       };
-      navigate(stepToPath[step] || '/app/dashboard');
+      // Back to the page that sent them here, if it's an in-app page and
+      // setup is done; otherwise wherever their setup step says.
+      const from = location.state?.from;
+      const returnTo = step === 'complete' && typeof from === 'string' && from.startsWith('/app/') ? from : null;
+      navigate(stepToPath[step] || returnTo || '/app/dashboard', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {

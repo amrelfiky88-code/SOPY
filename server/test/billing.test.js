@@ -1,7 +1,7 @@
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resetTestDb, closeDb } from '../test-utils/db.js';
-import { startTestServer, makeClient } from '../test-utils/server.js';
+import { startTestServer, makeClient, completeSetup } from '../test-utils/server.js';
 import { pool } from '../src/db.js';
 import { calculatePricing } from '../../shared/pricing.js';
 
@@ -131,4 +131,57 @@ test('only a business_owner can start checkout', async () => {
 
   const res = await api('POST', '/api/billing/checkout', { token: karimToken, body: {} });
   assert.equal(res.status, 403);
+});
+
+// Regression: completing a payment always set onboarding_step back to
+// 'onboarding', so a business that had finished setup and subscribed
+// (again) from the Account page was thrown back into the setup wizard.
+test('subscribing again after cancelling keeps the business out of the wizard', async () => {
+  const other = await api('POST', '/api/auth/signup', {
+    body: { fullName: 'Resub', email: 'resub@example.com', password: 'SopyDemo123', restaurantName: 'Resub Cafe', country: 'Egypt', branchCount: 1, userCount: 1 },
+  });
+  const t = other.body.token;
+  await completeSetup(api, t);
+  assert.equal((await api('POST', '/api/billing/subscription/cancel', { token: t, body: {} })).status, 204);
+
+  // "Change plan" from the Pricing page must not push a paid business back into checkout.
+  const repriced = await api('PATCH', '/api/tenants/current', { token: t, body: { branchCount: 2, userCount: 3, onboardingStep: 'checkout' } });
+  assert.equal(repriced.status, 200);
+  assert.equal(repriced.body.tenant.onboarding_step, 'complete');
+  assert.equal(repriced.body.tenant.branch_count, 2);
+
+  const checkout = await api('POST', '/api/billing/checkout', { token: t, body: {} });
+  assert.equal(checkout.status, 200);
+  const done = await api('POST', '/api/billing/mock-complete', { token: t, body: {} });
+  assert.equal(done.status, 200);
+  assert.equal(done.body.subscription.status, 'active');
+
+  const { rows } = await pool.query('SELECT onboarding_step FROM tenants WHERE id = $1', [other.body.tenant.id]);
+  assert.equal(rows[0].onboarding_step, 'complete');
+
+  // Nothing pending any more: a stray second call is refused, not a silent no-op.
+  const again = await api('POST', '/api/billing/mock-complete', { token: t, body: {} });
+  assert.equal(again.status, 409);
+});
+
+// Security: both of these used to let a brand-new signup into the app
+// without paying.
+test('an unpaid signup cannot skip checkout', async () => {
+  const fresh = await api('POST', '/api/auth/signup', {
+    body: { fullName: 'Free', email: 'free-rider@example.com', password: 'SopyDemo123', restaurantName: 'Free Cafe', country: 'Egypt', branchCount: 1, userCount: 1 },
+  });
+  const t = fresh.body.token;
+
+  const complete = await api('POST', '/api/onboarding/complete', { token: t, body: {} });
+  assert.equal(complete.status, 403);
+
+  const patched = await api('PATCH', '/api/tenants/current', { token: t, body: { onboardingStep: 'complete' } });
+  assert.equal(patched.status, 400);
+
+  const { rows } = await pool.query('SELECT onboarding_step FROM tenants WHERE id = $1', [fresh.body.tenant.id]);
+  assert.equal(rows[0].onboarding_step, 'configure_data');
+
+  // The normal forward steps still work.
+  const toPricing = await api('PATCH', '/api/tenants/current', { token: t, body: { onboardingStep: 'pricing' } });
+  assert.equal(toPricing.body.tenant.onboarding_step, 'pricing');
 });

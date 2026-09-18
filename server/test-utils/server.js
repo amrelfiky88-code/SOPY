@@ -14,6 +14,22 @@ export async function startTestServer() {
   };
 }
 
+// Takes a fresh signup through the real funnel — checkout, (mock) payment,
+// setup finished — the way a paying customer gets into the app. The
+// shortcut of calling /onboarding/complete straight after signup is now
+// refused, since it let accounts skip paying.
+export async function completeSetup(api, token) {
+  const checkout = await api('POST', '/api/billing/checkout', { token, body: {} });
+  if (checkout.status !== 200) throw new Error(`checkout failed: ${JSON.stringify(checkout.body)}`);
+  if (!checkout.body.alreadyActive) {
+    const paid = await api('POST', '/api/billing/mock-complete', { token, body: {} });
+    if (paid.status !== 200) throw new Error(`mock-complete failed: ${JSON.stringify(paid.body)}`);
+  }
+  const done = await api('POST', '/api/onboarding/complete', { token, body: {} });
+  if (done.status !== 200) throw new Error(`onboarding/complete failed: ${JSON.stringify(done.body)}`);
+  return done.body.tenant;
+}
+
 // Thin JSON fetch helper so test bodies read like the actual API contract
 // (method, path, body, bearer token) instead of raw fetch boilerplate.
 export function makeClient(baseUrl) {
