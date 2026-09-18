@@ -6,3 +6,4 @@ build/
 server/uploads/
 *.log
 .DS_Store
+server/storage/

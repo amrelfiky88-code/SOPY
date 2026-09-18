@@ -12,6 +12,7 @@ import { checklistsRouter } from './routes/checklists.routes.js';
 import { submissionsRouter } from './routes/submissions.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
 import { feedbackRouter } from './routes/feedback.routes.js';
+import { sharedRouter } from './routes/shared.routes.js';
 
 export function createApp() {
   const app = express();
@@ -41,6 +42,7 @@ export function createApp() {
   app.use('/api/submissions', submissionsRouter);
   app.use('/api/dashboard', dashboardRouter);
   app.use('/api/feedback', feedbackRouter);
+  app.use('/api/shared', sharedRouter);
 
   // In production this one Node process serves the built React app too, so
   // the whole thing runs as a single Hostinger "Node.js app" alongside
@@ -65,8 +67,8 @@ export function createApp() {
   app.use((err, req, res, next) => {
     // Malformed ids (e.g. /submissions/abc) are a client mistake, not a crash.
     if (err.code === '22P02') return res.status(400).json({ error: 'Invalid id' });
-    console.error(err);
     const status = err.status || err.statusCode || (err.name === 'MulterError' || err.expose ? 400 : 500);
+    if (status >= 500) console.error(err);
     // Don't echo database internals back on unexpected failures.
     res.status(status).json({ error: status >= 500 ? 'Internal server error' : err.message });
   });

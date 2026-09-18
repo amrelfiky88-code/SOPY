@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, getToken } from '../../api.js';
 import CameraCapture from '../../components/CameraCapture.jsx';
+import ReportLink from '../../components/ReportLink.jsx';
 import { CameraIcon } from '../../components/icons.jsx';
 import { useT } from '../../i18n/index.jsx';
 
@@ -154,7 +155,7 @@ export default function ChecklistRun() {
   if (!template) return error ? <div className="error-banner">{error}</div> : <p>{t('run.loadingChecklist')}</p>;
 
   if (scorecard) {
-    return <Scorecard scorecard={scorecard} onDone={() => navigate('/app/dashboard')} />;
+    return <Scorecard scorecard={scorecard} submissionId={submissionId} onDone={() => navigate('/app/dashboard')} />;
   }
 
   const renderPhotoControl = (item, r) => (
@@ -269,7 +270,7 @@ export default function ChecklistRun() {
 const RAG_LABEL = { green: 'Green — on standard', amber: 'Amber — action plan required', red: 'Red — escalate now' };
 const RAG_PILL_CLASS = { green: 'pill-green', amber: 'pill-amber', red: 'pill-red' };
 
-function Scorecard({ scorecard, onDone }) {
+function Scorecard({ scorecard, submissionId, onDone }) {
   return (
     <div>
       <h2>Score summary</h2>
@@ -311,7 +312,10 @@ function Scorecard({ scorecard, onDone }) {
         </div>
       </div>
 
-      <button className="btn btn-primary" onClick={onDone}>Back to dashboard</button>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <ReportLink submissionId={submissionId} style={{ marginTop: 0 }} />
+        <button className="btn btn-secondary" onClick={onDone}>Back to dashboard</button>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
+import ReportLink from '../../components/ReportLink.jsx';
 import { Section, FixedRowStatusTable, RepeatableTable, LabeledInput, LabeledSelect, LabeledTextarea } from './OpsFormParts.jsx';
 import { CheckCircleIcon } from '../../components/icons.jsx';
 
@@ -88,6 +89,7 @@ export default function AreaManagerVisitForm() {
       <div className="card empty-state">
         <CheckCircleIcon size={32} style={{ color: 'var(--green)', opacity: 1 }} />
         <p style={{ margin: 0 }}>Area Manager Visit Report submitted for {form.visit.date || 'today'}.</p>
+        <ReportLink submissionId={report.submissionId} />
       </div>
     );
   }

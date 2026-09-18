@@ -211,3 +211,18 @@ CREATE TABLE sessions (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_sessions_user ON sessions(user_id);
+
+-- A report PDF someone shared by link (WhatsApp/email). The file lives
+-- in server/storage/shares/<token>.pdf (outside the public /uploads
+-- folder) and is served by /api/shared/:token until expires_at.
+CREATE TABLE report_shares (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id      UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  submission_id  UUID NOT NULL REFERENCES checklist_submissions(id) ON DELETE CASCADE,
+  token          TEXT NOT NULL UNIQUE,
+  file_name      TEXT NOT NULL,
+  created_by     UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at     TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX idx_report_shares_tenant ON report_shares(tenant_id);

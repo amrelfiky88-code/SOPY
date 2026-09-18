@@ -25,6 +25,67 @@ function Base({ size = 20, children, ...rest }) {
   );
 }
 
+// Chat bubble with a tail and a handset — reads as WhatsApp on its green tile.
+export const WhatsAppIcon = (props) => (
+  <Base strokeWidth="1.8" {...props}>
+    <circle cx="12.5" cy="11.5" r="8.5" />
+    <polygon points="4,21 5.6,16.2 8.8,19" />
+    <polyline points="9.5,8.5 10.5,8 11.6,10.2 10.8,11.1 12.9,13.2 13.8,12.4 16,13.5 15.5,14.5" />
+  </Base>
+);
+
+export const MailIcon = (props) => (
+  <Base {...props}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <polyline points="3.5,6 12,13 20.5,6" />
+  </Base>
+);
+
+export const LinkIcon = (props) => (
+  <Base {...props}>
+    <rect x="2.5" y="9" width="10" height="6" rx="3" transform="rotate(-45 7.5 12)" />
+    <rect x="11.5" y="9" width="10" height="6" rx="3" transform="rotate(-45 16.5 12)" />
+    <line x1="9.5" y1="14.5" x2="14.5" y2="9.5" />
+  </Base>
+);
+
+export const ShareIcon = (props) => (
+  <Base {...props}>
+    <circle cx="18" cy="5.5" r="2.5" />
+    <circle cx="6" cy="12" r="2.5" />
+    <circle cx="18" cy="18.5" r="2.5" />
+    <line x1="8.2" y1="10.8" x2="15.8" y2="6.7" />
+    <line x1="8.2" y1="13.2" x2="15.8" y2="17.3" />
+  </Base>
+);
+
+export const FilePdfIcon = (props) => (
+  <Base {...props}>
+    <polygon points="6,3 14,3 19,8 19,21 6,21" />
+    <polyline points="14,3 14,8 19,8" />
+    <line x1="9" y1="13" x2="16" y2="13" />
+    <line x1="9" y1="16.5" x2="14" y2="16.5" />
+  </Base>
+);
+
+export const DownloadIcon = (props) => (
+  <Base {...props}>
+    <line x1="12" y1="3" x2="12" y2="15" />
+    <polyline points="7,10 12,15 17,10" />
+    <line x1="4" y1="20" x2="20" y2="20" />
+  </Base>
+);
+
+export const FileTextIcon = (props) => (
+  <Base {...props}>
+    <polygon points="6,3 14,3 19,8 19,21 6,21" />
+    <polyline points="14,3 14,8 19,8" />
+    <line x1="9" y1="12" x2="16" y2="12" />
+    <line x1="9" y1="15.5" x2="16" y2="15.5" />
+    <line x1="9" y1="19" x2="13" y2="19" />
+  </Base>
+);
+
 export const MenuIcon = (props) => (
   <Base {...props}>
     <line x1="4" y1="7" x2="20" y2="7" />

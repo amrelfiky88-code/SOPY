@@ -5,6 +5,7 @@ import { useT } from '../i18n/index.jsx';
 import FeedbackButton from './FeedbackButton.jsx';
 import {
   MenuIcon,
+  FileTextIcon,
   GridIcon,
   BarChartIcon,
   StoveIcon,
@@ -89,6 +90,7 @@ export default function AppLayout() {
           <NavLink to="/app/forms/bar" className={({ isActive }) => (isActive ? 'active' : '')}><CoffeeIcon size={18} /> {t('nav.bar')}</NavLink>
           <NavLink to="/app/forms/opening" className={({ isActive }) => (isActive ? 'active' : '')}><DoorOpenIcon size={18} /> {t('nav.opening')}</NavLink>
           <NavLink to="/app/forms/closing" className={({ isActive }) => (isActive ? 'active' : '')}><DoorClosedIcon size={18} /> {t('nav.closing')}</NavLink>
+          <NavLink to="/app/reports" className={({ isActive }) => (isActive ? 'active' : '')}><FileTextIcon size={18} /> {t('nav.reports')}</NavLink>
           <div className="sidebar-divider" />
           {canManage && <NavLink to="/app/checklists" className={({ isActive }) => (isActive ? 'active' : '')}><ClipboardCheckIcon size={18} /> {t('nav.builder')}</NavLink>}
           {canManage && <NavLink to="/app/team" className={({ isActive }) => (isActive ? 'active' : '')}><StorefrontIcon size={18} /> {t('nav.team')}</NavLink>}

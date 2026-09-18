@@ -24,6 +24,8 @@ import OpsManagerVisitForm from './pages/forms/OpsManagerVisitForm.jsx';
 import Team from './pages/team/Team.jsx';
 import Account from './pages/account/Account.jsx';
 import AcceptInvite from './pages/AcceptInvite.jsx';
+import ReportsList from './pages/reports/ReportsList.jsx';
+import ReportView from './pages/reports/ReportView.jsx';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -63,6 +65,8 @@ export default function App() {
         <Route path="forms/ops-manager-visit" element={<OpsManagerVisitForm />} />
         <Route path="team" element={<Team />} />
         <Route path="account" element={<Account />} />
+        <Route path="reports" element={<ReportsList />} />
+        <Route path="reports/:submissionId" element={<ReportView />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

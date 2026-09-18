@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import multer from 'multer';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { query } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
+import { translateRows, requestLanguage } from '../i18n/translateContent.js';
 
 export const submissionsRouter = Router();
 
@@ -224,7 +226,10 @@ submissionsRouter.get('/:id/scorecard', requireAuth, async (req, res) => {
   );
   const submission = subRows[0];
   if (!submission) return res.status(404).json({ error: 'Not found' });
+  res.json(await computeScorecard(submission));
+});
 
+async function computeScorecard(submission) {
   const { rows } = await query(
     `SELECT ci.category, ci.is_critical, r.is_compliant
      FROM checklist_template_items ti
@@ -236,7 +241,7 @@ submissionsRouter.get('/:id/scorecard', requireAuth, async (req, res) => {
        ORDER BY created_at DESC LIMIT 1
      ) r ON true
      WHERE ti.template_id = $2`,
-    [req.params.id, submission.template_id]
+    [submission.id, submission.template_id]
   );
 
   const sections = {};
@@ -265,7 +270,7 @@ submissionsRouter.get('/:id/scorecard', requireAuth, async (req, res) => {
     else if (percentage >= 85) ragStatus = 'amber';
   }
 
-  res.json({
+  return {
     percentage,
     totalScored,
     totalCompliant,
@@ -278,7 +283,100 @@ submissionsRouter.get('/:id/scorecard', requireAuth, async (req, res) => {
       criticalFails: s.criticalFails,
       percentage: s.total ? Math.round((s.compliant / s.total) * 1000) / 10 : null,
     })),
-  });
+  };
+}
+
+// Staff see their own reports; managers and up see the whole business's.
+const SEES_OWN_ONLY = ['employee'];
+
+// Everything needed to render (and PDF) a finished report in one call:
+// header details, the checklist's checkpoints with their answers and
+// photos, the score, and a pinned report's form data.
+submissionsRouter.get('/:id/report', requireAuth, async (req, res) => {
+  const { rows } = await query(
+    `SELECT s.*, t.name AS template_name, t.kind, b.name AS branch_name, b.city AS branch_city,
+            u.full_name AS submitted_by_name, tn.restaurant_name
+     FROM checklist_submissions s
+     JOIN checklist_templates t ON t.id = s.template_id
+     JOIN branches b ON b.id = s.branch_id
+     JOIN users u ON u.id = s.submitted_by
+     JOIN tenants tn ON tn.id = s.tenant_id
+     WHERE s.id = $1 AND s.tenant_id = $2`,
+    [req.params.id, req.auth.tenantId]
+  );
+  const submission = rows[0];
+  if (!submission) return res.status(404).json({ error: 'Not found' });
+  if (SEES_OWN_ONLY.includes(req.auth.role) && submission.submitted_by !== req.auth.userId) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  const { rows: itemRows } = await query(
+    `SELECT ci.id, ci.text, ci.description, ci.category, ci.is_critical, ti.sort_order,
+            r.is_compliant, r.value_text, r.photo_path, r.captured_at
+     FROM checklist_template_items ti
+     JOIN checklist_items ci ON ci.id = ti.item_id
+     LEFT JOIN LATERAL (
+       SELECT is_compliant, value_text, photo_path, captured_at FROM checklist_submission_responses
+       WHERE item_id = ci.id AND submission_id = $1
+       ORDER BY created_at DESC LIMIT 1
+     ) r ON true
+     WHERE ti.template_id = $2
+     ORDER BY ti.sort_order`,
+    [submission.id, submission.template_id]
+  );
+  const lang = await requestLanguage(req);
+  const items = await translateRows(itemRows, lang, ['text', 'description', 'category']);
+  let scorecard = null;
+  if (itemRows.length) {
+    scorecard = await computeScorecard(submission);
+    // Section names are item categories, so translate them the same way.
+    scorecard.sections = await translateRows(scorecard.sections, lang, ['category']);
+  }
+
+  res.json({ submission, items, scorecard });
+});
+
+// Share links for WhatsApp/email: the browser renders the PDF (so Arabic
+// and French come out exactly as on screen), uploads it here, and gets
+// back an unguessable link that works without logging in until it expires.
+const SHARE_ROOT = path.resolve('storage', 'shares');
+const SHARE_DAYS = 30;
+const pdfUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype !== 'application/pdf') {
+      return cb(Object.assign(new Error('Only PDF files can be shared'), { status: 400 }));
+    }
+    cb(null, true);
+  },
+});
+
+submissionsRouter.post('/:id/share', requireAuth, pdfUpload.single('pdf'), async (req, res) => {
+  const { rows } = await query(
+    'SELECT id, status, submitted_by FROM checklist_submissions WHERE id = $1 AND tenant_id = $2',
+    [req.params.id, req.auth.tenantId]
+  );
+  const submission = rows[0];
+  if (!submission || (SEES_OWN_ONLY.includes(req.auth.role) && submission.submitted_by !== req.auth.userId)) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  if (submission.status !== 'submitted') return res.status(409).json({ error: 'Submit the report before sharing it' });
+  if (!req.file || req.file.buffer.subarray(0, 5).toString('latin1') !== '%PDF-') {
+    return res.status(400).json({ error: 'A PDF file is required' });
+  }
+
+  const token = crypto.randomBytes(24).toString('base64url');
+  fs.mkdirSync(SHARE_ROOT, { recursive: true });
+  fs.writeFileSync(path.join(SHARE_ROOT, `${token}.pdf`), req.file.buffer);
+  const fileName = String(req.body.fileName || 'SOPY report.pdf').replace(/[^\p{L}\p{N} ._()-]/gu, '').slice(0, 120) || 'SOPY report.pdf';
+
+  const { rows: shareRows } = await query(
+    `INSERT INTO report_shares (tenant_id, submission_id, token, file_name, created_by, expires_at)
+     VALUES ($1, $2, $3, $4, $5, now() + ($6 || ' days')::interval) RETURNING expires_at`,
+    [req.auth.tenantId, submission.id, token, fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`, req.auth.userId, String(SHARE_DAYS)]
+  );
+  res.status(201).json({ path: `/api/shared/${token}`, expiresAt: shareRows[0].expires_at });
 });
 
 submissionsRouter.get('/', requireAuth, async (req, res) => {
@@ -288,6 +386,7 @@ submissionsRouter.get('/', requireAuth, async (req, res) => {
   const clauses = ['s.tenant_id = $1'];
   const params = [req.auth.tenantId];
   let i = 2;
+  if (SEES_OWN_ONLY.includes(req.auth.role)) { clauses.push(`s.submitted_by = $${i++}`); params.push(req.auth.userId); }
   if (branchId) { clauses.push(`s.branch_id = $${i++}`); params.push(branchId); }
   if (from) { clauses.push(`s.started_at >= $${i++}`); params.push(from); }
   if (to) { clauses.push(`s.started_at <= $${i++}`); params.push(to); }

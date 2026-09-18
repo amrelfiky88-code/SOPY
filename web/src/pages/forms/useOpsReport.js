@@ -8,6 +8,29 @@ import { api } from '../../api.js';
 //
 // onResume(formData) is called when the user picks up a draft they saved
 // earlier today, so the page can put its fields back.
+// Postgres jsonb doesn't keep object key order, so a saved report came
+// back with its sections shuffled (notes before shift, "End" before
+// "Start"). Record the form's own field order as a list — lists keep
+// their order — so the report and its PDF read top to bottom like the form.
+function withFieldOrder(formData) {
+  const order = [];
+  const seen = new Set();
+  const walk = (value, prefix) => {
+    if (Array.isArray(value)) {
+      value.forEach((row) => walk(row, `${prefix}[].`));
+    } else if (value && typeof value === 'object') {
+      for (const key of Object.keys(value)) {
+        if (key === '_fieldOrder') continue;
+        const path = prefix + key;
+        if (!seen.has(path)) { seen.add(path); order.push(path); }
+        walk(value[key], `${path}.`);
+      }
+    }
+  };
+  walk(formData, '');
+  return { ...formData, _fieldOrder: order };
+}
+
 export function useOpsReport({ kind, title, onResume }) {
   const [branches, setBranches] = useState([]);
   const [branchId, setBranchId] = useState('');
@@ -68,7 +91,7 @@ export function useOpsReport({ kind, title, onResume }) {
     setError('');
     setStatus('saving');
     try {
-      await api.patch(`/submissions/${submissionId}`, { formData, hasIncident: !!hasIncident });
+      await api.patch(`/submissions/${submissionId}`, { formData: withFieldOrder(formData), hasIncident: !!hasIncident });
       setStatus('started');
       // Brief confirmation — without it a successful save looked like nothing happened.
       setJustSaved(true);
@@ -84,7 +107,7 @@ export function useOpsReport({ kind, title, onResume }) {
     setError('');
     setStatus('saving');
     try {
-      await api.patch(`/submissions/${submissionId}`, { formData, hasIncident: !!hasIncident });
+      await api.patch(`/submissions/${submissionId}`, { formData: withFieldOrder(formData), hasIncident: !!hasIncident });
       const { lat, lng } = await new Promise((resolve) => {
         if (!navigator.geolocation) return resolve({});
         navigator.geolocation.getCurrentPosition(
@@ -101,5 +124,5 @@ export function useOpsReport({ kind, title, onResume }) {
     }
   };
 
-  return { branches, branchId, setBranchId, status, error, setError, start, save, submit, hasDraft: !!draft, justSaved };
+  return { branches, branchId, setBranchId, status, error, setError, start, save, submit, hasDraft: !!draft, justSaved, submissionId };
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
+import ReportLink from '../../components/ReportLink.jsx';
 import { Section, FixedRowStatusTable, LabeledInput, LabeledTextarea } from './OpsFormParts.jsx';
 import { CheckCircleIcon } from '../../components/icons.jsx';
 
@@ -68,6 +69,7 @@ export default function OpeningDailyForm() {
       <div className="card empty-state">
         <CheckCircleIcon size={32} style={{ color: 'var(--green)', opacity: 1 }} />
         <p style={{ margin: 0 }}>Daily Opening Report submitted for {form.shift.date || 'today'}.</p>
+        <ReportLink submissionId={report.submissionId} />
       </div>
     );
   }

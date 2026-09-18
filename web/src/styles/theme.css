@@ -790,3 +790,168 @@ tbody tr:hover { background: var(--paper); }
   box-shadow: 0 0 0 3px var(--green-tint);
 }
 .qty-range { margin-top: 10px; }
+
+/* ---- Share sheet (report page) -------------------------------------
+   Modelled on phone share sheets: a row of big app targets, then a
+   list of "more options". Horizontal scroll if the targets don't fit. */
+.share-sheet { margin-bottom: 20px; }
+.share-card {
+  background: var(--paper-white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+}
+.share-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.share-card-head .hint { margin: 0; }
+.share-targets {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -4px;
+  padding: 0 4px 2px;
+}
+.share-targets::-webkit-scrollbar { display: none; }
+.share-target {
+  flex: 1 0 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 6px 2px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.share-target:disabled { opacity: 0.45; cursor: default; }
+.share-target:not(:disabled):active { background: var(--green-tint); }
+.share-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--green-tint);
+  color: var(--green);
+}
+.share-icon-whatsapp { background: #25d366; color: #fff; }
+.share-icon-mail { background: #ea4335; color: #fff; }
+.share-card-label { margin: 18px 4px 8px; font-size: 14px; color: var(--ink-soft); }
+.share-list { padding: 4px 16px; }
+.share-list-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 0;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  text-decoration: none;
+  text-align: start;
+  cursor: pointer;
+}
+.share-list-row + .share-list-row { border-top: 1px solid var(--line); }
+.share-list-row svg { color: var(--green); flex-shrink: 0; }
+.share-list-row:disabled, .share-list-row.is-disabled { color: var(--ink-soft); cursor: default; }
+
+/* ---- Report page ----------------------------------------------------- */
+.back-link { display: inline-block; margin-bottom: 14px; color: var(--green); text-decoration: none; font-weight: 600; padding: 6px 0; }
+.report-doc > * + * { margin-top: 12px; }
+.report-meta {
+  display: grid;
+  grid-template-columns: minmax(96px, max-content) 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 15px;
+}
+.report-meta dt { color: var(--ink-soft); }
+.report-meta dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.report-score {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+}
+.report-score-value { font-family: var(--font-serif); font-size: 34px; font-weight: 700; }
+.report-heading { margin: 22px 0 4px; padding-bottom: 6px; border-bottom: 1px solid var(--line); color: var(--green); }
+.report-subheading { font-weight: 700; font-size: 14px; color: var(--ink-soft); margin-top: 14px; }
+.report-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+}
+.report-row-label { color: var(--ink-soft); overflow-wrap: anywhere; }
+.report-row-value { font-weight: 600; overflow-wrap: anywhere; }
+.report-item { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.report-item-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.report-item-head .pill { flex-shrink: 0; }
+.report-item .pill-red { margin-top: 6px; }
+.report-photo {
+  display: block;
+  margin-top: 10px;
+  width: 100%;
+  max-width: 320px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+.report-list { padding: 4px 16px; }
+.report-list-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 10px 0;
+  color: var(--ink);
+  text-decoration: none;
+}
+.report-list-row + .report-list-row { border-top: 1px solid var(--line); }
+.report-list-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--green-tint);
+  color: var(--green);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.report-list-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.report-list-text .hint { margin: 2px 0 0; overflow-wrap: anywhere; }
+/* Mixed-language text (English checkpoint names on an Arabic page, or
+   "1 / 1 (100%)") takes its direction from its own first letter, but
+   stays aligned to the page's reading edge. */
+.report-doc :is(h2, p, dd, .report-heading, .report-subheading, .report-row-label, .report-row-value, .report-item-head > span:first-child, .hint),
+.report-list-text > * {
+  unicode-bidi: plaintext;
+  text-align: left;
+}
+[dir='rtl'] .report-doc :is(h2, p, dd, .report-heading, .report-subheading, .report-row-label, .report-row-value, .report-item-head > span:first-child, .hint),
+[dir='rtl'] .report-list-text > * {
+  text-align: right;
+}
