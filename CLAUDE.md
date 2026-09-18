@@ -1,0 +1,78 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+SOPY is a multi-tenant SaaS that replaces paper SOP manuals for restaurants: checklists with camera-only photo evidence, daily operation reports, KPI dashboards, and Paddle subscription billing. `README.md` has setup/deploy detail; `HANDOFF.md` has project history and known gaps.
+
+## Commands
+
+npm workspaces (`server`, `web`) plus a non-workspace `shared/` folder. Run from the repo root:
+
+```bash
+npm install
+npm run db:migrate      # schema.sql + every seed file + content translations
+npm run dev:server      # API on :4000 (node --watch)
+npm run dev:web         # Vite on :5173, proxies /api and /uploads to :4000
+npm run build:web       # web/dist — also the only compile check; there is no linter or TS
+npm run test:server     # all backend tests
+```
+
+Single test file (from `server/`):
+
+```bash
+node --env-file=.env.test --test test/billing.test.js
+```
+
+Tests need a `sopy_test` database (`createdb sopy_test`, same role as `server/.env.example`). Every test file calls `resetTestDb()`, which drops and rebuilds the whole schema — that's why the suite runs with `--test-concurrency=1`. Don't remove that flag.
+
+There are no frontend tests. UI changes must be checked in a real browser, including at 375px width — the app is primarily used on phones.
+
+## Architecture
+
+**Server** (`server/src`): Express. `app.js` exports `createApp()` so tests boot the real app on an ephemeral port (`test-utils/server.js`); `index.js` only calls `listen`. In production the same process serves `web/dist` with SPA fallback — one Node app, no separate static host.
+
+**Multi-tenancy is enforced in application code, not Postgres RLS.** `requireAuth` puts `tenantId`/`userId`/`role` from the JWT on `req.auth`; every query must scope by `req.auth.tenantId`. `test/tenant-isolation.test.js` guards this. Roles are `business_owner`, `operations_manager`, `area_manager`, `store_manager`, `employee`, checked with `requireRole(...)`.
+
+**`shared/` is imported by both server and web** (web reaches it via `../../../shared/...`; Vite's `fs.allow: ['..']` permits this). It is the single source of truth for:
+- `pricing.js` — the tapering rate schedule, `calculatePricing`, and `PLAN_LIMITS`/`clampPlanCount`. The Pricing page, tenant PATCH, checkout, and plan changes all use it so the displayed price always equals the billed price.
+- `languages.js` — supported UI languages (`en`, `ar`, `fr`) and their text direction.
+
+**Onboarding funnel** is driven by `tenants.onboarding_step` (`configure_data` → `pricing` → `checkout` → `onboarding` → `complete`). `AppLayout` redirects any `/app/*` route back into the funnel until the step is `complete`.
+
+**Billing** (`routes/billing.routes.js`): with no `PADDLE_API_KEY`, checkout runs in mock mode (`/billing/mock-complete`). `/checkout` is idempotent (reuses the pending row) and short-circuits with `alreadyActive` for a paid tenant — without that, re-opening checkout created a pending row that masked the active subscription. The webhook is mounted with `express.raw()` *before* `express.json()` so the signature can be verified against raw bytes.
+
+**Two kinds of "checklist":**
+1. *Library checklists* — `checklist_items` (global rows have `tenant_id IS NULL`) → picked into `checklist_templates` → assigned → run via `ChecklistRun.jsx` as `checklist_submissions` + per-item responses. A non-compliant response on an `is_critical` item auto-flags the submission as an incident; `/submissions/:id/scorecard` computes section scores and Green/Amber/Red.
+2. *Pinned reports* (Kitchen, Bar, Opening, Closing, QC visit, Area/Ops manager visit) — dedicated pages under `web/src/pages/forms/` built on `useOpsReport({ kind, title })`. They store a free-form `form_data` JSON on the submission and don't use `checklist_items` at all. The template is auto-provisioned by `kind` on first use; which roles may provision each kind is the allowlist in `requireManagerUnlessBuiltinDailyReport` (`checklists.routes.js`). Adding a new pinned report means updating that allowlist, `App.jsx` routes, and the sidebar in `AppLayout.jsx`.
+
+**Photo evidence is camera-only and mandatory for every checkpoint.** `CameraCapture.jsx` uses `getUserMedia` and deliberately has no `<input type="file">` — a compliance requirement, not an oversight. `getUserMedia` needs HTTPS (or localhost), so phone testing over a plain LAN IP cannot open the camera. `requires_photo` is forced true on every item by an `UPDATE` in `migrate.js`, and `ChecklistRun` requires a photo before a checkpoint counts as answered.
+
+## Seed content and provenance
+
+Library content lives in `server/db/seed_*.sql`. **Any new seed file must be added to both `server/src/db/migrate.js` and `server/test-utils/db.js`**, or it won't apply on a fresh install or be exercised by tests.
+
+Content provenance matters and is recorded in each seed file's header:
+- `INTERNAL_QC` and SOP 1–11 (`standard = 'SOP'`) were **transcribed from the client's own documents**; `is_critical` mirrors their own ⚠ marks. Don't "correct" this content from outside research — raise it with the client.
+- SOP 12–20 (`seed_additional_sops.sql`) and the Convenience Store section (`standard = 'C_STORE'`, `seed_convenience_store.sql`) were **researched from public sources** at the client's request — reviewable starting points, not client-verified. C-Store temperatures are US FDA figures pending local confirmation.
+
+Items need an explicit `sort_order`: a multi-row `INSERT` does not guarantee row order. `npm run db:migrate` is not idempotent for seed data — re-running it duplicates library rows.
+
+Don't edit seed SQL (or anything with em dashes/Arabic/French) via PowerShell `-replace`; it has corrupted a file into mojibake before. Use the Write/Edit tools. Dry-run new seed SQL inside `BEGIN; … ROLLBACK;` first.
+
+## Internationalization
+
+- **UI strings**: `web/src/i18n/{en,ar,fr}.js`, used via `useT()` / `useI18n()`. `en.js` is the source key set; missing keys fall back to English. `I18nProvider` sets `<html lang dir>`; Arabic is RTL, so prefer logical CSS (`text-align: start`) and check new layouts with `dir="rtl"` (the mobile drawer has explicit `[dir='rtl']` rules).
+- **Library content**: translated server-side via the `content_translations` table, keyed by the **exact English source string** (not item id — seeded ids change on every re-seed). Dictionaries are `server/db/translations/*.js`, upserted by `loadTranslations()` (runs in migrate and test reset). The English rows in `checklist_items` are never overwritten, and rows marked `source = 'reviewed'` are never clobbered by the loader. `translateRows()` applies translations to `text`/`description`/`category` using `?lang=` or the user's saved `users.language`.
+- Because matching is exact, a one-character difference silently falls back to English. Run `node scripts/check-translation-coverage.js` (from `server/`) after editing seeds or dictionaries; it reports coverage and orphaned keys. `SOP N:` prefixes and QC section letters (A/B/C, W1/M1/Q1) are intentionally left untranslated — they reference the client's own numbered manual.
+
+## Mobile UI conventions
+
+Styling is a single hand-written `web/src/styles/theme.css` with CSS custom properties — no framework. Under 768px the sidebar becomes an off-canvas drawer and a fixed bottom tab bar appears; `.main` and `.sticky-action-bar` are offset to clear it. Wrap every `<table>` in `.table-scroll` (the page has `overflow-x: hidden`, so an unwrapped wide table gets clipped silently). Two-column form layouts use `.form-grid-2col`, not inline grid styles, so they can collapse on mobile. Icons come from `web/src/components/icons.jsx`, drawn only from line/rect/circle/polygon primitives.
+
+A `<label>` wrapping a checkbox binds to the *first* labelable element inside it — a nested `<button>` steals the click. Use explicit `htmlFor`/`id` when a label contains buttons (see `ChecklistBuilder.jsx`).
+
+## Local dev gotchas
+
+- The API server does not hot-reload route changes unless started with `npm run dev:server` (`node --watch`); a plain `node src/index.js` needs a restart.
+- If the Checklist Builder shows no items or `/api` requests through the Vite proxy hang with `ECONNRESET`, restart the API and Vite dev servers, then hard-reload the page.
+- CORS reflects any origin outside `NODE_ENV=production`, and Vite binds all interfaces with `allowedHosts: ['.trycloudflare.com']`, so the app works over a LAN IP or a Cloudflare quick tunnel (the only way to get HTTPS for camera testing on a phone).
