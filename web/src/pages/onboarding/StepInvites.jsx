@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { ROLES } from './roles.js';
+import InviteLink from '../../components/InviteLink.jsx';
 
 export default function StepInvites({ onNext, onBack }) {
   const { tenant } = useAuth();
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
   const [form, setForm] = useState({ fullName: '', email: '', role: 'employee', branchIds: [] });
-  const [lastInviteLink, setLastInviteLink] = useState('');
+  const [lastInviteLink, setLastInviteLink] = useState(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -34,7 +35,7 @@ export default function StepInvites({ onNext, onBack }) {
     setSubmitting(true);
     try {
       const res = await api.post('/tenants/users/invite', form);
-      setLastInviteLink(res.inviteLink);
+      setLastInviteLink({ path: res.inviteLink, email: form.email });
       setForm({ fullName: '', email: '', role: 'employee', branchIds: [] });
       await load();
     } catch (err) {
@@ -50,11 +51,7 @@ export default function StepInvites({ onNext, onBack }) {
       <p>You planned for {tenant?.user_count} user{tenant?.user_count === 1 ? '' : 's'} (you're already one of them).</p>
 
       {error && <div className="error-banner">{error}</div>}
-      {lastInviteLink && (
-        <div className="card">
-          Invite sent. Demo link (would normally be emailed): <code>{lastInviteLink}</code>
-        </div>
-      )}
+      {lastInviteLink && <InviteLink path={lastInviteLink.path} email={lastInviteLink.email} />}
 
       {users.map((u) => (
         <div className="checklist-row" key={u.id}>

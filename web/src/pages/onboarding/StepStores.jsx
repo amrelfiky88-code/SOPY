@@ -33,8 +33,13 @@ export default function StepStores({ onNext, onBack }) {
   };
 
   const removeBranch = async (id) => {
-    await api.del(`/tenants/branches/${id}`);
-    await load();
+    setError('');
+    try {
+      await api.del(`/tenants/branches/${id}`);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
