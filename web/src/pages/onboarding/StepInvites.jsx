@@ -69,7 +69,7 @@ export default function StepInvites({ onNext, onBack }) {
         </div>
         <div className="field">
           <label htmlFor="email">Email</label>
-          <input id="email" type="email" required value={form.email} onChange={set('email')} />
+          <input id="email" type="email" autoComplete="off" autoCapitalize="none" spellCheck={false} required value={form.email} onChange={set('email')} />
         </div>
         <div className="field">
           <label htmlFor="role">Role</label>

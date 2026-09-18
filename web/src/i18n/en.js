@@ -77,6 +77,8 @@ export default {
   'run.notCompliant': 'Not compliant',
   'run.critical': 'critical',
   'run.openCamera': 'Open camera to capture evidence',
+  'run.retakePhoto': 'Retake',
+  'run.closeCamera': 'Close camera',
   'run.uploadingPhoto': 'Uploading photo…',
   'run.saveFailed': "Couldn't save that — check your connection and try again.",
   'run.photoCaptured': 'Photo captured',

@@ -40,7 +40,7 @@ export default function AcceptInvite() {
       <form onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="password">Password</label>
-          <input id="password" type="password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input id="password" type="password" autoComplete="new-password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
         <button className="btn btn-primary" type="submit" disabled={submitting}>
           {submitting ? 'Saving…' : 'Set password and log in'}

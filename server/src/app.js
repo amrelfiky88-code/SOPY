@@ -47,7 +47,14 @@ export function createApp() {
   // managed PostgreSQL — no separate static host needed.
   if (process.env.NODE_ENV === 'production') {
     const webDist = path.resolve('../web/dist');
-    app.use(express.static(webDist));
+    app.use(express.static(webDist, {
+      // Hashed build assets never change, so phones can keep them; the
+      // HTML, sw.js and manifest must be revalidated or updates stall.
+      setHeaders: (res, filePath) => {
+        const hashed = filePath.includes(`${path.sep}assets${path.sep}`);
+        res.setHeader('Cache-Control', hashed ? 'public, max-age=31536000, immutable' : 'no-cache');
+      },
+    }));
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) return next();
       res.sendFile(path.join(webDist, 'index.html'));

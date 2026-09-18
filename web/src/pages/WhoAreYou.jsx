@@ -54,15 +54,15 @@ export default function WhoAreYou() {
         </div>
         <div className="field">
           <label htmlFor="email">Email</label>
-          <input id="email" type="email" required value={form.email} onChange={set('email')} />
+          <input id="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required value={form.email} onChange={set('email')} />
         </div>
         <div className="field">
           <label htmlFor="phone">Phone</label>
-          <input id="phone" type="tel" value={form.phone} onChange={set('phone')} />
+          <input id="phone" type="tel" autoComplete="tel" value={form.phone} onChange={set('phone')} />
         </div>
         <div className="field">
           <label htmlFor="password">Create a password</label>
-          <input id="password" type="password" minLength={8} required value={form.password} onChange={set('password')} />
+          <input id="password" type="password" autoComplete="new-password" minLength={8} required value={form.password} onChange={set('password')} />
           <div className="hint">At least 8 characters.</div>
         </div>
         <div className="field">

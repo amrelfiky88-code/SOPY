@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext.jsx';
 import { useT } from '../i18n/index.jsx';
 import FeedbackButton from './FeedbackButton.jsx';
 import {
+  MenuIcon,
   GridIcon,
   BarChartIcon,
   StoveIcon,
@@ -38,6 +39,19 @@ export default function AppLayout() {
   // tapping a nav link on mobile doesn't leave it open over the new page.
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
+  // While the drawer is open, stop the page behind it scrolling (iOS
+  // scrolls the body through the backdrop) and let Escape close it.
+  useEffect(() => {
+    if (!sidebarOpen) return undefined;
+    document.documentElement.classList.add('scroll-locked');
+    const onKey = (e) => { if (e.key === 'Escape') setSidebarOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.documentElement.classList.remove('scroll-locked');
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [sidebarOpen]);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -57,8 +71,9 @@ export default function AppLayout() {
           className="hamburger-btn"
           onClick={() => setSidebarOpen(true)}
           aria-label={t('nav.openMenu')}
+          aria-expanded={sidebarOpen}
         >
-          ☰
+          <MenuIcon size={22} strokeWidth="2" />
         </button>
         <span className="brand">SOPY</span>
       </div>

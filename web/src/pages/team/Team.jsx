@@ -174,7 +174,7 @@ export default function Team() {
               </div>
               <div className="field">
                 <label htmlFor="iem">Email</label>
-                <input id="iem" type="email" required value={inviteForm.email} onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))} />
+                <input id="iem" type="email" autoComplete="off" autoCapitalize="none" spellCheck={false} required value={inviteForm.email} onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))} />
               </div>
               <div className="field">
                 <label htmlFor="irole">Role</label>

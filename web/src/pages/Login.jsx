@@ -33,18 +33,19 @@ export default function Login() {
 
   return (
     <div className="screen-narrow">
+      <Link to="/" className="auth-brand">SOPY</Link>
       <h2>Log in</h2>
       {error && <div className="error-banner">{error}</div>}
       <form onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="email">Email</label>
-          <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input id="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="field">
           <label htmlFor="password">Password</label>
-          <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
-        <button className="btn btn-primary" type="submit" disabled={submitting}>
+        <button className="btn btn-primary" type="submit" disabled={submitting} style={{ width: '100%' }}>
           {submitting ? 'Logging in…' : 'Log in'}
         </button>
       </form>

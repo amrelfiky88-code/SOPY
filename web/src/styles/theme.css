@@ -37,7 +37,20 @@ html, body {
   width: 100%;
 }
 
+html {
+  /* iOS enlarges text on rotate to landscape without this. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+html.scroll-locked, html.scroll-locked body { overflow: hidden; }
+
 body {
+  /* viewport-fit=cover lets the page run under a landscape notch; keep
+     content clear of it. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  /* No grey flash on tap (Android/iOS) — buttons have their own :active state. */
+  -webkit-tap-highlight-color: transparent;
   margin: 0;
   font-family: var(--font);
   background: var(--paper);
@@ -173,7 +186,27 @@ input[type="range"] {
   transition: background-color var(--ease), border-color var(--ease), transform var(--ease), box-shadow var(--ease);
 }
 .btn svg { flex-shrink: 0; }
-.btn:active { transform: translateY(1px); }
+.btn:active { transform: translateY(1px); opacity: 0.9; }
+.mobile-tabbar a:active, .sidebar a:active, .filter-row button:active { opacity: 0.7; }
+
+/* iOS Safari collapses empty date/time inputs to almost no height and
+   centres their text; give them the same box as every other field. */
+input[type="date"], input[type="time"], input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 44px;
+  text-align: start;
+}
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value { text-align: start; }
+
+/* On phones the fixed tab bar and action bar ride up on top of the
+   on-screen keyboard and cover the field being typed in (main.jsx sets
+   .keyboard-open while a text field has focus). */
+@media (max-width: 768px) {
+  .keyboard-open .mobile-tabbar,
+  .keyboard-open .sticky-action-bar { display: none; }
+}
 .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--green-tint); }
 
 .btn-primary {
@@ -342,6 +375,9 @@ tbody tr:hover { background: var(--paper); }
   width: 100%;
   max-width: 460px;
   max-height: calc(100vh - 32px);
+  /* 100vh on mobile includes the area behind the browser toolbars. */
+  max-height: calc(100dvh - 32px);
+  overscroll-behavior: contain;
   overflow-y: auto;
   padding: 20px;
 }
@@ -374,6 +410,9 @@ tbody tr:hover { background: var(--paper); }
 }
 .mobile-topbar .brand { font-family: var(--font-serif); color: var(--paper-white); font-weight: 700; font-size: 18px; text-decoration: none; }
 .hamburger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: 1px solid rgba(255,255,255,0.4);
   border-radius: var(--radius-sm);
@@ -403,6 +442,8 @@ tbody tr:hover { background: var(--paper); }
     transform: translateX(-100%);
     transition: transform 0.2s ease;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
     width: min(80vw, 280px);
   }
   .sidebar.open { transform: translateX(0); }
@@ -537,6 +578,13 @@ tbody tr:hover { background: var(--paper); }
 }
 .kpi-tile .label { font-size: 13px; color: var(--ink-soft); }
 .kpi-tile .value { font-family: var(--font-serif); font-size: 28px; font-weight: 700; color: var(--ink); }
+/* One tile per row made the phone dashboard a full screen of scrolling
+   for four numbers; two compact columns keep them all in view. */
+@media (max-width: 600px) {
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .kpi-tile { padding: 12px; gap: 8px; }
+  .kpi-tile .value { font-size: 24px; }
+}
 
 .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
 .filter-row button {
@@ -571,6 +619,17 @@ tbody tr:hover { background: var(--paper); }
   cursor: pointer;
   box-shadow: var(--shadow-raised);
 }
+.auth-brand {
+  display: inline-block;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--green);
+  text-decoration: none;
+  margin-bottom: 20px;
+}
+
+.camera-box .capture-btn:disabled { opacity: 0.4; cursor: default; }
 
 .checklist-row {
   display: flex;

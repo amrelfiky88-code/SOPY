@@ -162,9 +162,19 @@ export default function ChecklistRun() {
       {uploadingItem === item.id ? (
         <span className="hint">{t('run.uploadingPhoto')}</span>
       ) : activeCameraItem === item.id ? (
-        <CameraCapture onCapture={(blob) => savePhoto(item.id, blob)} captured={!!r.hasPhoto} />
+        <>
+          <CameraCapture onCapture={(blob) => savePhoto(item.id, blob)} />
+          <button type="button" className="btn btn-secondary btn-small" style={{ marginTop: 8 }} onClick={() => setActiveCameraItem(null)}>
+            {t('run.closeCamera')}
+          </button>
+        </>
       ) : r.hasPhoto ? (
-        <span className="pill pill-green">{t('run.photoCaptured')}</span>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span className="pill pill-green">{t('run.photoCaptured')}</span>
+          <button type="button" className="btn btn-secondary btn-small" onClick={() => setActiveCameraItem(item.id)}>
+            <CameraIcon size={14} /> {t('run.retakePhoto')}
+          </button>
+        </div>
       ) : (
         <button type="button" className="btn btn-secondary btn-small" onClick={() => setActiveCameraItem(item.id)}>
           <CameraIcon size={14} /> {t('run.openCamera')}

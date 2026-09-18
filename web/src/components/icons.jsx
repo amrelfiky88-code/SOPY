@@ -25,6 +25,14 @@ function Base({ size = 20, children, ...rest }) {
   );
 }
 
+export const MenuIcon = (props) => (
+  <Base {...props}>
+    <line x1="4" y1="7" x2="20" y2="7" />
+    <line x1="4" y1="12" x2="20" y2="12" />
+    <line x1="4" y1="17" x2="20" y2="17" />
+  </Base>
+);
+
 export const GridIcon = (props) => (
   <Base {...props}>
     <rect x="3" y="3" width="7" height="7" rx="1.5" />
