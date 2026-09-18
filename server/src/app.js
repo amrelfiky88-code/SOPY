@@ -10,6 +10,7 @@ import { onboardingRouter } from './routes/onboarding.routes.js';
 import { checklistsRouter } from './routes/checklists.routes.js';
 import { submissionsRouter } from './routes/submissions.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
+import { feedbackRouter } from './routes/feedback.routes.js';
 
 export function createApp() {
   const app = express();
@@ -38,6 +39,7 @@ export function createApp() {
   app.use('/api/checklists', checklistsRouter);
   app.use('/api/submissions', submissionsRouter);
   app.use('/api/dashboard', dashboardRouter);
+  app.use('/api/feedback', feedbackRouter);
 
   // In production this one Node process serves the built React app too, so
   // the whole thing runs as a single Hostinger "Node.js app" alongside

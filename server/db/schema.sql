@@ -108,6 +108,20 @@ CREATE INDEX idx_checklist_items_standard ON checklist_items(standard);
 -- client transcribed SOP 1-11 and the QC audit content from their own
 -- documents, so a translation is an additional view of that text, not a
 -- replacement for it. `source` marks whether a human has reviewed it.
+-- In-app feedback from any signed-in user. page_path records where they
+-- were when they sent it, since "this screen is confusing" is useless
+-- without knowing which screen.
+CREATE TABLE feedback (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
+  category    TEXT NOT NULL,             -- 'bug' | 'idea' | 'other'
+  message     TEXT NOT NULL,
+  page_path   TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_feedback_tenant ON feedback(tenant_id);
+
 CREATE TABLE content_translations (
   lang        TEXT NOT NULL,             -- 'ar' | 'fr'
   source_text TEXT NOT NULL,             -- the exact English string

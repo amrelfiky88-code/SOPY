@@ -214,6 +214,14 @@ export const CameraIcon = (props) => (
   </Base>
 );
 
+export const MessageIcon = (props) => (
+  <Base {...props}>
+    <polygon points="3,4 21,4 21,16 10,16 5,20 5,16 3,16" />
+    <line x1="7" y1="8.5" x2="17" y2="8.5" />
+    <line x1="7" y1="12" x2="13" y2="12" />
+  </Base>
+);
+
 export const DoorClosedIcon = (props) => (
   <Base {...props}>
     <rect x="5" y="3" width="14" height="18" />

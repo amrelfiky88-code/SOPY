@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useT } from '../i18n/index.jsx';
+import FeedbackButton from './FeedbackButton.jsx';
 import {
   GridIcon,
   BarChartIcon,
@@ -81,6 +82,7 @@ export default function AppLayout() {
           {canManage && <NavLink to="/app/forms/ops-manager-visit" className={({ isActive }) => (isActive ? 'active' : '')}><BriefcaseIcon size={18} /> {t('nav.opsVisit')}</NavLink>}
           <div className="sidebar-divider" />
           <NavLink to="/app/account" className={({ isActive }) => (isActive ? 'active' : '')}><UserIcon size={18} /> {t('nav.account')}</NavLink>
+          <FeedbackButton onOpen={() => setSidebarOpen(false)} />
           <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}><LogOutIcon size={18} /> {t('nav.logout')}</a>
         </nav>
       </div>
