@@ -267,38 +267,37 @@ export default function ChecklistRun() {
   );
 }
 
-const RAG_LABEL = { green: 'Green — on standard', amber: 'Amber — action plan required', red: 'Red — escalate now' };
 const RAG_PILL_CLASS = { green: 'pill-green', amber: 'pill-amber', red: 'pill-red' };
 
 function Scorecard({ scorecard, submissionId, onDone }) {
+  const t = useT();
   return (
     <div>
-      <h2>Score summary</h2>
+      <h2>{t('run.scoreTitle')}</h2>
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
           <div>
             <div style={{ fontSize: 32, fontWeight: 700 }}>
               {scorecard.percentage !== null ? `${scorecard.percentage}%` : '—'}
             </div>
-            <div className="hint">{scorecard.totalCompliant} / {scorecard.totalScored} checkpoints compliant</div>
+            <div className="hint">{t('report.checkpointsCompliant', { n: scorecard.totalCompliant, total: scorecard.totalScored })}</div>
           </div>
           <span className={`pill ${RAG_PILL_CLASS[scorecard.ragStatus]}`} style={{ fontSize: 14, padding: '6px 14px' }}>
-            {RAG_LABEL[scorecard.ragStatus]}
+            {t(`report.rag.${scorecard.ragStatus}`)}
           </span>
         </div>
         {scorecard.criticalFails > 0 && (
           <div className="error-banner">
-            {scorecard.criticalFails} critical checkpoint{scorecard.criticalFails === 1 ? '' : 's'} failed — this
-            run is flagged as an incident.
+            {t('report.criticalFails', { n: scorecard.criticalFails })} — {t('run.flagged')}
           </div>
         )}
       </div>
 
       <div className="card">
-        <h3 style={{ marginBottom: 12 }}>By section</h3>
+        <h3 style={{ marginBottom: 12 }}>{t('report.sections')}</h3>
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Section</th><th>Score</th><th>Critical fails</th></tr></thead>
+            <thead><tr><th>{t('run.colSection')}</th><th>{t('report.score')}</th><th>{t('run.colCritical')}</th></tr></thead>
             <tbody>
               {scorecard.sections.map((s) => (
                 <tr key={s.category}>
@@ -314,7 +313,7 @@ function Scorecard({ scorecard, submissionId, onDone }) {
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <ReportLink submissionId={submissionId} style={{ marginTop: 0 }} />
-        <button className="btn btn-secondary" onClick={onDone}>Back to dashboard</button>
+        <button className="btn btn-secondary" onClick={onDone}>{t('run.backToDashboard')}</button>
       </div>
     </div>
   );

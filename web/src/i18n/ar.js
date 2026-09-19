@@ -48,6 +48,7 @@ export default {
   'role.employee': 'موظف',
 
   'dashboard.welcome': 'مرحبًا بعودتك',
+  'dashboard.welcomeNamed': 'مرحبًا بعودتك، {name}',
   'dashboard.assigned': 'المهام المسندة إليك',
   'dashboard.submitted24h': 'أرسلت خلال ٢٤ ساعة',
   'dashboard.activeStores': 'الفروع النشطة',
@@ -72,6 +73,15 @@ export default {
   'kpi.monthly': 'شهري',
   'kpi.quarterly': 'ربع سنوي',
   'kpi.noData': 'لا توجد بيانات بعد',
+  'run.scoreTitle': 'ملخص النتيجة',
+  'run.flagged': 'تم تسجيل هذا الفحص كحادثة.',
+  'run.colSection': 'القسم',
+  'run.colCritical': 'إخفاقات حرجة',
+  'run.backToDashboard': 'العودة إلى لوحة التحكم',
+  'offline.title': 'تعذّر الوصول إلى SOPY',
+  'offline.body': 'ما زلت مسجّلًا الدخول، لكن التطبيق لم يتمكن من الاتصال. تحقّق من شبكة Wi-Fi أو بيانات الجوال وحاول مرة أخرى.',
+  'offline.trying': 'جارٍ الاتصال…',
+  'kpi.basedOn': 'بناءً على {n} من التقارير المُرسلة في هذه الفترة.',
 
   'run.compliant': 'مطابق',
   'run.notCompliant': 'غير مطابق',

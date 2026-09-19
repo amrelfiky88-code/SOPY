@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
-import { calculatePricing } from '../../../shared/pricing.js';
+import { calculatePricing, clampPlanCount, PLAN_LIMITS } from '../../../shared/pricing.js';
 import { createCheckoutTransaction, updateSubscriptionQuantities, cancelSubscription } from '../paddle/client.js';
 import { verifyPaddleSignature } from '../paddle/webhook.js';
 
@@ -130,7 +130,11 @@ billingRouter.get('/subscription', requireAuth, async (req, res) => {
 // Called when a business owner changes branch/user counts after go-live —
 // updates Paddle so the next invoice is prorated automatically.
 billingRouter.patch('/subscription/quantities', requireAuth, requireRole('business_owner'), async (req, res) => {
-  const { branchCount, userCount } = req.body;
+  const branchCount = clampPlanCount(req.body.branchCount, PLAN_LIMITS.branches);
+  const userCount = clampPlanCount(req.body.userCount, PLAN_LIMITS.users);
+  if (branchCount === null || userCount === null) {
+    return res.status(400).json({ error: 'Branch and user counts must be numbers' });
+  }
   const pricing = calculatePricing({ branches: branchCount, users: userCount });
 
   const { rows } = await query(
@@ -139,6 +143,20 @@ billingRouter.patch('/subscription/quantities', requireAuth, requireRole('busine
   );
   const sub = rows[0];
   if (!sub) return res.status(404).json({ error: 'No active subscription' });
+
+  // Can't pay for fewer stores/users than are in use — the seats would
+  // stay usable while the bill went down.
+  const { rows: usage } = await query(
+    `SELECT (SELECT count(*)::int FROM branches WHERE tenant_id = $1 AND is_active) AS branches,
+            (SELECT count(*)::int FROM users WHERE tenant_id = $1 AND status != 'disabled') AS users`,
+    [req.auth.tenantId]
+  );
+  if (pricing.branchCount < usage[0].branches) {
+    return res.status(409).json({ error: `You have ${usage[0].branches} active stores. Remove stores in Team & stores before lowering the plan to ${pricing.branchCount}.` });
+  }
+  if (pricing.userCount < usage[0].users) {
+    return res.status(409).json({ error: `You have ${usage[0].users} users (including pending invites). Disable users in Team & stores before lowering the plan to ${pricing.userCount}.` });
+  }
 
   if (sub.paddle_subscription_id && process.env.PADDLE_API_KEY) {
     await updateSubscriptionQuantities({

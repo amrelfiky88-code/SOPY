@@ -70,12 +70,17 @@ export default function Team() {
     const previous = users;
     setUsers((u) => u.map((x) => (x.id === id ? { ...x, ...(patch.accessLevel ? { access_level: patch.accessLevel } : patch) } : x)));
     try {
-      await api.patch(`/tenants/users/${id}`, patch);
+      const { user } = await api.patch(`/tenants/users/${id}`, patch);
+      // Take the server's version: re-enabling someone who never accepted
+      // their invite comes back as 'invited', not 'active'.
+      if (user) setUsers((u) => u.map((x) => (x.id === id ? { ...x, ...user } : x)));
     } catch (err) {
       setUsers(previous);
       setError(err.message);
     }
   };
+
+  const [confirmingDisable, setConfirmingDisable] = useState(null);
 
   return (
     <div>
@@ -157,7 +162,28 @@ export default function Team() {
                             </select>
                           ) : ACCESS_LEVELS.find((a) => a.value === u.access_level)?.label.split(' —')[0]}
                         </td>
-                        <td><span className="pill">{u.status}</span></td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span className={`pill ${u.status === 'disabled' ? 'pill-red' : u.status === 'active' ? 'pill-green' : ''}`}>{u.status}</span>
+                            {editable && u.status !== 'disabled' && (
+                              confirmingDisable === u.id ? (
+                                <>
+                                  <button type="button" className="btn btn-small btn-danger" onClick={() => { setConfirmingDisable(null); updateUser(u.id, { status: 'disabled' }); }}>
+                                    {u.status === 'invited' ? 'Cancel invite' : 'Disable'}
+                                  </button>
+                                  <button type="button" className="btn btn-small btn-secondary" onClick={() => setConfirmingDisable(null)}>Keep</button>
+                                </>
+                              ) : (
+                                <button type="button" className="btn btn-small btn-secondary" onClick={() => setConfirmingDisable(u.id)}>
+                                  {u.status === 'invited' ? 'Cancel invite' : 'Disable'}
+                                </button>
+                              )
+                            )}
+                            {editable && u.status === 'disabled' && (
+                              <button type="button" className="btn btn-small btn-secondary" onClick={() => updateUser(u.id, { status: 'active' })}>Enable</button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -165,6 +191,8 @@ export default function Team() {
               </table>
             </div>
           </div>
+
+          <p className="hint">Disabled people can't sign in and don't count toward your plan's users. Their past reports are kept.</p>
 
           {assignableRoles.length > 0 && (
             <form onSubmit={invite} className="card">

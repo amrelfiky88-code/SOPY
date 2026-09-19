@@ -55,8 +55,12 @@ export function blendedRate(count, schedule) {
 }
 
 export function calculatePricing({ branches, users }) {
-  const branchCount = Math.max(0, Number(branches) || 0);
-  const userCount = Math.max(0, Number(users) || 0);
+  // Whole numbers within the plan limits. The rate is computed unit by
+  // unit, so an unbounded count (say 1e9 from a crafted request) would
+  // spin the server; a fraction like 1.5 isn't a store you can bill.
+  const safe = (v, { max }) => Math.min(max, Math.max(0, Math.floor(Number(v)) || 0));
+  const branchCount = safe(branches, PLAN_LIMITS.branches);
+  const userCount = safe(users, PLAN_LIMITS.users);
 
   const branchLine = lineTotal(branchCount, RATE_SCHEDULE.branch);
   const userLine = lineTotal(userCount, RATE_SCHEDULE.user);

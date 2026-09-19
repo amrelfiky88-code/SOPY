@@ -14,9 +14,13 @@ export default function StepInvites({ onNext, onBack }) {
   const [submitting, setSubmitting] = useState(false);
 
   const load = async () => {
-    const [u, b] = await Promise.all([api.get('/tenants/users'), api.get('/tenants/branches')]);
-    setUsers(u.users);
-    setBranches(b.branches);
+    try {
+      const [u, b] = await Promise.all([api.get('/tenants/users'), api.get('/tenants/branches')]);
+      setUsers(u.users);
+      setBranches(b.branches);
+    } catch (err) {
+      setError(err.message);
+    }
   };
   useEffect(() => { load(); }, []);
 

@@ -74,13 +74,42 @@ tenantsRouter.get('/branches', requireAuth, async (req, res) => {
   res.json({ branches: rows });
 });
 
+// The subscription is billed per store and per user, so the plan's counts
+// are a ceiling: without this a business paying for one store and one
+// user could add any number of either.
+async function planRoom(tenantId, kind) {
+  const { rows } = await query(
+    kind === 'branches'
+      ? `SELECT t.branch_count AS allowed, t.onboarding_step,
+                (SELECT count(*)::int FROM branches WHERE tenant_id = t.id AND is_active) AS used
+         FROM tenants t WHERE t.id = $1`
+      : `SELECT t.user_count AS allowed, t.onboarding_step,
+                (SELECT count(*)::int FROM users WHERE tenant_id = t.id AND status != 'disabled') AS used
+         FROM tenants t WHERE t.id = $1`,
+    [tenantId]
+  );
+  const r = rows[0];
+  return { allowed: r.allowed, used: r.used, full: r.used >= r.allowed, settingUp: r.onboarding_step !== 'complete' };
+}
+
+const planFullMessage = (what, room, role) =>
+  `Your plan covers ${room.allowed} ${what}${room.allowed === 1 ? '' : 's'}. ` +
+  (role !== 'business_owner'
+    ? 'Ask the business owner to add more to the plan.'
+    : room.settingUp
+      ? 'You can add more from Profile & billing once setup is finished.'
+      : 'Change your plan in Profile & billing to add more.');
+
 tenantsRouter.post('/branches', requireAuth, requireRole('business_owner', 'operations_manager'), async (req, res) => {
-  const { name, address, city, timezone } = req.body;
+  const { address, city, timezone } = req.body;
+  const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
   if (!name) return res.status(400).json({ error: 'Branch name is required' });
+  const room = await planRoom(req.auth.tenantId, 'branches');
+  if (room.full) return res.status(409).json({ error: planFullMessage('store', room, req.auth.role) });
   const { rows } = await query(
     `INSERT INTO branches (tenant_id, name, address, city, timezone)
      VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [req.auth.tenantId, name, address || null, city || null, timezone || 'UTC']
+    [req.auth.tenantId, name, address || null, typeof city === 'string' ? city.trim() || null : null, timezone || 'UTC']
   );
   res.status(201).json({ branch: rows[0] });
 });
@@ -121,7 +150,9 @@ async function validBranchIds(branchIds, tenantId) {
 
 tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
   const { fullName, email, role, accessLevel, branchIds } = req.body;
-  if (!fullName?.trim() || !email?.trim() || !role) return res.status(400).json({ error: 'Missing required fields' });
+  if (typeof fullName !== 'string' || typeof email !== 'string' || !fullName.trim() || !email.trim() || !role) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
   if (!isValidRole(role)) return res.status(400).json({ error: 'Unknown role' });
   if (!canAssignRole(req.auth.role, role)) {
     return res.status(403).json({ error: "You can only invite people to roles below your own" });
@@ -132,22 +163,34 @@ tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', '
   const branches = await validBranchIds(branchIds ?? [], req.auth.tenantId);
   if (branches === undefined) return res.status(400).json({ error: 'One or more stores were not found' });
 
-  const existing = await query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+  const cleanEmail = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return res.status(400).json({ error: 'Enter a valid email address' });
+  const existing = await query('SELECT id FROM users WHERE email = $1', [cleanEmail]);
   if (existing.rows.length) return res.status(409).json({ error: 'A user with this email already exists' });
+
+  const room = await planRoom(req.auth.tenantId, 'users');
+  if (room.full) return res.status(409).json({ error: planFullMessage('user', room, req.auth.role) });
 
   const inviteToken = crypto.randomBytes(24).toString('hex');
   const placeholderHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
 
-  const { rows } = await query(
-    `INSERT INTO users (tenant_id, full_name, email, role, access_level, status, invite_token, password_hash)
-     VALUES ($1, $2, $3, $4, $5, 'invited', $6, $7) RETURNING *`,
-    [req.auth.tenantId, fullName.trim(), email.trim().toLowerCase(), role, accessLevel || 'standard', inviteToken, placeholderHash]
-  );
-  const user = rows[0];
-
-  if (branches.length) {
-    const values = branches.map((_, idx) => `($1, $${idx + 2})`).join(', ');
-    await query(`INSERT INTO user_branches (user_id, branch_id) VALUES ${values}`, [user.id, ...branches]);
+  let user;
+  try {
+    user = await withTransaction(async (client) => {
+      const { rows } = await client.query(
+        `INSERT INTO users (tenant_id, full_name, email, role, access_level, status, invite_token, password_hash)
+         VALUES ($1, $2, $3, $4, $5, 'invited', $6, $7) RETURNING *`,
+        [req.auth.tenantId, fullName.trim(), cleanEmail, role, accessLevel || 'standard', inviteToken, placeholderHash]
+      );
+      if (branches.length) {
+        const values = branches.map((_, idx) => `($1, $${idx + 2})`).join(', ');
+        await client.query(`INSERT INTO user_branches (user_id, branch_id) VALUES ${values}`, [rows[0].id, ...branches]);
+      }
+      return rows[0];
+    });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'A user with this email already exists' });
+    throw err;
   }
 
   // In production this would send an email with the invite link.
@@ -168,7 +211,7 @@ tenantsRouter.patch('/users/:id', requireAuth, requireRole('business_owner', 'op
   // including the branch-assignment rewrite — only runs once we know the
   // user is ours; previously that rewrite ran against any id it was given.
   const { rows: targetRows } = await query(
-    'SELECT id, role FROM users WHERE id = $1 AND tenant_id = $2',
+    'SELECT id, role, status, invite_token FROM users WHERE id = $1 AND tenant_id = $2',
     [req.params.id, req.auth.tenantId]
   ).catch(() => ({ rows: [] }));
   const target = targetRows[0];
@@ -197,7 +240,18 @@ tenantsRouter.patch('/users/:id', requireAuth, requireRole('business_owner', 'op
   }
   if (status !== undefined) {
     if (!EDITABLE_STATUSES.includes(status)) return res.status(400).json({ error: 'Unknown status' });
-    fields.push(`status = $${i++}`); values.push(status);
+    let next = status;
+    if (status === 'active') {
+      // Re-enabling someone takes a seat again.
+      if (target.status === 'disabled') {
+        const room = await planRoom(req.auth.tenantId, 'users');
+        if (room.full) return res.status(409).json({ error: planFullMessage('user', room, req.auth.role) });
+      }
+      // Someone who never accepted their invite goes back to 'invited' —
+      // marking them 'active' left them with no password and a dead invite link.
+      if (target.invite_token) next = 'invited';
+    }
+    fields.push(`status = $${i++}`); values.push(next);
   }
 
   const branches = branchIds === undefined ? null : await validBranchIds(branchIds, req.auth.tenantId);

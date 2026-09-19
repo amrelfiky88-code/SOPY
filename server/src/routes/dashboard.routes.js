@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
+import { MY_ASSIGNMENTS_FROM, myAssignmentParams } from '../assignments.js';
 
 export const dashboardRouter = Router();
 
+const PERIODS = ['daily', 'weekly', 'monthly', 'quarterly'];
+
 function periodStart(period) {
-  const now = new Date();
-  const d = new Date(now);
+  const d = new Date();
   switch (period) {
     case 'weekly': d.setDate(d.getDate() - 7); break;
     case 'monthly': d.setMonth(d.getMonth() - 1); break;
@@ -17,9 +19,28 @@ function periodStart(period) {
   return d.toISOString();
 }
 
-// KPI dashboard: compliance %, temperature deviations, waste value, incident count
+const amount = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+
+// Waste value as the report forms actually record it: the Kitchen
+// report's "Total waste value" and the Bar report's "Total beverage waste
+// value". (This used to read form_data.waste_log[].value, a shape no form
+// writes, so the tile always showed $0.00.)
+function wasteFromForm(formData) {
+  if (!formData) return 0;
+  let total = amount(formData.wasteTotal?.value) + amount(formData.stockNotes?.wasteValue);
+  if (Array.isArray(formData.waste_log)) {
+    for (const entry of formData.waste_log) total += amount(entry?.value);
+  }
+  return total;
+}
+
+// KPI dashboard: compliance %, temperature deviations, waste value, incident count.
+// Only submitted reports count — a half-finished run isn't a result yet.
 dashboardRouter.get('/kpi', requireAuth, async (req, res) => {
-  const period = req.query.period || 'daily';
+  const period = PERIODS.includes(req.query.period) ? req.query.period : 'daily';
   const branchId = req.query.branchId || null;
   const since = periodStart(period);
 
@@ -30,43 +51,38 @@ dashboardRouter.get('/kpi', requireAuth, async (req, res) => {
   const { rows: submissionRows } = await query(
     `SELECT s.id, s.has_incident, s.form_data
      FROM checklist_submissions s
-     WHERE s.tenant_id = $1 AND s.started_at >= $2 ${branchClause}`,
+     WHERE s.tenant_id = $1 AND s.status = 'submitted' AND s.started_at >= $2 ${branchClause}`,
     params
   );
 
+  // Latest answer per checkpoint per run, so a changed answer isn't
+  // counted twice.
   const { rows: complianceRows } = await query(
-    `SELECT r.is_compliant, ci.category, ci.is_critical
+    `SELECT DISTINCT ON (r.submission_id, r.item_id) r.is_compliant, ci.category, ci.is_critical
      FROM checklist_submission_responses r
      JOIN checklist_submissions s ON s.id = r.submission_id
      JOIN checklist_items ci ON ci.id = r.item_id
-     WHERE s.tenant_id = $1 AND s.started_at >= $2 ${branchClause} AND r.is_compliant IS NOT NULL`,
+     WHERE s.tenant_id = $1 AND s.status = 'submitted' AND s.started_at >= $2 ${branchClause}
+     ORDER BY r.submission_id, r.item_id, r.created_at DESC`,
     params
   );
+  const answered = complianceRows.filter((r) => r.is_compliant !== null);
 
-  const totalResponses = complianceRows.length;
-  const compliantResponses = complianceRows.filter((r) => r.is_compliant === true).length;
+  const totalResponses = answered.length;
+  const compliantResponses = answered.filter((r) => r.is_compliant === true).length;
   const compliancePct = totalResponses ? Math.round((compliantResponses / totalResponses) * 1000) / 10 : null;
 
   // Matches both the original placeholder category ('temperature') and
   // the richer imported category names (e.g. "... Food Safety &
-  // Temperature Control") — substring, case-insensitive.
-  const temperatureDeviations = complianceRows.filter(
-    (r) => r.category?.toLowerCase().includes('temperature') && r.is_compliant === false
-  ).length;
+  // Temperature Control") — substring, case-insensitive. Kitchen reports
+  // with "Temperature deviation found" ticked count too.
+  const temperatureDeviations =
+    answered.filter((r) => r.category?.toLowerCase().includes('temperature') && r.is_compliant === false).length +
+    submissionRows.filter((s) => s.form_data?.tempDeviation?.found === true).length;
 
-  const criticalFailCount = complianceRows.filter((r) => r.is_critical && r.is_compliant === false).length;
-
+  const criticalFailCount = answered.filter((r) => r.is_critical && r.is_compliant === false).length;
   const incidentCount = submissionRows.filter((s) => s.has_incident).length;
-
-  let wasteValue = 0;
-  for (const s of submissionRows) {
-    const wasteLog = s.form_data?.waste_log;
-    if (Array.isArray(wasteLog)) {
-      for (const entry of wasteLog) {
-        wasteValue += Number(entry.value) || 0;
-      }
-    }
-  }
+  const wasteValue = submissionRows.reduce((sum, s) => sum + wasteFromForm(s.form_data), 0);
 
   res.json({
     period,
@@ -83,15 +99,13 @@ dashboardRouter.get('/kpi', requireAuth, async (req, res) => {
 // Small "today" summary used by role dashboards
 dashboardRouter.get('/summary', requireAuth, async (req, res) => {
   const { rows: myAssignments } = await query(
-    `SELECT count(*)::int AS n FROM checklist_assignments a
-     LEFT JOIN user_branches ub ON ub.branch_id = a.branch_id AND ub.user_id = $2
-     WHERE a.tenant_id = $1 AND a.active
-       AND (a.user_id = $2 OR a.role = $3 OR a.branch_id IS NULL OR ub.user_id IS NOT NULL)`,
-    [req.auth.tenantId, req.auth.userId, req.auth.role]
+    `SELECT count(*)::int AS n ${MY_ASSIGNMENTS_FROM}`,
+    myAssignmentParams(req.auth)
   );
   const { rows: submittedToday } = await query(
     `SELECT count(*)::int AS n FROM checklist_submissions
-     WHERE tenant_id = $1 AND submitted_by = $2 AND started_at >= now() - interval '24 hours'`,
+     WHERE tenant_id = $1 AND submitted_by = $2 AND status = 'submitted'
+       AND submitted_at >= now() - interval '24 hours'`,
     [req.auth.tenantId, req.auth.userId]
   );
   const { rows: branches } = await query('SELECT count(*)::int AS n FROM branches WHERE tenant_id = $1 AND is_active', [req.auth.tenantId]);

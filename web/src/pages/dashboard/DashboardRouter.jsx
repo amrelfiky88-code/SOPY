@@ -13,14 +13,14 @@ export default function DashboardRouter() {
   const [summary, setSummary] = useState(null);
 
   useEffect(() => {
-    api.get('/dashboard/summary').then(setSummary);
+    api.get('/dashboard/summary').then(setSummary).catch(() => {}); // tiles are optional
   }, []);
 
   const isManager = ['business_owner', 'operations_manager', 'area_manager'].includes(user?.role);
 
   return (
     <div>
-      <h2>{t('dashboard.welcome')}{tenant ? `, ${tenant.restaurant_name}` : ''}</h2>
+      <h2>{tenant ? t('dashboard.welcomeNamed', { name: tenant.restaurant_name }) : t('dashboard.welcome')}</h2>
 
       {summary && (
         <div className="kpi-grid">

@@ -51,7 +51,13 @@ async function attempt(method, path, body, isForm) {
 
   if (!res.ok) {
     const message = (data && data.error) || `Request failed (${res.status})`;
-    throw Object.assign(new Error(message), { transient: res.status >= 502 && res.status <= 504 });
+    // A signed-in request rejected as unauthenticated means the session is
+    // over (expired, or the account was disabled): tell the app to sign
+    // out, rather than every page showing "Invalid session".
+    if (res.status === 401 && token && !path.startsWith('/auth/login')) {
+      window.dispatchEvent(new Event('sopy:signed-out'));
+    }
+    throw Object.assign(new Error(message), { status: res.status, transient: res.status >= 502 && res.status <= 504 });
   }
   return data;
 }

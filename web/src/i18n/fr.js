@@ -48,6 +48,7 @@ export default {
   'role.employee': 'Employé',
 
   'dashboard.welcome': 'Bon retour',
+  'dashboard.welcomeNamed': 'Bon retour, {name}',
   'dashboard.assigned': 'Qui vous sont assignées',
   'dashboard.submitted24h': 'Envoyées (24 h)',
   'dashboard.activeStores': 'Établissements actifs',
@@ -72,6 +73,15 @@ export default {
   'kpi.monthly': 'Mensuel',
   'kpi.quarterly': 'Trimestriel',
   'kpi.noData': 'Aucune donnée pour le moment',
+  'run.scoreTitle': 'Résumé du score',
+  'run.flagged': 'ce contrôle est signalé comme incident.',
+  'run.colSection': 'Section',
+  'run.colCritical': 'Échecs critiques',
+  'run.backToDashboard': 'Retour au tableau de bord',
+  'offline.title': 'Impossible de joindre SOPY',
+  'offline.body': "Vous êtes toujours connecté : l'application n'a simplement pas pu se connecter. Vérifiez le Wi-Fi ou les données mobiles et réessayez.",
+  'offline.trying': 'Connexion…',
+  'kpi.basedOn': 'Basé sur {n} rapport(s) envoyé(s) sur cette période.',
 
   'run.compliant': 'Conforme',
   'run.notCompliant': 'Non conforme',

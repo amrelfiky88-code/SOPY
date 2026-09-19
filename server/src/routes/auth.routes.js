@@ -4,6 +4,8 @@ import { query, withTransaction } from '../db.js';
 import { signToken } from '../auth/jwt.js';
 import { requireAuth } from '../auth/middleware.js';
 import { isSupportedLanguage, DEFAULT_LANGUAGE } from '../../../shared/languages.js';
+import { clampPlanCount, PLAN_LIMITS } from '../../../shared/pricing.js';
+import { isLocked, recordFailure, clearFailures, LOCKED_MESSAGE } from '../auth/rateLimit.js';
 
 export const authRouter = Router();
 
@@ -14,35 +16,55 @@ authRouter.post('/signup', async (req, res) => {
     restaurantName, country, branchCount, userCount,
   } = req.body;
 
-  if (!fullName || !email || !password || !restaurantName || !country) {
+  const cleanEmail = normalizeEmail(email);
+  const name = str(fullName);
+  const restaurant = str(restaurantName);
+  const countryName = str(country);
+  if (!name || !cleanEmail || typeof password !== 'string' || !restaurant || !countryName) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
+  if (!EMAIL_RE.test(cleanEmail)) return res.status(400).json({ error: 'Enter a valid email address' });
   if (password.length < 8) {
     return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
+  if (password.length > 200) return res.status(400).json({ error: 'Password is too long' });
 
-  const existing = await query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+  const existing = await query('SELECT id FROM users WHERE email = $1', [cleanEmail]);
   if (existing.rows.length) {
     return res.status(409).json({ error: 'An account with this email already exists' });
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const result = await withTransaction(async (client) => {
-    const tenantRes = await client.query(
-      `INSERT INTO tenants (restaurant_name, country, branch_count, user_count, onboarding_step)
-       VALUES ($1, $2, $3, $4, 'configure_data') RETURNING *`,
-      [restaurantName, country, Number(branchCount) || 1, Number(userCount) || 1]
-    );
-    const tenant = tenantRes.rows[0];
+  let result;
+  try {
+    result = await withTransaction(async (client) => {
+      const tenantRes = await client.query(
+        `INSERT INTO tenants (restaurant_name, country, branch_count, user_count, onboarding_step)
+         VALUES ($1, $2, $3, $4, 'configure_data') RETURNING *`,
+        [
+          restaurant, countryName,
+          // Same limits as the Pricing page; a negative or huge count
+          // used to be stored as-is.
+          clampPlanCount(branchCount, PLAN_LIMITS.branches) ?? PLAN_LIMITS.branches.min,
+          clampPlanCount(userCount, PLAN_LIMITS.users) ?? PLAN_LIMITS.users.min,
+        ]
+      );
+      const tenant = tenantRes.rows[0];
 
-    const userRes = await client.query(
-      `INSERT INTO users (tenant_id, full_name, title, email, phone, password_hash, role, access_level)
-       VALUES ($1, $2, $3, $4, $5, $6, 'business_owner', 'admin') RETURNING *`,
-      [tenant.id, fullName, title || null, email.toLowerCase(), phone || null, passwordHash]
-    );
-    return { tenant, user: userRes.rows[0] };
-  });
+      const userRes = await client.query(
+        `INSERT INTO users (tenant_id, full_name, title, email, phone, password_hash, role, access_level)
+         VALUES ($1, $2, $3, $4, $5, $6, 'business_owner', 'admin') RETURNING *`,
+        [tenant.id, name, str(title) || null, cleanEmail, str(phone) || null, passwordHash]
+      );
+      return { tenant, user: userRes.rows[0] };
+    });
+  } catch (err) {
+    // Two signups racing on the same email: the unique index catches the
+    // second one after the check above passed.
+    if (err.code === '23505') return res.status(409).json({ error: 'An account with this email already exists' });
+    throw err;
+  }
 
   const token = signToken({ userId: result.user.id });
   res.status(201).json({
@@ -53,15 +75,23 @@ authRouter.post('/signup', async (req, res) => {
 });
 
 authRouter.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Missing credentials' });
+  const { password } = req.body;
+  // Phones autocapitalise and add trailing spaces; neither should fail a login.
+  const email = normalizeEmail(req.body.email);
+  if (!email || typeof password !== 'string' || !password) return res.status(400).json({ error: 'Missing credentials' });
 
-  const { rows } = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+  const lockKey = `login:${email}`;
+  if (isLocked(lockKey)) return res.status(429).json({ error: LOCKED_MESSAGE });
+
+  const { rows } = await query('SELECT * FROM users WHERE email = $1', [email]);
   const user = rows[0];
-  if (!user) return res.status(401).json({ error: 'Invalid email or password' });
-
-  const ok = await bcrypt.compare(password, user.password_hash);
-  if (!ok) return res.status(401).json({ error: 'Invalid email or password' });
+  // Invited users have a random placeholder hash until they accept.
+  const ok = user && user.status !== 'invited' && (await bcrypt.compare(password, user.password_hash));
+  if (!ok) {
+    recordFailure(lockKey);
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+  clearFailures(lockKey);
   if (user.status === 'disabled') return res.status(403).json({ error: 'Account disabled' });
 
   const token = signToken({ userId: user.id });
@@ -72,8 +102,9 @@ authRouter.post('/login', async (req, res) => {
 // Accept an invite: sets a password for a pre-created 'invited' user
 authRouter.post('/accept-invite', async (req, res) => {
   const { inviteToken, password } = req.body;
-  if (!inviteToken || !password) return res.status(400).json({ error: 'Missing fields' });
+  if (typeof inviteToken !== 'string' || !inviteToken || typeof password !== 'string') return res.status(400).json({ error: 'Missing fields' });
   if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  if (password.length > 200) return res.status(400).json({ error: 'Password is too long' });
 
   const { rows } = await query(
     "SELECT * FROM users WHERE invite_token = $1 AND status = 'invited'",
@@ -127,6 +158,10 @@ authRouter.patch('/me', requireAuth, async (req, res) => {
   const { rows } = await query(`UPDATE users SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`, values);
   res.json({ user: publicUser(rows[0]) });
 });
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const str = (v) => (typeof v === 'string' ? v.trim() : '');
+export const normalizeEmail = (v) => str(v).toLowerCase();
 
 function publicUser(u) {
   return {

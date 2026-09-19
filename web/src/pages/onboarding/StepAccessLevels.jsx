@@ -9,8 +9,12 @@ export default function StepAccessLevels({ onNext, onBack, finishing }) {
   const [error, setError] = useState('');
 
   const load = async () => {
-    const { users } = await api.get('/tenants/users');
-    setUsers(users);
+    try {
+      const { users } = await api.get('/tenants/users');
+      setUsers(users);
+    } catch (err) {
+      setError(err.message);
+    }
   };
   useEffect(() => { load(); }, []);
 

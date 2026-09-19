@@ -11,8 +11,12 @@ export default function StepStores({ onNext, onBack }) {
   const [submitting, setSubmitting] = useState(false);
 
   const load = async () => {
-    const { branches } = await api.get('/tenants/branches');
-    setBranches(branches);
+    try {
+      const { branches } = await api.get('/tenants/branches');
+      setBranches(branches);
+    } catch (err) {
+      setError(err.message);
+    }
   };
   useEffect(() => { load(); }, []);
 

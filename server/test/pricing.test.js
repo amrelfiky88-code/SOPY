@@ -24,14 +24,22 @@ test('blended rate approaches but never drops below the floor as volume grows', 
   // since the first few units were priced above it — it only gets
   // asymptotically closer as volume grows. It must never undershoot.
   let previousGap = Infinity;
+  // blendedRate directly: calculatePricing caps counts at the plan limit
+  // (500 stores), and this is about the rate curve itself.
   for (const branches of [10, 50, 500, 5000]) {
-    const p = calculatePricing({ branches, users: 1 });
-    const gap = p.branchBlendedRate - RATE_SCHEDULE.branch.floor;
-    assert.ok(gap >= 0, `blended rate ${p.branchBlendedRate} dropped below floor at ${branches} branches`);
+    const rate = blendedRate(branches, RATE_SCHEDULE.branch);
+    const gap = rate - RATE_SCHEDULE.branch.floor;
+    assert.ok(gap >= 0, `blended rate ${rate} dropped below floor at ${branches} branches`);
     assert.ok(gap <= previousGap, 'gap to floor should shrink (or stay flat) as volume grows');
     previousGap = gap;
   }
   assert.ok(previousGap < 0.01, 'blended rate should be within a cent of the floor at very high volume');
+});
+
+test('calculatePricing never bills a fraction of a unit or more than the plan limit', () => {
+  const p = calculatePricing({ branches: 2.9, users: 1e12 });
+  assert.equal(p.branchCount, 2);
+  assert.equal(p.userCount, 2000);
 });
 
 test('monthlyTotal always equals branches * blendedRate + users * blendedRate', () => {

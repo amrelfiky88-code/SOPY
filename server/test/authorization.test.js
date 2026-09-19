@@ -66,9 +66,10 @@ test('a store manager CAN auto-provision the built-in bar_daily template', async
 });
 
 test('an owner CAN create an arbitrary custom checklist template', async () => {
+  const itemId = (await api('GET', '/api/checklists/library?q=fridge', { token: ownerToken })).body.items[0].id;
   const res = await api('POST', '/api/checklists/templates', {
     token: ownerToken,
-    body: { name: 'Opening Checklist', itemIds: [] },
+    body: { name: 'Opening Checklist', itemIds: [itemId] },
   });
   assert.equal(res.status, 201);
 });

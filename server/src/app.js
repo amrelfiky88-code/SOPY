@@ -67,6 +67,10 @@ export function createApp() {
   app.use((err, req, res, next) => {
     // Malformed ids (e.g. /submissions/abc) are a client mistake, not a crash.
     if (err.code === '22P02') return res.status(400).json({ error: 'Invalid id' });
+    // Deleting something other records still point at (e.g. a checklist
+    // that has been run) — refuse cleanly rather than a 500.
+    if (err.code === '23503') return res.status(409).json({ error: 'This is still in use and can’t be removed' });
+    if (err.code === '23505') return res.status(409).json({ error: 'That already exists' });
     const status = err.status || err.statusCode || (err.name === 'MulterError' || err.expose ? 400 : 500);
     if (status >= 500) console.error(err);
     // Don't echo database internals back on unexpected failures.

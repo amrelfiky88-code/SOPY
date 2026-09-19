@@ -48,6 +48,7 @@ export default {
   'role.employee': 'Employee',
 
   'dashboard.welcome': 'Welcome back',
+  'dashboard.welcomeNamed': 'Welcome back, {name}',
   'dashboard.assigned': 'Assigned to you',
   'dashboard.submitted24h': 'You submitted (24h)',
   'dashboard.activeStores': 'Active stores',
@@ -72,6 +73,15 @@ export default {
   'kpi.monthly': 'Monthly',
   'kpi.quarterly': 'Quarterly',
   'kpi.noData': 'No data yet',
+  'run.scoreTitle': 'Score summary',
+  'run.flagged': 'this run is flagged as an incident.',
+  'run.colSection': 'Section',
+  'run.colCritical': 'Critical fails',
+  'run.backToDashboard': 'Back to dashboard',
+  'offline.title': "Can't reach SOPY",
+  'offline.body': "You're still signed in — the app just couldn't connect. Check your Wi-Fi or mobile data and try again.",
+  'offline.trying': 'Connecting…',
+  'kpi.basedOn': 'Based on {n} submitted report(s) in this period.',
 
   'run.compliant': 'Compliant',
   'run.notCompliant': 'Not compliant',

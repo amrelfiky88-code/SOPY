@@ -11,14 +11,24 @@ export default function KpiDashboard() {
   const [branchId, setBranchId] = useState('');
   const [branches, setBranches] = useState([]);
   const [kpi, setKpi] = useState(null);
-
-  useEffect(() => { api.get('/tenants/branches').then((d) => setBranches(d.branches)); }, []);
+  const [error, setError] = useState('');
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
+    api.get('/tenants/branches').then((d) => setBranches(d.branches)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    // Ignore a slow reply for a filter the user has already changed.
+    let current = true;
     const params = new URLSearchParams({ period });
     if (branchId) params.set('branchId', branchId);
-    api.get(`/dashboard/kpi?${params.toString()}`).then(setKpi);
-  }, [period, branchId]);
+    setError('');
+    api.get(`/dashboard/kpi?${params.toString()}`)
+      .then((d) => { if (current) setKpi(d); })
+      .catch((err) => { if (current) setError(err.message); });
+    return () => { current = false; };
+  }, [period, branchId, reload]);
 
   return (
     <div>
@@ -38,6 +48,12 @@ export default function KpiDashboard() {
         </select>
       </div>
 
+      {error && (
+        <div className="error-banner">
+          {error}{' '}
+          <button type="button" className="link-btn" onClick={() => setReload((n) => n + 1)}>{t('common.tryAgain')}</button>
+        </div>
+      )}
       {kpi && (
         <div className="kpi-grid">
           <Tile icon={CheckCircleIcon} tone="green" label={t('kpi.compliance')} value={kpi.compliancePct !== null ? `${kpi.compliancePct}%` : t('kpi.noData')} />
@@ -47,7 +63,7 @@ export default function KpiDashboard() {
           <Tile icon={XCircleIcon} tone="red" label={t('kpi.criticalFails')} value={kpi.criticalFailCount} />
         </div>
       )}
-      {kpi && <p className="hint">Based on {kpi.submissionsCount} checklist run{kpi.submissionsCount === 1 ? '' : 's'} in this period.</p>}
+      {kpi && <p className="hint">{t('kpi.basedOn', { n: kpi.submissionsCount })}</p>}
     </div>
   );
 }

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
+import { useT } from './i18n/index.jsx';
 
 import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
@@ -28,13 +29,37 @@ import ReportsList from './pages/reports/ReportsList.jsx';
 import ReportView from './pages/reports/ReportView.jsx';
 
 function RequireAuth({ children }) {
-  const { user, loading } = useAuth();
+  const { user, loading, offline, refresh } = useAuth();
   const location = useLocation();
   if (loading) return null;
+  if (!user && offline) return <OfflineScreen onRetry={refresh} />;
   // Remember where they were headed (e.g. a checklist reopened in Chrome
   // to get camera access) so logging in lands them back there.
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   return children;
+}
+
+// Shown instead of the login page when the saved session couldn't be
+// checked because there's no connection — the login is still valid.
+function OfflineScreen({ onRetry }) {
+  const t = useT();
+  const [trying, setTrying] = useState(false);
+  const retry = async () => {
+    setTrying(true);
+    try { await onRetry(); } finally { setTrying(false); }
+  };
+  return (
+    <div className="screen-narrow">
+      <span className="auth-brand">SOPY</span>
+      <div className="card">
+        <h2>{t('offline.title')}</h2>
+        <p>{t('offline.body')}</p>
+        <button type="button" className="btn btn-primary" onClick={retry} disabled={trying}>
+          {trying ? t('offline.trying') : t('common.tryAgain')}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function App() {

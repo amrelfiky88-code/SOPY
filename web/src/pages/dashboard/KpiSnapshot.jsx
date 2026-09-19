@@ -8,7 +8,8 @@ export default function KpiSnapshot() {
   const [kpi, setKpi] = useState(null);
 
   useEffect(() => {
-    api.get('/dashboard/kpi?period=daily').then(setKpi);
+    // A snapshot is optional on the dashboard; if it can't load, leave it out.
+    api.get('/dashboard/kpi?period=daily').then(setKpi).catch(() => {});
   }, []);
 
   if (!kpi) return null;

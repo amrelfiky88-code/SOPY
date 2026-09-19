@@ -226,7 +226,9 @@ submissionsRouter.get('/:id/scorecard', requireAuth, async (req, res) => {
   );
   const submission = subRows[0];
   if (!submission) return res.status(404).json({ error: 'Not found' });
-  res.json(await computeScorecard(submission));
+  const scorecard = await computeScorecard(submission);
+  scorecard.sections = await translateRows(scorecard.sections, await requestLanguage(req), ['category']);
+  res.json(scorecard);
 });
 
 async function computeScorecard(submission) {
