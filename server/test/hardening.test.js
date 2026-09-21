@@ -172,3 +172,17 @@ test('deleting a checklist that has been run is refused cleanly', async () => {
   const res = await api('DELETE', `/api/checklists/templates/${used.id}`, { token: owner.token });
   assert.equal(res.status, 409);
 });
+
+test('the plan page cannot drop counts below what is already in use either', async () => {
+  const lowStores = await api('PATCH', '/api/tenants/current', { token: owner.token, body: { branchCount: 1 } });
+  assert.equal(lowStores.status, 409);
+  assert.match(lowStores.body.error, /2 active stores/);
+
+  const lowUsers = await api('PATCH', '/api/tenants/current', { token: owner.token, body: { userCount: 1 } });
+  assert.equal(lowUsers.status, 409);
+
+  // Raising is fine.
+  const up = await api('PATCH', '/api/tenants/current', { token: owner.token, body: { branchCount: 5, userCount: 6 } });
+  assert.equal(up.status, 200);
+  assert.equal(up.body.tenant.branch_count, 5);
+});

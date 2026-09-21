@@ -131,6 +131,8 @@ function ProfileCard({ user, tenant, setUser }) {
       <button className="btn btn-primary" onClick={save} disabled={status === 'saving' || !form.fullName.trim()}>
         {status === 'saving' ? t('common.saving') : status === 'saved' ? t('common.saved') : t('account.saveProfile')}
       </button>
+      {/* Without this the button just sits there greyed out with no reason given. */}
+      {!form.fullName.trim() && <p className="hint">{t('account.nameRequired')}</p>}
     </div>
   );
 }

@@ -127,8 +127,9 @@ export default function ChecklistRun() {
 
   // Photo evidence is mandatory for every checkpoint, not just the ones
   // the library flags requires_photo — a checkpoint isn't "answered"
-  // until a photo has been captured for it.
-  const allAnswered = items.every((item) => {
+  // until a photo has been captured for it. An empty checklist would pass
+  // this vacuously, so it's handled separately below.
+  const allAnswered = items.length > 0 && items.every((item) => {
     const r = responses[item.id];
     if (!r?.hasPhoto) return false;
     if (isObservationItem(item)) return !!r?.valueText?.trim();
@@ -188,6 +189,15 @@ export default function ChecklistRun() {
     <div className="has-sticky-actions">
       <h2>{template.name}</h2>
       {error && <div className="error-banner">{error}</div>}
+
+      {items.length === 0 && (
+        <div className="card empty-state">
+          <span>{t('run.noCheckpoints')}</span>
+          <button type="button" className="btn btn-secondary btn-small" onClick={() => navigate('/app/dashboard')}>
+            {t('run.backToDashboard')}
+          </button>
+        </div>
+      )}
 
       {items.map((item) => {
         const r = responses[item.id] || {};
@@ -273,7 +283,7 @@ function Scorecard({ scorecard, submissionId, onDone }) {
   const t = useT();
   return (
     <div>
-      <h2>{t('run.scoreTitle')}</h2>
+      <h2>{t('run.scoreSummary')}</h2>
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
           <div>

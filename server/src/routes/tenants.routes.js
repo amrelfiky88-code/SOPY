@@ -9,6 +9,8 @@ import { PLAN_LIMITS, clampPlanCount } from '../../../shared/pricing.js';
 export const tenantsRouter = Router();
 
 const CLIENT_SETTABLE_STEPS = ['pricing', 'checkout'];
+// Matches the options on the Configure page.
+const BUSINESS_TYPES = ['restaurant', 'cafe', 'quick_service', 'bar', 'cloud_kitchen', 'hotel_fb'];
 
 // Step 3: "Configure Your Data" — confirm branch/user counts and business type
 tenantsRouter.patch('/current', requireAuth, requireRole('business_owner', 'operations_manager'), async (req, res) => {
@@ -22,17 +24,35 @@ tenantsRouter.patch('/current', requireAuth, requireRole('business_owner', 'oper
   // integer column rejects outright) and a negative or zero count would
   // price out at $0.00. Limits live in shared/pricing.js so the Pricing
   // page and checkout enforce exactly the same range.
+  // Lowering a count below what's already in use would leave stores or
+  // people the plan doesn't cover (and bill for fewer at the next
+  // checkout), so it's refused here just as it is on the billing route.
+  const { rows: usage } = await query(
+    `SELECT (SELECT count(*)::int FROM branches WHERE tenant_id = $1 AND is_active) AS branches,
+            (SELECT count(*)::int FROM users WHERE tenant_id = $1 AND status != 'disabled') AS users`,
+    [req.auth.tenantId]
+  );
+
   if (branchCount !== undefined) {
     const n = clampPlanCount(branchCount, PLAN_LIMITS.branches);
     if (n === null) return res.status(400).json({ error: 'branchCount must be a number' });
+    if (n < usage[0].branches) {
+      return res.status(409).json({ error: `You have ${usage[0].branches} active stores. Remove stores in Team & stores before lowering the plan to ${n}.` });
+    }
     fields.push(`branch_count = $${i++}`); values.push(n);
   }
   if (userCount !== undefined) {
     const n = clampPlanCount(userCount, PLAN_LIMITS.users);
     if (n === null) return res.status(400).json({ error: 'userCount must be a number' });
+    if (n < usage[0].users) {
+      return res.status(409).json({ error: `You have ${usage[0].users} users (including pending invites). Disable users in Team & stores before lowering the plan to ${n}.` });
+    }
     fields.push(`user_count = $${i++}`); values.push(n);
   }
-  if (businessType !== undefined) { fields.push(`business_type = $${i++}`); values.push(businessType); }
+  if (businessType !== undefined) {
+    if (!BUSINESS_TYPES.includes(businessType)) return res.status(400).json({ error: 'Unknown business type' });
+    fields.push(`business_type = $${i++}`); values.push(businessType);
+  }
   // The client may only walk forward through the pre-payment steps
   // (configure → pricing → checkout). Anything past checkout is the
   // server's to set once payment is confirmed; accepting any value let a

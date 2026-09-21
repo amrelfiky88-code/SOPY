@@ -3,6 +3,7 @@ import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-route
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useT } from '../i18n/index.jsx';
 import FeedbackButton from './FeedbackButton.jsx';
+import SetupInProgress from '../pages/onboarding/SetupInProgress.jsx';
 import {
   MenuIcon,
   FileTextIcon,
@@ -20,6 +21,9 @@ import {
   BriefcaseIcon,
   UserIcon,
 } from './icons.jsx';
+
+// Roles allowed to run the signup funnel (the server enforces the same).
+const SETUP_ROLES = ['business_owner', 'operations_manager'];
 
 const STEP_TO_PATH = {
   who_are_you: '/get-started',
@@ -59,7 +63,12 @@ export default function AppLayout() {
   };
 
   if (tenant && tenant.onboarding_step !== 'complete') {
-    return <Navigate to={STEP_TO_PATH[tenant.onboarding_step] || '/configure'} replace />;
+    // Only the roles that can actually complete setup go through the
+    // funnel; staff invited early would otherwise land in the owner's
+    // wizard and hit "Insufficient permissions" on every step.
+    return SETUP_ROLES.includes(user?.role)
+      ? <Navigate to={STEP_TO_PATH[tenant.onboarding_step] || '/configure'} replace />
+      : <SetupInProgress />;
   }
 
   const canManage = ['business_owner', 'operations_manager', 'area_manager'].includes(user?.role);

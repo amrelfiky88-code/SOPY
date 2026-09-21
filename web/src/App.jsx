@@ -27,6 +27,7 @@ import Account from './pages/account/Account.jsx';
 import AcceptInvite from './pages/AcceptInvite.jsx';
 import ReportsList from './pages/reports/ReportsList.jsx';
 import ReportView from './pages/reports/ReportView.jsx';
+import SetupInProgress from './pages/onboarding/SetupInProgress.jsx';
 
 function RequireAuth({ children }) {
   const { user, loading, offline, refresh } = useAuth();
@@ -37,6 +38,16 @@ function RequireAuth({ children }) {
   // to get camera access) so logging in lands them back there.
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   return children;
+}
+
+// Signup, plan, checkout and the setup wizard belong to the people who
+// run the business; staff invited mid-setup get a "setting up" message
+// instead of screens they can't use.
+const SETUP_ROLES = ['business_owner', 'operations_manager'];
+
+function RequireSetupRole({ children }) {
+  const { user } = useAuth();
+  return <RequireAuth>{user && !SETUP_ROLES.includes(user.role) ? <SetupInProgress /> : children}</RequireAuth>;
 }
 
 // Shown instead of the login page when the saved session couldn't be
@@ -70,10 +81,10 @@ export default function App() {
       <Route path="/get-started" element={<WhoAreYou />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
 
-      <Route path="/configure" element={<RequireAuth><ConfigureData /></RequireAuth>} />
-      <Route path="/pricing" element={<RequireAuth><Pricing /></RequireAuth>} />
-      <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
-      <Route path="/onboarding/*" element={<RequireAuth><OnboardingWizard /></RequireAuth>} />
+      <Route path="/configure" element={<RequireSetupRole><ConfigureData /></RequireSetupRole>} />
+      <Route path="/pricing" element={<RequireSetupRole><Pricing /></RequireSetupRole>} />
+      <Route path="/checkout" element={<RequireSetupRole><Checkout /></RequireSetupRole>} />
+      <Route path="/onboarding/*" element={<RequireSetupRole><OnboardingWizard /></RequireSetupRole>} />
 
       <Route path="/app" element={<RequireAuth><AppLayout /></RequireAuth>}>
         <Route index element={<Navigate to="dashboard" replace />} />
