@@ -27,36 +27,45 @@ async function paddleRequest(pathname, { method = 'GET', body } = {}) {
   return data.data;
 }
 
-// Creates a transaction with two custom (non-catalog) line items so the
-// exact tapered total from the pricing calculator is what the customer is
-// charged — Paddle supports inline custom prices for this.
-// branchRate/userRate are the blended per-unit rates from shared/pricing.js.
-export async function createCheckoutTransaction({ customerEmail, branchCount, userCount, branchRate, userRate, tenantId }) {
+const cents = (amount) => String(Math.round(Number(amount) * 100));
+
+// Non-catalog prices must belong to a product. Use a catalog product when
+// one is configured; otherwise describe one inline (Paddle creates it).
+// Without either, Paddle rejects the transaction outright.
+function productFields() {
+  return process.env.PADDLE_PRODUCT_ID
+    ? { product_id: process.env.PADDLE_PRODUCT_ID }
+    : { product: { name: 'SOPY subscription', tax_category: process.env.PADDLE_TAX_CATEGORY || 'standard' } };
+}
+
+// One line per resource, charged as quantity 1 at that resource's exact
+// tapered subtotal. The previous version sent quantity × blended rate
+// rounded to cents, which drifts from the tapered total (2 branches:
+// 2 × $9.83 = $19.66, while the pricing page and our records said
+// $19.67), so the customer was billed a different amount than shown.
+// `pricing` is calculatePricing()'s result from shared/pricing.js.
+export function buildLineItems(pricing) {
+  const line = (name, count, subtotal) => ({
+    quantity: 1,
+    price: {
+      name,
+      description: `SOPY — ${count} ${name.toLowerCase()}`,
+      billing_cycle: { interval: 'month', frequency: 1 },
+      unit_price: { amount: cents(subtotal), currency_code: 'USD' },
+      ...productFields(),
+    },
+  });
+  return [
+    line('Branches', pricing.branchCount, pricing.branchSubtotal),
+    line('Users', pricing.userCount, pricing.userSubtotal),
+  ];
+}
+
+export async function createCheckoutTransaction({ customerEmail, pricing, tenantId }) {
   return paddleRequest('/transactions', {
     method: 'POST',
     body: {
-      items: [
-        {
-          quantity: branchCount,
-          price: {
-            description: 'SOPY — Branches',
-            name: 'Branches',
-            billing_cycle: { interval: 'month', frequency: 1 },
-            unit_price: { amount: String(Math.round(branchRate * 100)), currency_code: 'USD' },
-            product_id: process.env.PADDLE_PRODUCT_ID || undefined,
-          },
-        },
-        {
-          quantity: userCount,
-          price: {
-            description: 'SOPY — Users',
-            name: 'Users',
-            billing_cycle: { interval: 'month', frequency: 1 },
-            unit_price: { amount: String(Math.round(userRate * 100)), currency_code: 'USD' },
-            product_id: process.env.PADDLE_PRODUCT_ID || undefined,
-          },
-        },
-      ],
+      items: buildLineItems(pricing),
       custom_data: { tenantId },
       customer: customerEmail ? { email: customerEmail } : undefined,
       collection_mode: 'automatic',
@@ -64,33 +73,14 @@ export async function createCheckoutTransaction({ customerEmail, branchCount, us
   });
 }
 
-// Updates an existing subscription's quantities. Paddle prorates
-// automatically when proration_billing_mode is 'prorated_immediately'.
-export async function updateSubscriptionQuantities({ subscriptionId, branchCount, userCount, branchRate, userRate }) {
+// Replaces the subscription's items with the new plan. Paddle prorates
+// automatically with 'prorated_immediately'.
+export async function updateSubscriptionQuantities({ subscriptionId, pricing }) {
   return paddleRequest(`/subscriptions/${subscriptionId}`, {
     method: 'PATCH',
     body: {
       proration_billing_mode: 'prorated_immediately',
-      items: [
-        {
-          quantity: branchCount,
-          price: {
-            description: 'SOPY — Branches',
-            name: 'Branches',
-            billing_cycle: { interval: 'month', frequency: 1 },
-            unit_price: { amount: String(Math.round(branchRate * 100)), currency_code: 'USD' },
-          },
-        },
-        {
-          quantity: userCount,
-          price: {
-            description: 'SOPY — Users',
-            name: 'Users',
-            billing_cycle: { interval: 'month', frequency: 1 },
-            unit_price: { amount: String(Math.round(userRate * 100)), currency_code: 'USD' },
-          },
-        },
-      ],
+      items: buildLineItems(pricing),
     },
   });
 }

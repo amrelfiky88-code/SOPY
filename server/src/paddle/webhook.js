@@ -14,6 +14,11 @@ export function verifyPaddleSignature(rawBody, signatureHeader) {
   const { ts, h1 } = parts;
   if (!ts || !h1) return false;
 
+  // Reject stale signatures so a captured webhook can't be replayed later
+  // (e.g. an old "transaction.completed" re-activating a canceled plan).
+  const ageSeconds = Math.abs(Date.now() / 1000 - Number(ts));
+  if (!Number.isFinite(ageSeconds) || ageSeconds > MAX_AGE_SECONDS) return false;
+
   const signedPayload = `${ts}:${rawBody}`;
   const expected = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
 
@@ -21,3 +26,7 @@ export function verifyPaddleSignature(rawBody, signatureHeader) {
   const b = Buffer.from(h1, 'hex');
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+
+// Paddle retries failed deliveries with a fresh signature, so a short
+// window doesn't lose events.
+const MAX_AGE_SECONDS = 5 * 60;

@@ -304,13 +304,25 @@ function SubscriptionCard({ user, tenant }) {
 
           <p className="hint">
             {subscription.status === 'canceled'
-              ? t('account.isCanceled')
-              : renewal
-                ? t('account.renewsOn', { date: renewal })
-                : t('account.renewsMonthly')}
+              ? (renewal ? t('account.canceledUntil', { date: renewal }) : t('account.isCanceled'))
+              : subscription.status === 'pending'
+                ? t('account.pendingNote')
+                : subscription.status === 'past_due'
+                  ? t('account.pastDueNote')
+                  : renewal
+                    ? t('account.renewsOn', { date: renewal })
+                    : t('account.renewsMonthly')}
           </p>
 
-          {isOwner && subscription.status !== 'canceled' && (
+          {/* A checkout that was started but never paid: changing or
+              canceling it failed with "No active subscription". */}
+          {isOwner && subscription.status === 'pending' && (
+            <Link to="/checkout" className="btn btn-primary" style={{ marginTop: 4, width: '100%' }}>
+              {t('account.finishPayment')}
+            </Link>
+          )}
+
+          {isOwner && (subscription.status === 'active' || subscription.status === 'past_due') && (
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
               <button className="btn btn-secondary btn-small" onClick={() => setEditing(true)}>{t('account.changePlan')}</button>
               {confirmingCancel ? (

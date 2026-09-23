@@ -18,6 +18,7 @@ import { dashboardRouter } from './routes/dashboard.routes.js';
 import { feedbackRouter } from './routes/feedback.routes.js';
 import { sharedRouter } from './routes/shared.routes.js';
 import { requireSignedUpload } from './uploads.js';
+import { blockWritesWhenPlanEnded } from './auth/plan.js';
 
 export function createApp() {
   const app = express();
@@ -40,12 +41,20 @@ export function createApp() {
   app.get('/api/health', (req, res) => res.json({ ok: true }));
 
   app.use('/api/auth', authRouter);
-  app.use('/api/tenants', tenantsRouter);
+  // After a plan ends, adding stores or people is blocked; shrinking
+  // (plan counts, disabling users, removing stores) stays open so an owner
+  // can tidy up before subscribing again.
+  app.use('/api/tenants', blockWritesWhenPlanEnded([
+    ['PATCH', /^\/current$/],
+    ['PATCH', /^\/users\/[^/]+$/],
+    ['DELETE', /^\/branches\/[^/]+$/],
+  ]), tenantsRouter);
   app.use('/api/pricing', pricingRouter);
   app.use('/api/billing', billingRouter);
   app.use('/api/onboarding', onboardingRouter);
-  app.use('/api/checklists', checklistsRouter);
-  app.use('/api/submissions', submissionsRouter);
+  app.use('/api/checklists', blockWritesWhenPlanEnded(), checklistsRouter);
+  // Sharing an existing report stays allowed after a plan ends.
+  app.use('/api/submissions', blockWritesWhenPlanEnded([['POST', /^\/[^/]+\/share$/]]), submissionsRouter);
   app.use('/api/dashboard', dashboardRouter);
   app.use('/api/feedback', feedbackRouter);
   app.use('/api/shared', sharedRouter);

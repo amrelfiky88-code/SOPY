@@ -21,7 +21,7 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
   // the customer's active subscription. With real Paddle keys it would
   // also mint a second transaction the customer could pay a second time.
   const { rows: activeRows } = await query(
-    "SELECT * FROM subscriptions WHERE tenant_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1",
+    "SELECT * FROM subscriptions WHERE tenant_id = $1 AND status IN ('active', 'past_due') ORDER BY created_at DESC LIMIT 1",
     [req.auth.tenantId]
   );
   if (activeRows[0]) {
@@ -46,14 +46,7 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
 
   try {
     const transaction = process.env.PADDLE_API_KEY
-      ? await createCheckoutTransaction({
-          customerEmail: userRows[0].email,
-          branchCount: pricing.branchCount,
-          userCount: pricing.userCount,
-          branchRate: pricing.branchBlendedRate,
-          userRate: pricing.userBlendedRate,
-          tenantId: tenant.id,
-        })
+      ? await createCheckoutTransaction({ customerEmail: userRows[0].email, pricing, tenantId: tenant.id })
       : mockTransaction(pricing); // lets the flow run end-to-end without real Paddle keys in dev
 
     // Idempotent: reuse the tenant's existing pending subscription row
@@ -138,7 +131,7 @@ billingRouter.patch('/subscription/quantities', requireAuth, requireRole('busine
   const pricing = calculatePricing({ branches: branchCount, users: userCount });
 
   const { rows } = await query(
-    "SELECT * FROM subscriptions WHERE tenant_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1",
+    "SELECT * FROM subscriptions WHERE tenant_id = $1 AND status IN ('active', 'past_due') ORDER BY created_at DESC LIMIT 1",
     [req.auth.tenantId]
   );
   const sub = rows[0];
@@ -159,13 +152,7 @@ billingRouter.patch('/subscription/quantities', requireAuth, requireRole('busine
   }
 
   if (sub.paddle_subscription_id && process.env.PADDLE_API_KEY) {
-    await updateSubscriptionQuantities({
-      subscriptionId: sub.paddle_subscription_id,
-      branchCount: pricing.branchCount,
-      userCount: pricing.userCount,
-      branchRate: pricing.branchBlendedRate,
-      userRate: pricing.userBlendedRate,
-    });
+    await updateSubscriptionQuantities({ subscriptionId: sub.paddle_subscription_id, pricing });
   }
 
   const { rows: updated } = await query(
@@ -180,7 +167,7 @@ billingRouter.patch('/subscription/quantities', requireAuth, requireRole('busine
 
 billingRouter.post('/subscription/cancel', requireAuth, requireRole('business_owner'), async (req, res) => {
   const { rows } = await query(
-    "SELECT * FROM subscriptions WHERE tenant_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1",
+    "SELECT * FROM subscriptions WHERE tenant_id = $1 AND status IN ('active', 'past_due') ORDER BY created_at DESC LIMIT 1",
     [req.auth.tenantId]
   );
   const sub = rows[0];
@@ -206,35 +193,59 @@ export async function paddleWebhookHandler(req, res) {
   }
   if (!valid) return res.status(401).json({ error: 'Invalid signature' });
 
-  const event = JSON.parse(req.body.toString('utf8'));
+  let event;
+  try {
+    event = JSON.parse(req.body.toString('utf8'));
+  } catch {
+    return res.status(400).json({ error: 'Malformed payload' });
+  }
   const tenantId = event.data?.custom_data?.tenantId;
+  const data = event.data || {};
 
   switch (event.event_type) {
     case 'transaction.completed': {
       if (tenantId) {
-        await query(
-          "UPDATE subscriptions SET status = 'active', paddle_customer_id = $1 WHERE tenant_id = $2 AND paddle_transaction_id = $3",
-          [event.data.customer_id, tenantId, event.data.id]
+        const { rowCount } = await query(
+          "UPDATE subscriptions SET status = 'active', paddle_customer_id = $1, updated_at = now() WHERE tenant_id = $2 AND paddle_transaction_id = $3",
+          [data.customer_id, tenantId, data.id]
         );
-        await advancePastCheckout(tenantId);
+        // Renewal transactions for an existing subscription don't match a
+        // checkout row, and mustn't reset where the business is in setup.
+        if (rowCount) await advancePastCheckout(tenantId);
       }
       break;
     }
     case 'subscription.created':
-    case 'subscription.updated': {
-      if (tenantId) {
-        await query(
-          `UPDATE subscriptions SET paddle_subscription_id = $1, status = $2, current_period_end = $3, updated_at = now()
-           WHERE id = (SELECT id FROM subscriptions WHERE tenant_id = $4 ORDER BY created_at DESC LIMIT 1)`,
-          [event.data.id, event.data.status === 'active' ? 'active' : event.data.status, event.data.current_billing_period?.ends_at || null, tenantId]
-        );
-      }
-      break;
-    }
+    case 'subscription.updated':
     case 'subscription.canceled': {
-      if (tenantId) {
-        await query("UPDATE subscriptions SET status = 'canceled', updated_at = now() WHERE tenant_id = $1", [tenantId]);
-      }
+      if (!tenantId || !data.id) break;
+      // A cancellation scheduled for the end of the period arrives as an
+      // "active" subscription with scheduled_change.action = 'cancel'.
+      // Our own cancel already marked the row canceled (the UI says access
+      // continues until the period ends); taking Paddle's "active" at face
+      // value flipped it back to Active on the next update.
+      const status = event.event_type === 'subscription.canceled' || data.scheduled_change?.action === 'cancel'
+        ? 'canceled'
+        : data.status;
+      const periodEnd = data.current_billing_period?.ends_at || data.scheduled_change?.effective_at || null;
+      // Target the row for *this* subscription: by its Paddle id, or — the
+      // first time we hear of it — the checkout row whose transaction
+      // created it. This used to update "the newest row", so an update
+      // about an old subscription overwrote a newer pending checkout, and
+      // a cancel canceled every row the business had, new ones included.
+      await query(
+        `UPDATE subscriptions SET paddle_subscription_id = $1, status = $2,
+                current_period_end = COALESCE($3::timestamptz, current_period_end), updated_at = now()
+         WHERE id = (
+           SELECT id FROM subscriptions
+           WHERE tenant_id = $4
+             AND (paddle_subscription_id = $1
+                  OR (paddle_subscription_id IS NULL AND paddle_transaction_id = $5))
+           ORDER BY (paddle_subscription_id = $1) DESC NULLS LAST, created_at DESC
+           LIMIT 1
+         )`,
+        [data.id, status, periodEnd, tenantId, data.transaction_id || null]
+      );
       break;
     }
     default:

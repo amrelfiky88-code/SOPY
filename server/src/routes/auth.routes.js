@@ -6,6 +6,7 @@ import { requireAuth } from '../auth/middleware.js';
 import { isSupportedLanguage, DEFAULT_LANGUAGE } from '../../../shared/languages.js';
 import { clampPlanCount, PLAN_LIMITS } from '../../../shared/pricing.js';
 import { isLocked, recordFailure, clearFailures, LOCKED_MESSAGE } from '../auth/rateLimit.js';
+import { planEnded } from '../auth/plan.js';
 
 export const authRouter = Router();
 
@@ -96,7 +97,7 @@ authRouter.post('/login', async (req, res) => {
 
   const token = signToken({ userId: user.id });
   const { rows: tenantRows } = await query('SELECT * FROM tenants WHERE id = $1', [user.tenant_id]);
-  res.json({ token, user: publicUser(user), tenant: tenantRows[0] });
+  res.json({ token, user: publicUser(user), tenant: { ...tenantRows[0], plan_ended: await planEnded(user.tenant_id) } });
 });
 
 // Accept an invite: sets a password for a pre-created 'invited' user
@@ -126,7 +127,9 @@ authRouter.post('/accept-invite', async (req, res) => {
 authRouter.get('/me', requireAuth, async (req, res) => {
   const { rows } = await query('SELECT * FROM users WHERE id = $1', [req.auth.userId]);
   const { rows: tenantRows } = await query('SELECT * FROM tenants WHERE id = $1', [req.auth.tenantId]);
-  res.json({ user: publicUser(rows[0]), tenant: tenantRows[0] });
+  // Lets the app show a "subscription ended" banner up front instead of
+  // failing on the first thing someone tries to save.
+  res.json({ user: publicUser(rows[0]), tenant: { ...tenantRows[0], plan_ended: await planEnded(req.auth.tenantId) } });
 });
 
 // Lets a signed-in user edit their own profile from the account page.

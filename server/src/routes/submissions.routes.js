@@ -58,13 +58,16 @@ submissionsRouter.post('/', requireAuth, async (req, res) => {
     if (!ok[0]) return res.status(404).json({ error: 'Assignment not found' });
   }
 
-  // Tapping Start on an assigned checklist again today picks up the run
-  // already underway rather than opening a second, empty one.
+  // Tapping Start on an assigned checklist again during the shift picks up
+  // the run already underway rather than opening a second, empty one.
+  // "This shift" is a rolling 16 hours, not "since midnight": midnight
+  // here meant UTC (2-3am in Cairo), so a run started at 1am and resumed
+  // at 3am was missed and duplicated.
   if (assignmentId) {
     const { rows: open } = await query(
       `SELECT * FROM checklist_submissions
        WHERE tenant_id = $1 AND assignment_id = $2 AND branch_id = $3 AND submitted_by = $4
-         AND status = 'in_progress' AND started_at >= date_trunc('day', now())
+         AND status = 'in_progress' AND started_at >= now() - interval '16 hours'
        ORDER BY started_at DESC LIMIT 1`,
       [req.auth.tenantId, assignmentId, branchId, req.auth.userId]
     );
@@ -80,8 +83,9 @@ submissionsRouter.post('/', requireAuth, async (req, res) => {
 });
 
 // The caller's own unfinished report of this kind at this store, started
-// today — lets "Save progress" survive a reload instead of orphaning the
-// draft. Must stay above '/:id' so 'draft' isn't read as an id.
+// within the last 16 hours (see the resume note above) — lets "Save
+// progress" survive a reload instead of orphaning the draft. Must stay
+// above '/:id' so 'draft' isn't read as an id.
 submissionsRouter.get('/draft', requireAuth, async (req, res) => {
   const { kind, branchId } = req.query;
   if (!kind || !branchId) return res.status(400).json({ error: 'kind and branchId are required' });
@@ -89,7 +93,7 @@ submissionsRouter.get('/draft', requireAuth, async (req, res) => {
     `SELECT s.* FROM checklist_submissions s
      JOIN checklist_templates t ON t.id = s.template_id
      WHERE s.tenant_id = $1 AND s.submitted_by = $2 AND s.branch_id = $3 AND t.kind = $4
-       AND s.status = 'in_progress' AND s.started_at >= date_trunc('day', now())
+       AND s.status = 'in_progress' AND s.started_at >= now() - interval '16 hours'
      ORDER BY s.started_at DESC LIMIT 1`,
     [req.auth.tenantId, req.auth.userId, branchId, kind]
   );

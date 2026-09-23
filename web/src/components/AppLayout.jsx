@@ -116,6 +116,14 @@ export default function AppLayout() {
         <div style={{ marginBottom: 20, color: 'var(--ink-soft)', fontSize: 14 }}>
           {user?.fullName} · <span className="pill pill-green">{t(`role.${user?.role}`)}</span>
         </div>
+        {tenant?.plan_ended && (
+          <div className="error-banner" role="status">
+            {t('plan.ended')}{' '}
+            {user?.role === 'business_owner'
+              ? <NavLink to="/app/account" className="link-btn">{t('plan.resubscribe')}</NavLink>
+              : t('plan.askOwner')}
+          </div>
+        )}
         <Outlet />
       </div>
 
