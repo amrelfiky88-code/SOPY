@@ -1,3 +1,7 @@
+// First: .env must be loaded before any module reads process.env (the
+// JWT_SECRET boot check in auth/jwt.js, for one). It happened to work
+// only because db.js pulled dotenv in first.
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'node:path';

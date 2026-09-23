@@ -50,6 +50,14 @@ submissionsRouter.post('/', requireAuth, async (req, res) => {
   );
   if (!owned[0].template_ok || !owned[0].branch_ok) return res.status(404).json({ error: 'Checklist or store not found' });
 
+  if (assignmentId) {
+    const { rows: ok } = await query(
+      'SELECT 1 FROM checklist_assignments WHERE id = $1 AND tenant_id = $2',
+      [assignmentId, req.auth.tenantId]
+    );
+    if (!ok[0]) return res.status(404).json({ error: 'Assignment not found' });
+  }
+
   // Tapping Start on an assigned checklist again today picks up the run
   // already underway rather than opening a second, empty one.
   if (assignmentId) {
