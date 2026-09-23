@@ -13,6 +13,7 @@ import { submissionsRouter } from './routes/submissions.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
 import { feedbackRouter } from './routes/feedback.routes.js';
 import { sharedRouter } from './routes/shared.routes.js';
+import { requireSignedUpload } from './uploads.js';
 
 export function createApp() {
   const app = express();
@@ -29,7 +30,8 @@ export function createApp() {
   app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), paddleWebhookHandler);
 
   app.use(express.json({ limit: '1mb' }));
-  app.use('/uploads', express.static(path.resolve('uploads')));
+  // Photos are only served through signed, expiring links (see uploads.js).
+  app.use('/uploads', requireSignedUpload, express.static(path.resolve('uploads')));
 
   app.get('/api/health', (req, res) => res.json({ ok: true }));
 

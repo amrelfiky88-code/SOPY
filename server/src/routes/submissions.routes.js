@@ -6,6 +6,7 @@ import path from 'node:path';
 import { query } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
 import { translateRows, requestLanguage } from '../i18n/translateContent.js';
+import { signPhotos } from '../uploads.js';
 
 export const submissionsRouter = Router();
 
@@ -93,7 +94,14 @@ submissionsRouter.patch('/:id', requireAuth, async (req, res) => {
   const fields = [];
   const values = [];
   let i = 1;
-  if (formData !== undefined) { fields.push(`form_data = $${i++}`); values.push(JSON.stringify(formData)); }
+  if (formData !== undefined) {
+    if (formData === null || typeof formData !== 'object') return res.status(400).json({ error: 'formData must be an object' });
+    const json = JSON.stringify(formData);
+    // A full Kitchen report is a few KB; this only stops a runaway client
+    // (or a crafted request) storing megabytes per row.
+    if (json.length > 512_000) return res.status(413).json({ error: 'This report is too large to save' });
+    fields.push(`form_data = $${i++}`); values.push(json);
+  }
   if (hasIncident !== undefined) { fields.push(`has_incident = $${i++}`); values.push(!!hasIncident); }
   if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
   if (!(await findOpenSubmission(req, res))) return;
@@ -113,6 +121,9 @@ submissionsRouter.patch('/:id', requireAuth, async (req, res) => {
 submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), async (req, res) => {
   const { itemId, isCompliant, valueText, gpsLat, gpsLng, capturedAt } = req.body;
   if (!itemId) return res.status(400).json({ error: 'itemId is required' });
+  if (typeof valueText === 'string' && valueText.length > 2000) {
+    return res.status(400).json({ error: 'Keep the note under 2000 characters' });
+  }
   const submission = await findOpenSubmission(req, res);
   if (!submission) return;
 
@@ -179,7 +190,7 @@ submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), as
     }
   }
 
-  res.status(201).json({ response: rows[0] });
+  res.status(201).json({ response: signPhotos(rows)[0] });
 });
 
 submissionsRouter.post('/:id/submit', requireAuth, async (req, res) => {
@@ -208,7 +219,7 @@ submissionsRouter.get('/:id', requireAuth, async (req, res) => {
      WHERE r.submission_id = $1 ORDER BY r.created_at`,
     [req.params.id]
   );
-  res.json({ submission: rows[0], responses });
+  res.json({ submission: rows[0], responses: signPhotos(responses) });
 });
 
 // Section-by-section score, critical-fail count, and Green/Amber/Red
@@ -327,7 +338,7 @@ submissionsRouter.get('/:id/report', requireAuth, async (req, res) => {
     [submission.id, submission.template_id]
   );
   const lang = await requestLanguage(req);
-  const items = await translateRows(itemRows, lang, ['text', 'description', 'category']);
+  const items = signPhotos(await translateRows(itemRows, lang, ['text', 'description', 'category']));
   let scorecard = null;
   if (itemRows.length) {
     scorecard = await computeScorecard(submission);

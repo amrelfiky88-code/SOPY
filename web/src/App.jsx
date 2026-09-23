@@ -73,6 +73,12 @@ function OfflineScreen({ onRetry }) {
   );
 }
 
+function NotFoundRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  return <Navigate to={user ? '/app/dashboard' : '/'} replace />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -105,7 +111,9 @@ export default function App() {
         <Route path="reports/:submissionId" element={<ReportView />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* A mistyped or stale address sent signed-in staff to the marketing
+          page; send them to their dashboard instead. */}
+      <Route path="*" element={<NotFoundRedirect />} />
     </Routes>
   );
 }

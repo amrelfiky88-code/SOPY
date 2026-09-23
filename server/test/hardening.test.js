@@ -186,3 +186,50 @@ test('the plan page cannot drop counts below what is already in use either', asy
   assert.equal(up.status, 200);
   assert.equal(up.body.tenant.branch_count, 5);
 });
+
+// Evidence photos used to be world-readable at a guessable-shaped URL
+// with no login and no expiry.
+test('evidence photos are only served through signed, expiring links', async () => {
+  const branchId = (await api('GET', '/api/tenants/branches', { token: owner.token })).body.branches[0].id;
+  const itemId = (await api('GET', '/api/checklists/library?q=fridge', { token: owner.token })).body.items[0].id;
+  const tpl = (await api('POST', '/api/checklists/templates', { token: owner.token, body: { name: 'Photo check', itemIds: [itemId] } })).body.template;
+  const subId = (await api('POST', '/api/submissions', { token: owner.token, body: { templateId: tpl.id, branchId } })).body.submission.id;
+
+  const form = new FormData();
+  form.append('itemId', itemId);
+  form.append('isCompliant', 'true');
+  form.append('photo', new Blob([Buffer.from([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' }), 'e.jpg');
+  await fetch(`${baseUrl}/api/submissions/${subId}/responses`, { method: 'POST', headers: { Authorization: `Bearer ${owner.token}` }, body: form });
+
+  const detail = await api('GET', `/api/submissions/${subId}`, { token: owner.token });
+  const signed = detail.body.responses[0].photo_path;
+  assert.match(signed, /^\/uploads\/.+\?e=\d+&s=[A-Za-z0-9_-]+$/);
+
+  // The signed link works without a login (so <img> and the PDF can use it).
+  assert.equal((await fetch(baseUrl + signed)).status, 200);
+  // The bare path, a tampered signature and an expired link do not.
+  assert.equal((await fetch(baseUrl + signed.split('?')[0])).status, 403);
+  assert.equal((await fetch(`${baseUrl + signed}x`)).status, 403);
+  const [p, q] = signed.split('?');
+  const params = new URLSearchParams(q);
+  params.set('e', String(Date.now() - 1000));
+  assert.equal((await fetch(`${baseUrl}${p}?${params}`)).status, 403);
+});
+
+test('oversized reports, notes and names are refused', async () => {
+  const branchId = (await api('GET', '/api/tenants/branches', { token: owner.token })).body.branches[0].id;
+  const tpl = (await api('GET', '/api/checklists/templates', { token: owner.token })).body.templates.find((t) => t.kind === 'kitchen_daily');
+  const subId = (await api('POST', '/api/submissions', { token: owner.token, body: { templateId: tpl.id, branchId } })).body.submission.id;
+
+  const huge = await api('PATCH', `/api/submissions/${subId}`, { token: owner.token, body: { formData: { notes: 'x'.repeat(600_000) } } });
+  assert.equal(huge.status, 413);
+  const notAnObject = await api('PATCH', `/api/submissions/${subId}`, { token: owner.token, body: { formData: 'nope' } });
+  assert.equal(notAnObject.status, 400);
+
+  const longStore = await api('POST', '/api/tenants/branches', { token: owner.token, body: { name: 'S'.repeat(200) } });
+  assert.equal(longStore.status, 400);
+  const longChecklist = await api('POST', '/api/checklists/templates', { token: owner.token, body: { name: 'C'.repeat(250), itemIds: [] } });
+  assert.equal(longChecklist.status, 400);
+  const badStandard = await api('POST', '/api/checklists/library', { token: owner.token, body: { text: 'Custom point', standard: 'MADE_UP' } });
+  assert.equal(badStandard.status, 400);
+});

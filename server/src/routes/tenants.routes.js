@@ -124,6 +124,7 @@ tenantsRouter.post('/branches', requireAuth, requireRole('business_owner', 'oper
   const { address, city, timezone } = req.body;
   const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
   if (!name) return res.status(400).json({ error: 'Branch name is required' });
+  if (name.length > 120) return res.status(400).json({ error: 'That store name is too long' });
   const room = await planRoom(req.auth.tenantId, 'branches');
   if (room.full) return res.status(409).json({ error: planFullMessage('store', room, req.auth.role) });
   const { rows } = await query(
@@ -172,6 +173,9 @@ tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', '
   const { fullName, email, role, accessLevel, branchIds } = req.body;
   if (typeof fullName !== 'string' || typeof email !== 'string' || !fullName.trim() || !email.trim() || !role) {
     return res.status(400).json({ error: 'Missing required fields' });
+  }
+  if (fullName.trim().length > 120 || email.trim().length > 200) {
+    return res.status(400).json({ error: 'That name or email is too long' });
   }
   if (!isValidRole(role)) return res.status(400).json({ error: 'Unknown role' });
   if (!canAssignRole(req.auth.role, role)) {

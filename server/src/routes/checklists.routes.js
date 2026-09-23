@@ -53,14 +53,23 @@ checklistsRouter.get('/library', requireAuth, requireOnboardingComplete, async (
 });
 
 checklistsRouter.post('/library', requireAuth, requireRole('business_owner', 'operations_manager'), async (req, res) => {
-  const { text, description, standard, category, requiresPhoto, isCritical } = req.body;
+  const { requiresPhoto, isCritical } = req.body;
+  const text = trimmed(req.body.text);
+  const description = trimmed(req.body.description);
+  const category = trimmed(req.body.category);
+  const { standard } = req.body;
   if (!text || !standard) return res.status(400).json({ error: 'text and standard are required' });
+  if (!STANDARDS.includes(standard)) return res.status(400).json({ error: 'Unknown standard' });
+  if (text.length > 500 || description.length > 2000 || category.length > 200) {
+    return res.status(400).json({ error: 'That checkpoint text is too long' });
+  }
   // Photo evidence is mandatory for every checkpoint — default new
   // custom items to true unless the caller explicitly opts out.
   const { rows } = await query(
     `INSERT INTO checklist_items (tenant_id, text, description, standard, category, requires_photo, is_critical)
      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
     [req.auth.tenantId, text, description || null, standard, category || null, requiresPhoto !== false, !!isCritical]
+
   );
   res.status(201).json({ item: rows[0] });
 });
@@ -104,6 +113,9 @@ const OPEN_TO_ANYONE_REPORT_KINDS = new Set(['kitchen_daily', 'bar_daily', 'open
 const MANAGER_VISIT_REPORT_ROLES = ['business_owner', 'operations_manager', 'area_manager'];
 const MANAGER_VISIT_REPORT_KINDS = new Set(['qc_visit', 'area_manager_visit', 'ops_manager_visit']);
 const FREQUENCIES = ['daily', 'weekly', 'monthly', 'quarterly'];
+// Same set the builder's filter row offers.
+const STANDARDS = ['HACCP', 'ISO_22000', 'LOCAL_CODE', 'INTERNAL_QC', 'SOP', 'C_STORE', 'CUSTOM'];
+const trimmed = (v) => (typeof v === 'string' ? v.trim() : '');
 
 function requireManagerUnlessBuiltinDailyReport(req, res, next) {
   const kind = req.body.kind;
@@ -117,6 +129,7 @@ checklistsRouter.post('/templates', requireAuth, requireOnboardingComplete, requ
   const kind = req.body.kind || 'custom';
   const frequency = req.body.frequency || 'daily';
   if (typeof name !== 'string' || !name.trim()) return res.status(400).json({ error: 'name is required' });
+  if (name.trim().length > 200) return res.status(400).json({ error: 'That checklist name is too long' });
   if (kind !== 'custom' && !OPEN_TO_ANYONE_REPORT_KINDS.has(kind) && !MANAGER_VISIT_REPORT_KINDS.has(kind)) {
     return res.status(400).json({ error: 'Unknown report kind' });
   }
