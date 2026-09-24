@@ -83,7 +83,7 @@ export default function Team() {
     setBusy(`reset:${u.id}`);
     try {
       const res = await api.post(`/tenants/users/${u.id}/reset-link`, {});
-      setLastInvite({ path: res.resetLink, email: u.email, kind: 'reset' });
+      setLastInvite({ path: res.resetLink, email: u.email, kind: res.kind || 'reset' });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) { setError(err.message); } finally { setBusy(''); }
   };
@@ -258,9 +258,9 @@ export default function Team() {
                             {editable && u.status === 'disabled' && (
                               <button type="button" className="btn btn-small btn-secondary" onClick={() => updateUser(u.id, { status: 'active' })}>{t('team.enable')}</button>
                             )}
-                            {editable && u.status === 'active' && confirmingDisable !== u.id && (
+                            {editable && u.status !== 'disabled' && confirmingDisable !== u.id && (
                               <button type="button" className="btn btn-small btn-secondary" disabled={busy === `reset:${u.id}`} onClick={() => resetPassword(u)}>
-                                {busy === `reset:${u.id}` ? t('team.creating') : t('team.resetPassword')}
+                                {busy === `reset:${u.id}` ? t('team.creating') : u.status === 'invited' ? t('team.newInviteLink') : t('team.resetPassword')}
                               </button>
                             )}
                           </div>

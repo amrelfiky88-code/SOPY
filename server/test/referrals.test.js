@@ -218,3 +218,23 @@ test('no referral link, no welcome discount', async () => {
   const { rows } = await pool.query('SELECT count(*)::int AS n FROM account_credits WHERE tenant_id = $1', [plain.tenantId]);
   assert.equal(rows[0].n, 0);
 });
+
+test('canceling releases credit that was waiting on a renewal, so it comes off the next checkout', async () => {
+  process.env.PADDLE_API_KEY = 'test_key';
+  const J = await signup('ref-j@example.com');
+  const { rows } = await pool.query(
+    `INSERT INTO subscriptions (tenant_id, branch_count, user_count, branch_rate, user_rate, monthly_total, status, paddle_subscription_id)
+     VALUES ($1, 1, 1, 10, 9, 19, 'active', 'sub_cancel') RETURNING id`,
+    [J.tenantId]
+  );
+  await pool.query(
+    "INSERT INTO account_credits (tenant_id, amount, status, paddle_discount_id, used_on_subscription_id) VALUES ($1, 10, 'scheduled', 'dsc_x', $2)",
+    [J.tenantId, rows[0].id]
+  );
+  const cancel = await api('POST', '/api/billing/subscription/cancel', { token: J.token, body: {} });
+  assert.equal(cancel.status, 204);
+  const after = (await credit(J.token)).credit;
+  assert.equal(after.scheduled, 0);
+  assert.equal(after.available, 10, 'the credit is usable again');
+  delete process.env.PADDLE_API_KEY;
+});

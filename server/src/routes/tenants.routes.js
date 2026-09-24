@@ -144,7 +144,9 @@ tenantsRouter.delete('/branches/:id', requireAuth, requireRole('business_owner',
 });
 
 // --- Users / invites ---
-tenantsRouter.get('/users', requireAuth, async (req, res) => {
+// Everyone's email, phone and role: for the people who manage the team.
+// (Any signed-in employee used to be able to read the whole staff list.)
+tenantsRouter.get('/users', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
   const { rows } = await query(
     `SELECT u.id, u.full_name, u.title, u.email, u.phone, u.role, u.access_level, u.status,
             COALESCE(array_agg(ub.branch_id) FILTER (WHERE ub.branch_id IS NOT NULL), '{}') AS branch_ids
@@ -205,8 +207,8 @@ tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', '
   try {
     user = await withTransaction(async (client) => {
       const { rows } = await client.query(
-        `INSERT INTO users (tenant_id, full_name, email, role, access_level, status, invite_token, password_hash)
-         VALUES ($1, $2, $3, $4, $5, 'invited', $6, $7) RETURNING *`,
+        `INSERT INTO users (tenant_id, full_name, email, role, access_level, status, invite_token, invite_expires_at, password_hash)
+         VALUES ($1, $2, $3, $4, $5, 'invited', $6, now() + interval '${INVITE_DAYS} days', $7) RETURNING *`,
         [req.auth.tenantId, fullName.trim(), cleanEmail, role, accessLevel || 'standard', inviteToken, placeholderHash]
       );
       if (branches.length) {
@@ -228,10 +230,16 @@ tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', '
   });
 });
 
+// Links used to work forever, so a reset link forwarded months ago still
+// let whoever had it take over the account.
+const INVITE_DAYS = 14;
+const RESET_HOURS = 48;
+
 // A manager creates a one-time link for someone who forgot their password
 // (SOPY doesn't send email, so there was no way back in at all). Opening
 // it lets them set a new password; that also signs out their other
-// devices. Same rank rules as editing the person.
+// devices. For someone who hasn't accepted yet it's a fresh invite link,
+// replacing one that expired or got lost. Same rank rules as editing.
 tenantsRouter.post('/users/:id/reset-link', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
   const { rows } = await query(
     'SELECT id, role, status FROM users WHERE id = $1 AND tenant_id = $2',
@@ -241,11 +249,15 @@ tenantsRouter.post('/users/:id/reset-link', requireAuth, requireRole('business_o
   if (!target) return res.status(404).json({ error: 'User not found' });
   if (target.id === req.auth.userId) return res.status(403).json({ error: 'Change your own password in Profile & billing' });
   if (!canManageUser(req.auth.role, target.role)) return res.status(403).json({ error: 'You can only manage people below your own role' });
-  if (target.status !== 'active') return res.status(409).json({ error: 'Only active users can be sent a reset link' });
+  if (target.status === 'disabled') return res.status(409).json({ error: 'Enable this person before sending them a link' });
 
   const token = crypto.randomBytes(24).toString('hex');
-  await query('UPDATE users SET invite_token = $1 WHERE id = $2', [token, target.id]);
-  res.status(201).json({ resetLink: `/accept-invite?token=${token}` });
+  const lifetime = target.status === 'invited' ? `${INVITE_DAYS} days` : `${RESET_HOURS} hours`;
+  const { rows: updated } = await query(
+    'UPDATE users SET invite_token = $1, invite_expires_at = now() + $2::interval WHERE id = $3 RETURNING invite_expires_at',
+    [token, lifetime, target.id]
+  );
+  res.status(201).json({ resetLink: `/accept-invite?token=${token}`, kind: target.status === 'invited' ? 'invite' : 'reset', expiresAt: updated[0].invite_expires_at });
 });
 
 // Columns safe to send to the browser — never password_hash or invite_token.
@@ -301,7 +313,7 @@ tenantsRouter.patch('/users/:id', requireAuth, requireRole('business_owner', 'op
     // Disabling someone who already has a password drops any pending
     // reset link, so invite_token keeps meaning "never accepted" for the
     // re-enable rule above.
-    if (status === 'disabled' && target.status === 'active') fields.push('invite_token = NULL');
+    if (status === 'disabled' && target.status === 'active') fields.push('invite_token = NULL', 'invite_expires_at = NULL');
     fields.push(`status = $${i++}`); values.push(next);
   }
 

@@ -57,7 +57,8 @@ const MESSAGES = [
   ['Submit the report before sharing it', 'أرسل التقرير قبل مشاركته', 'Envoyez le rapport avant de le partager'],
   ['Some checkpoints were not found', 'لم يتم العثور على بعض نقاط الفحص', 'Certains points de contrôle sont introuvables'],
   ['Pick at least one checkpoint', 'اختر نقطة فحص واحدة على الأقل', 'Choisissez au moins un point de contrôle'],
-  ['Only active users can be sent a reset link', 'يمكن إرسال رابط إعادة التعيين للمستخدمين النشطين فقط', 'Seuls les utilisateurs actifs peuvent recevoir un lien de réinitialisation'],
+  ['Enable this person before sending them a link', 'فعّل هذا الشخص قبل إرسال رابط إليه', 'Réactivez cette personne avant de lui envoyer un lien'],
+  ['This link has expired. Ask your manager for a new one.', 'انتهت صلاحية هذا الرابط. اطلب رابطًا جديدًا من مديرك.', 'Ce lien a expiré. Demandez-en un nouveau à votre manager.'],
   ['No checkout in progress', 'لا توجد عملية دفع جارية', 'Aucun paiement en cours'],
   ['New password must be at least 8 characters', 'يجب أن تتكون كلمة المرور الجديدة من 8 أحرف على الأقل', 'Le nouveau mot de passe doit contenir au moins 8 caractères'],
   ['Name cannot be empty', 'لا يمكن ترك الاسم فارغًا', 'Le nom ne peut pas être vide'],
@@ -84,6 +85,8 @@ const MESSAGES = [
   ['Assignment not found', 'التكليف غير موجود', 'Attribution introuvable'],
   ['Account disabled', 'الحساب معطّل', 'Compte désactivé'],
   ['A PDF file is required', 'مطلوب ملف PDF', 'Un fichier PDF est requis'],
+  ['Only PDF files can be shared', 'يمكن مشاركة ملفات PDF فقط', 'Seuls les fichiers PDF peuvent être partagés'],
+  ['Only camera-captured JPEG/PNG images are accepted', 'تُقبل الصور الملتقطة بالكاميرا فقط (JPEG/PNG)', "Seules les photos prises avec l'appareil (JPEG/PNG) sont acceptées"],
   // Second sentences of the "plan is full" message (see PATTERNS).
   ['Ask the business owner to add more to the plan.', 'اطلب من مالك المنشأة إضافة المزيد إلى الخطة.', "Demandez au propriétaire d'augmenter la formule."],
   ['You can add more from Profile & billing once setup is finished.', 'يمكنك إضافة المزيد من الملف الشخصي والفواتير بعد انتهاء الإعداد.', 'Vous pourrez en ajouter depuis Profil et facturation une fois la configuration terminée.'],

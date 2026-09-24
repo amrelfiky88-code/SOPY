@@ -39,7 +39,7 @@ before(async () => {
   api = makeClient(baseUrl);
 
   const signup = await api('POST', '/api/auth/signup', {
-    body: { fullName: 'Owner', email: 'ev-owner@example.com', password: 'OwnerPass123', restaurantName: 'Evidence', country: 'Egypt', branchCount: 2, userCount: 4 },
+    body: { fullName: 'Owner', email: 'ev-owner@example.com', password: 'OwnerPass123', restaurantName: 'Evidence', country: 'Egypt', branchCount: 2, userCount: 5 },
   });
   O.token = signup.body.token;
   await completeSetup(api, O.token);
@@ -142,4 +142,61 @@ test('a dead share link shows a readable page in the reader’s language; API cl
   assert.match(html, /هذا الرابط غير صالح/);
   const json = await fetch(url, { headers: { Accept: 'application/json' } });
   assert.equal((await json.json()).error, 'This link is not valid');
+});
+
+test('invite and password-reset links expire; a manager can issue a fresh invite', async () => {
+  const invite = await api('POST', '/api/tenants/users/invite', { token: O.token, body: { fullName: 'Late', email: 'ev-late@example.com', role: 'employee', branchIds: [storeA] } });
+  const lateId = invite.body.user.id;
+  const oldToken = invite.body.inviteLink.split('token=')[1];
+  // Two weeks pass without the invite being used.
+  await pool.query("UPDATE users SET invite_expires_at = now() - interval '1 minute' WHERE id = $1", [lateId]);
+  const stale = await api('POST', '/api/auth/accept-invite', { body: { inviteToken: oldToken, password: 'Password123' } });
+  assert.equal(stale.status, 410);
+  assert.match(stale.body.error, /expired/);
+
+  const fresh = await api('POST', `/api/tenants/users/${lateId}/reset-link`, { token: O.token, body: {} });
+  assert.equal(fresh.status, 201);
+  assert.equal(fresh.body.kind, 'invite');
+  assert.ok(new Date(fresh.body.expiresAt) - Date.now() > 13 * 24 * 3600 * 1000, 'a new invite lasts 14 days');
+  const joined = await api('POST', '/api/auth/accept-invite', { body: { inviteToken: fresh.body.resetLink.split('token=')[1], password: 'Password123' } });
+  assert.equal(joined.status, 200);
+
+  const reset = await api('POST', `/api/tenants/users/${lateId}/reset-link`, { token: O.token, body: {} });
+  assert.equal(reset.body.kind, 'reset');
+  const hours = (new Date(reset.body.expiresAt) - Date.now()) / 3600e3;
+  assert.ok(hours > 47 && hours <= 48, 'a password reset lasts 48 hours');
+});
+
+test('expired shared PDFs are deleted from disk, and the link still says expired', async () => {
+  const fsMod = await import('node:fs');
+  const pathMod = await import('node:path');
+  const { SHARE_ROOT, sweepExpiredShares } = await import('../src/shares.js');
+  const sub = await start(E1.token);
+  await respond(E1.token, sub, { itemId: itemIds[0], isCompliant: 'true' });
+  await respond(E1.token, sub, { itemId: itemIds[1], isCompliant: 'true' });
+  assert.equal((await api('POST', `/api/submissions/${sub}/submit`, { token: E1.token, body: {} })).status, 200);
+  const form = new FormData();
+  form.append('pdf', new Blob([Buffer.from('%PDF-1.4 test')], { type: 'application/pdf' }), 'r.pdf');
+  const share = await fetch(`${baseUrl}/api/submissions/${sub}/share`, { method: 'POST', headers: { Authorization: `Bearer ${E1.token}` }, body: form }).then((r) => r.json());
+  const token = share.path.split('/').pop();
+  const file = pathMod.join(SHARE_ROOT, `${token}.pdf`);
+  assert.ok(fsMod.existsSync(file));
+
+  await pool.query("UPDATE report_shares SET expires_at = now() - interval '1 day' WHERE token = $1", [token]);
+  assert.ok((await sweepExpiredShares({ force: true })) >= 1);
+  assert.equal(fsMod.existsSync(file), false, 'the report is gone from disk');
+  const res = await fetch(`${baseUrl}${share.path}`, { headers: { Accept: 'application/json' } });
+  assert.equal(res.status, 410);
+});
+
+test("staff can't read a colleague's run, its score, the staff list or the assignment setup", async () => {
+  const sub = await start(E1.token);
+  await respond(E1.token, sub, { itemId: itemIds[0], isCompliant: 'true' });
+  assert.equal((await api('GET', `/api/submissions/${sub}`, { token: E2.token })).status, 404);
+  assert.equal((await api('GET', `/api/submissions/${sub}/scorecard`, { token: E2.token })).status, 404);
+  assert.equal((await api('GET', `/api/submissions/${sub}`, { token: E1.token })).status, 200, 'their own is fine');
+  assert.equal((await api('GET', `/api/submissions/${sub}`, { token: M.token })).status, 200, 'managers see everyone’s');
+  assert.equal((await api('GET', '/api/tenants/users', { token: E1.token })).status, 403);
+  assert.equal((await api('GET', '/api/checklists/assignments', { token: E1.token })).status, 403);
+  assert.equal((await api('GET', '/api/tenants/users', { token: O.token })).status, 200);
 });

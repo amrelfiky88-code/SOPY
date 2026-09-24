@@ -54,6 +54,7 @@ CREATE TABLE users (
   access_level  TEXT NOT NULL DEFAULT 'standard', -- 'admin' | 'manager' | 'standard'
   status        TEXT NOT NULL DEFAULT 'active',   -- 'invited' | 'active' | 'disabled'
   invite_token  TEXT,               -- one-time link: an invite, or a manager-issued password reset
+  invite_expires_at TIMESTAMPTZ,    -- invites last 14 days, password resets 48 hours
   -- Sessions issued before this are refused: set when a password changes
   -- or is reset, so a lost phone's session stops working.
   tokens_valid_after TIMESTAMPTZ,

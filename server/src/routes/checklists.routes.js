@@ -190,7 +190,7 @@ checklistsRouter.delete('/templates/:id', requireAuth, requireRole('business_own
 });
 
 // --- Assignments: assign a template to stores / users / roles ---
-checklistsRouter.get('/assignments', requireAuth, async (req, res) => {
+checklistsRouter.get('/assignments', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
   const { rows } = await query(
     `SELECT a.*, t.name AS template_name, t.kind, b.name AS branch_name
      FROM checklist_assignments a

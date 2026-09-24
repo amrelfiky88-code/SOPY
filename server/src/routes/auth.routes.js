@@ -130,13 +130,16 @@ authRouter.post('/accept-invite', async (req, res) => {
   );
   const user = rows[0];
   if (!user) return res.status(404).json({ error: 'This link has already been used or is no longer valid' });
+  if (user.invite_expires_at && new Date(user.invite_expires_at) < new Date()) {
+    return res.status(410).json({ error: 'This link has expired. Ask your manager for a new one.' });
+  }
 
   const passwordHash = await bcrypt.hash(password, 10);
   // The language they read the invite page in becomes their setting,
   // unless they already had one (a password reset keeps it).
   const language = user.status === 'invited' && isSupportedLanguage(req.body.language) ? req.body.language : user.language;
   await query(
-    "UPDATE users SET password_hash = $1, status = 'active', invite_token = NULL, tokens_valid_after = $2, language = $3 WHERE id = $4",
+    "UPDATE users SET password_hash = $1, status = 'active', invite_token = NULL, invite_expires_at = NULL, tokens_valid_after = $2, language = $3 WHERE id = $4",
     [passwordHash, new Date(), language, user.id]
   );
   clearFailures(`login:${user.email}`);

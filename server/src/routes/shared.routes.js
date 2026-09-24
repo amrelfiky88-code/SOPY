@@ -4,13 +4,13 @@ import path from 'node:path';
 import { query } from '../db.js';
 import { translateError, uiLanguageFromHeader } from '../i18n/errorMessages.js';
 import { languageDir } from '../../../shared/languages.js';
+import { SHARE_ROOT, sweepSoon } from '../shares.js';
 
 // Public, no-login download of a report PDF someone chose to share over
 // WhatsApp or email. The token is the only credential (192 random bits),
 // and the link stops working when it expires.
 export const sharedRouter = Router();
 
-const SHARE_ROOT = path.resolve('storage', 'shares');
 
 const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -30,6 +30,7 @@ function refuse(req, res, status, message) {
 }
 
 sharedRouter.get('/:token', async (req, res) => {
+  sweepSoon();
   const { token } = req.params;
   if (!/^[A-Za-z0-9_-]{32}$/.test(token)) return refuse(req, res, 404, 'This link is not valid');
 

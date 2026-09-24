@@ -180,3 +180,15 @@ export async function renewalPaid(tenantId, discountId) {
   }
   await scheduleCreditOnRenewal(tenantId);
 }
+
+// A subscription was canceled: the renewal a scheduled discount was
+// waiting for will never be billed, so that credit goes back to available
+// (and comes off the next checkout) instead of being stuck for good.
+export async function releaseScheduledCredit(tenantId) {
+  const { rowCount } = await query(
+    `UPDATE account_credits SET status = 'available', paddle_discount_id = NULL, used_on_subscription_id = NULL
+     WHERE tenant_id = $1 AND status = 'scheduled'`,
+    [tenantId]
+  );
+  return rowCount;
+}

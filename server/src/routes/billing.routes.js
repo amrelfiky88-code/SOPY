@@ -3,7 +3,7 @@ import { query } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
 import { calculatePricing, clampPlanCount, PLAN_LIMITS } from '../../../shared/pricing.js';
 import { createCheckoutTransaction, updateSubscriptionQuantities, cancelSubscription, createCreditDiscount } from '../paddle/client.js';
-import { creditForPayment, availableCreditKind, spendCreditOnCheckout, grantReferralReward, renewalPaid } from '../credits.js';
+import { creditForPayment, availableCreditKind, spendCreditOnCheckout, grantReferralReward, renewalPaid, releaseScheduledCredit } from '../credits.js';
 import { verifyPaddleSignature } from '../paddle/webhook.js';
 
 export const billingRouter = Router();
@@ -203,6 +203,7 @@ billingRouter.post('/subscription/cancel', requireAuth, requireRole('business_ow
     await cancelSubscription(sub.paddle_subscription_id);
   }
   await query("UPDATE subscriptions SET status = 'canceled', updated_at = now() WHERE id = $1", [sub.id]);
+  await releaseScheduledCredit(req.auth.tenantId);
   res.status(204).end();
 });
 
@@ -279,6 +280,7 @@ export async function paddleWebhookHandler(req, res) {
          )`,
         [data.id, status, periodEnd, tenantId, data.transaction_id || null]
       );
+      if (status === 'canceled') await releaseScheduledCredit(tenantId);
       break;
     }
     default:

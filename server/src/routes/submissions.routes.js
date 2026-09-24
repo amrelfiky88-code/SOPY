@@ -7,6 +7,7 @@ import { query } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
 import { translateRows, requestLanguage } from '../i18n/translateContent.js';
 import { signPhotos } from '../uploads.js';
+import { SHARE_ROOT, SHARE_DAYS, sweepSoon } from '../shares.js';
 
 export const submissionsRouter = Router();
 
@@ -259,12 +260,17 @@ submissionsRouter.post('/:id/submit', requireAuth, async (req, res) => {
   res.json({ submission: rows[0] });
 });
 
+// Staff see only their own runs here too, as on /report — this and the
+// scorecard used to hand any employee a colleague's answers and photos.
+const canSee = (req, submission) =>
+  !!submission && (!SEES_OWN_ONLY.includes(req.auth.role) || submission.submitted_by === req.auth.userId);
+
 submissionsRouter.get('/:id', requireAuth, async (req, res) => {
   const { rows } = await query(
     'SELECT * FROM checklist_submissions WHERE id = $1 AND tenant_id = $2',
     [req.params.id, req.auth.tenantId]
   );
-  if (!rows[0]) return res.status(404).json({ error: 'Not found' });
+  if (!canSee(req, rows[0])) return res.status(404).json({ error: 'Not found' });
   const { rows: responses } = await query(
     `SELECT r.*, ci.text AS item_text FROM checklist_submission_responses r
      JOIN checklist_items ci ON ci.id = r.item_id
@@ -288,7 +294,7 @@ submissionsRouter.get('/:id/scorecard', requireAuth, async (req, res) => {
     [req.params.id, req.auth.tenantId]
   );
   const submission = subRows[0];
-  if (!submission) return res.status(404).json({ error: 'Not found' });
+  if (!canSee(req, submission)) return res.status(404).json({ error: 'Not found' });
   const scorecard = await computeScorecard(submission);
   scorecard.sections = await translateRows(scorecard.sections, await requestLanguage(req), ['category']);
   res.json(scorecard);
@@ -404,8 +410,6 @@ submissionsRouter.get('/:id/report', requireAuth, async (req, res) => {
 // Share links for WhatsApp/email: the browser renders the PDF (so Arabic
 // and French come out exactly as on screen), uploads it here, and gets
 // back an unguessable link that works without logging in until it expires.
-const SHARE_ROOT = path.resolve('storage', 'shares');
-const SHARE_DAYS = 30;
 const pdfUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
@@ -441,6 +445,7 @@ submissionsRouter.post('/:id/share', requireAuth, pdfUpload.single('pdf'), async
      VALUES ($1, $2, $3, $4, $5, now() + ($6 || ' days')::interval) RETURNING expires_at`,
     [req.auth.tenantId, submission.id, token, fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`, req.auth.userId, String(SHARE_DAYS)]
   );
+  sweepSoon();
   res.status(201).json({ path: `/api/shared/${token}`, expiresAt: shareRows[0].expires_at });
 });
 
