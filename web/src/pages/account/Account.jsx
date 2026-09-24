@@ -4,6 +4,7 @@ import { api, setToken } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { calculatePricing, PLAN_LIMITS, clampPlanCount } from '../../../../shared/pricing.js';
 import QuantityField from '../../components/QuantityField.jsx';
+import ReferralCard from './ReferralCard.jsx';
 import { LabeledInput } from '../forms/OpsFormParts.jsx';
 import { LANGUAGES } from '../../../../shared/languages.js';
 import { useI18n } from '../../i18n/index.jsx';
@@ -37,6 +38,7 @@ export default function Account() {
       <ProfileCard user={user} tenant={tenant} setUser={setUser} />
       <PasswordCard />
       <SubscriptionCard user={user} tenant={tenant} />
+      {user?.role === 'business_owner' && <ReferralCard />}
     </div>
   );
 }

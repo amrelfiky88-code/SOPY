@@ -17,6 +17,7 @@ import { submissionsRouter } from './routes/submissions.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
 import { feedbackRouter } from './routes/feedback.routes.js';
 import { sharedRouter } from './routes/shared.routes.js';
+import { referralsRouter } from './routes/referrals.routes.js';
 import { requireSignedUpload } from './uploads.js';
 import { blockWritesWhenPlanEnded } from './auth/plan.js';
 
@@ -59,6 +60,7 @@ export function createApp() {
   app.use('/api/dashboard', dashboardRouter);
   app.use('/api/feedback', feedbackRouter);
   app.use('/api/shared', sharedRouter);
+  app.use('/api/referrals', referralsRouter);
 
   // In production this one Node process serves the built React app too, so
   // the whole thing runs as a single Hostinger "Node.js app" alongside

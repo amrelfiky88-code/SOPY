@@ -16,6 +16,8 @@ CREATE TABLE tenants (
   onboarding_step TEXT NOT NULL DEFAULT 'who_are_you',
     -- who_are_you -> configure_data -> pricing -> checkout -> onboarding -> complete
   onboarding_completed_at TIMESTAMPTZ,
+  referral_code   TEXT UNIQUE,              -- this business's share code (?ref=…); created on first view
+  referred_by_tenant_id UUID REFERENCES tenants(id) ON DELETE SET NULL, -- whose link they signed up with
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -77,6 +79,7 @@ CREATE TABLE subscriptions (
   branch_rate           NUMERIC(10,4) NOT NULL,   -- blended per-branch rate at time of billing
   user_rate             NUMERIC(10,4) NOT NULL,   -- blended per-user rate at time of billing
   monthly_total         NUMERIC(10,2) NOT NULL,
+  credit_applied        NUMERIC(10,2) NOT NULL DEFAULT 0, -- account credit taken off this checkout's first payment
   status                TEXT NOT NULL DEFAULT 'pending', -- pending|active|past_due|canceled
   paddle_subscription_id TEXT,
   paddle_customer_id     TEXT,
@@ -229,3 +232,22 @@ CREATE TABLE report_shares (
   expires_at     TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX idx_report_shares_tenant ON report_shares(tenant_id);
+-- Account credit a business can spend on its payments. Today the only
+-- source is referrals: one row per referred business that paid (the
+-- UNIQUE on referred_tenant_id makes the reward once-only even if the
+-- activation is reported twice). A row is 'available' until it's put
+-- towards a payment: 'scheduled' when attached to a Paddle renewal as a
+-- one-time discount, 'used' once that payment (or a checkout) is made.
+CREATE TABLE account_credits (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id           UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  amount              NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+  source              TEXT NOT NULL DEFAULT 'referral',
+  referred_tenant_id  UUID UNIQUE REFERENCES tenants(id) ON DELETE SET NULL,
+  status              TEXT NOT NULL DEFAULT 'available', -- available | scheduled | used
+  paddle_discount_id  TEXT,
+  used_on_subscription_id UUID REFERENCES subscriptions(id) ON DELETE SET NULL,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  used_at             TIMESTAMPTZ
+);
+CREATE INDEX idx_account_credits_tenant ON account_credits(tenant_id);

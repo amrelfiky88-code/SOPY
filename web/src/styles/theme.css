@@ -965,3 +965,20 @@ tbody tr:hover { background: var(--paper); }
   min-height: 36px;
   cursor: pointer;
 }
+/* Referral section (Profile & billing). */
+.referral-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0 8px;
+  text-align: center;
+}
+.referral-stats > div {
+  background: var(--green-tint);
+  border-radius: var(--radius-sm);
+  padding: 10px 4px;
+}
+.referral-stat-value { font-family: var(--font-serif); font-size: 22px; font-weight: 700; color: var(--green); }
+.referral-stats .hint { margin: 2px 0 0; }
+.referral-plus { color: var(--green); font-weight: 700; white-space: nowrap; }
+a.share-target { text-decoration: none; }

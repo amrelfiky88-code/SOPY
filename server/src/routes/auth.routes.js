@@ -7,6 +7,7 @@ import { isSupportedLanguage, DEFAULT_LANGUAGE } from '../../../shared/languages
 import { clampPlanCount, PLAN_LIMITS } from '../../../shared/pricing.js';
 import { isLocked, recordFailure, clearFailures, LOCKED_MESSAGE } from '../auth/rateLimit.js';
 import { planEnded } from '../auth/plan.js';
+import { tenantForReferralCode } from '../credits.js';
 
 export const authRouter = Router();
 
@@ -36,19 +37,24 @@ authRouter.post('/signup', async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+  // Signed up through another business's referral link? Remember whose,
+  // so they're rewarded when this business first pays. An unknown or
+  // malformed code is simply ignored — it must never block a signup.
+  const referredBy = await tenantForReferralCode(req.body.referralCode);
 
   let result;
   try {
     result = await withTransaction(async (client) => {
       const tenantRes = await client.query(
-        `INSERT INTO tenants (restaurant_name, country, branch_count, user_count, onboarding_step)
-         VALUES ($1, $2, $3, $4, 'configure_data') RETURNING *`,
+        `INSERT INTO tenants (restaurant_name, country, branch_count, user_count, onboarding_step, referred_by_tenant_id)
+         VALUES ($1, $2, $3, $4, 'configure_data', $5) RETURNING *`,
         [
           restaurant, countryName,
           // Same limits as the Pricing page; a negative or huge count
           // used to be stored as-is.
           clampPlanCount(branchCount, PLAN_LIMITS.branches) ?? PLAN_LIMITS.branches.min,
           clampPlanCount(userCount, PLAN_LIMITS.users) ?? PLAN_LIMITS.users.min,
+          referredBy,
         ]
       );
       const tenant = tenantRes.rows[0];

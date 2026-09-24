@@ -10,6 +10,8 @@ export default function Checkout() {
   const { user, tenant, setTenant } = useAuth();
   const navigate = useNavigate();
   const [pricing, setPricing] = useState(null);
+  // Referral credit taken off this first payment.
+  const [credit, setCredit] = useState({ applied: 0, dueToday: null });
   const [mock, setMock] = useState(false);
   const [alreadyActive, setAlreadyActive] = useState(false);
   const [transactionId, setTransactionId] = useState(null);
@@ -38,6 +40,7 @@ export default function Checkout() {
       const data = await api.post('/billing/checkout', {});
       if (!liveRef.current) return;
       setPricing(data.pricing);
+      setCredit({ applied: Number(data.creditApplied || 0), dueToday: data.dueToday ?? data.pricing?.monthlyTotal });
       setMock(!!data.mock);
       setAlreadyActive(!!data.alreadyActive);
       setTransactionId(data.transactionId || null);
@@ -208,6 +211,22 @@ export default function Checkout() {
             <span>{money(pricing.monthlyTotal)}</span>
           </div>
 
+          {credit.applied > 0 && (
+            <>
+              <div className="summary-row">
+                <span>Referral credit</span>
+                <span className="referral-plus">−{money(credit.applied)}</span>
+              </div>
+              <div className="summary-row summary-total">
+                <span>Due today</span>
+                <span>{money(credit.dueToday)}</span>
+              </div>
+              <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>
+                Your account credit comes off this first payment; after that the plan renews at {money(pricing.monthlyTotal)} a month.
+              </p>
+            </>
+          )}
+
           <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>
             {pricing.currency || 'USD'} · Renews monthly · Cancel anytime. Change your branch or user count later and
             we'll prorate the difference on your next invoice.
@@ -240,7 +259,7 @@ export default function Checkout() {
         <div className="card">
           <h3 style={{ fontSize: 16, marginBottom: 8 }}>Payment</h3>
           <button className="btn btn-primary" onClick={handlePay} disabled={!transactionId}>
-            Pay {money(pricing?.monthlyTotal)} and activate
+            Pay {money(credit.applied > 0 ? credit.dueToday : pricing?.monthlyTotal)} and activate
           </button>
           <p className="hint secure-note">
             <ShieldIcon size={14} /> Card details are entered on Paddle's secure checkout — SOPY never sees them.

@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { query } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
 import { calculatePricing, clampPlanCount, PLAN_LIMITS } from '../../../shared/pricing.js';
-import { createCheckoutTransaction, updateSubscriptionQuantities, cancelSubscription } from '../paddle/client.js';
+import { createCheckoutTransaction, updateSubscriptionQuantities, cancelSubscription, createCreditDiscount } from '../paddle/client.js';
+import { creditForPayment, spendCreditOnCheckout, grantReferralReward, renewalPaid } from '../credits.js';
 import { verifyPaddleSignature } from '../paddle/webhook.js';
 
 export const billingRouter = Router();
@@ -43,11 +44,19 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
   }
 
   const pricing = calculatePricing({ branches: tenant.branch_count, users: tenant.user_count });
+  // Account credit (referral cash back) comes off this first payment.
+  // Recorded on the checkout row and only spent once the payment is
+  // confirmed, so an abandoned checkout doesn't eat the credit.
+  const creditApplied = await creditForPayment(tenant.id, pricing.monthlyTotal);
 
   try {
-    const transaction = process.env.PADDLE_API_KEY
-      ? await createCheckoutTransaction({ customerEmail: userRows[0].email, pricing, tenantId: tenant.id })
-      : mockTransaction(pricing); // lets the flow run end-to-end without real Paddle keys in dev
+    let transaction;
+    if (process.env.PADDLE_API_KEY) {
+      const discount = creditApplied > 0 ? await createCreditDiscount({ amount: creditApplied, tenantId: tenant.id }) : null;
+      transaction = await createCheckoutTransaction({ customerEmail: userRows[0].email, pricing, tenantId: tenant.id, discountId: discount?.id });
+    } else {
+      transaction = mockTransaction(pricing); // lets the flow run end-to-end without real Paddle keys in dev
+    }
 
     // Idempotent: reuse the tenant's existing pending subscription row
     // instead of inserting a new one each time /checkout is called — the
@@ -62,19 +71,25 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
     if (existingPending[0]) {
       await query(
         `UPDATE subscriptions SET branch_count = $1, user_count = $2, branch_rate = $3, user_rate = $4,
-                                   monthly_total = $5, paddle_transaction_id = $6, updated_at = now()
-         WHERE id = $7`,
-        [pricing.branchCount, pricing.userCount, pricing.branchBlendedRate, pricing.userBlendedRate, pricing.monthlyTotal, transaction.id, existingPending[0].id]
+                                   monthly_total = $5, paddle_transaction_id = $6, credit_applied = $7, updated_at = now()
+         WHERE id = $8`,
+        [pricing.branchCount, pricing.userCount, pricing.branchBlendedRate, pricing.userBlendedRate, pricing.monthlyTotal, transaction.id, creditApplied, existingPending[0].id]
       );
     } else {
       await query(
-        `INSERT INTO subscriptions (tenant_id, branch_count, user_count, branch_rate, user_rate, monthly_total, status, paddle_transaction_id)
-         VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)`,
-        [tenant.id, pricing.branchCount, pricing.userCount, pricing.branchBlendedRate, pricing.userBlendedRate, pricing.monthlyTotal, transaction.id]
+        `INSERT INTO subscriptions (tenant_id, branch_count, user_count, branch_rate, user_rate, monthly_total, status, paddle_transaction_id, credit_applied)
+         VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8)`,
+        [tenant.id, pricing.branchCount, pricing.userCount, pricing.branchBlendedRate, pricing.userBlendedRate, pricing.monthlyTotal, transaction.id, creditApplied]
       );
     }
 
-    res.json({ transactionId: transaction.id, pricing, mock: !process.env.PADDLE_API_KEY });
+    res.json({
+      transactionId: transaction.id,
+      pricing,
+      creditApplied,
+      dueToday: Math.round((pricing.monthlyTotal - creditApplied) * 100) / 100,
+      mock: !process.env.PADDLE_API_KEY,
+    });
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
@@ -89,6 +104,14 @@ function advancePastCheckout(tenantId) {
     "UPDATE tenants SET onboarding_step = 'onboarding' WHERE id = $1 AND onboarding_step IN ('configure_data', 'pricing', 'checkout')",
     [tenantId]
   );
+}
+
+// A checkout was paid: spend the credit that was taken off it, and — if
+// this business signed up through someone's referral link — reward them
+// (once, on the first payment only).
+async function paymentConfirmed(tenantId, subscription) {
+  await spendCreditOnCheckout(tenantId, subscription.id, subscription.credit_applied);
+  await grantReferralReward(tenantId);
 }
 
 function mockTransaction(pricing) {
@@ -109,6 +132,7 @@ billingRouter.post('/mock-complete', requireAuth, requireRole('business_owner'),
   );
   if (!rows[0]) return res.status(409).json({ error: 'No checkout in progress' });
   await advancePastCheckout(req.auth.tenantId);
+  await paymentConfirmed(req.auth.tenantId, rows[0]);
   res.json({ subscription: rows[0] });
 });
 
@@ -205,13 +229,20 @@ export async function paddleWebhookHandler(req, res) {
   switch (event.event_type) {
     case 'transaction.completed': {
       if (tenantId) {
-        const { rowCount } = await query(
-          "UPDATE subscriptions SET status = 'active', paddle_customer_id = $1, updated_at = now() WHERE tenant_id = $2 AND paddle_transaction_id = $3",
+        // Only a pending checkout row activates, so Paddle retrying the
+        // same event can't spend credit or reward a referrer twice.
+        const { rows: activated } = await query(
+          `UPDATE subscriptions SET status = 'active', paddle_customer_id = $1, updated_at = now()
+           WHERE tenant_id = $2 AND paddle_transaction_id = $3 AND status = 'pending' RETURNING *`,
           [data.customer_id, tenantId, data.id]
         );
-        // Renewal transactions for an existing subscription don't match a
-        // checkout row, and mustn't reset where the business is in setup.
-        if (rowCount) await advancePastCheckout(tenantId);
+        if (activated[0]) {
+          await advancePastCheckout(tenantId);
+          await paymentConfirmed(tenantId, activated[0]);
+        } else if (data.origin === 'subscription_recurring') {
+          // A renewal was paid (a scheduled credit discount, if any, is now spent).
+          await renewalPaid(tenantId);
+        }
       }
       break;
     }

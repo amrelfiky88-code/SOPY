@@ -32,6 +32,13 @@ document.addEventListener('focusin', syncKeyboardFlag);
 // focusout fires before focus lands on the next field; check once it has.
 document.addEventListener('focusout', () => setTimeout(syncKeyboardFlag, 0));
 
+// Remember a referral code from ?ref=… for 30 days, so someone who opens a
+// referral link, browses the site and signs up later is still credited.
+try {
+  const ref = new URLSearchParams(window.location.search).get('ref');
+  if (ref) localStorage.setItem('sopy_ref', JSON.stringify({ code: ref.trim().toUpperCase().slice(0, 16), at: Date.now() }));
+} catch { /* storage blocked — the link still works if they sign up right away */ }
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>

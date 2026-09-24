@@ -61,7 +61,7 @@ export function buildLineItems(pricing) {
   ];
 }
 
-export async function createCheckoutTransaction({ customerEmail, pricing, tenantId }) {
+export async function createCheckoutTransaction({ customerEmail, pricing, tenantId, discountId }) {
   return paddleRequest('/transactions', {
     method: 'POST',
     body: {
@@ -69,7 +69,34 @@ export async function createCheckoutTransaction({ customerEmail, pricing, tenant
       custom_data: { tenantId },
       customer: customerEmail ? { email: customerEmail } : undefined,
       collection_mode: 'automatic',
+      ...(discountId ? { discount_id: discountId } : {}),
     },
+  });
+}
+
+// A single-use, non-recurring flat discount — how account credit
+// (referral cash back) is taken off one payment.
+export async function createCreditDiscount({ amount, tenantId }) {
+  return paddleRequest('/discounts', {
+    method: 'POST',
+    body: {
+      description: 'SOPY account credit',
+      type: 'flat',
+      amount: cents(amount),
+      currency_code: 'USD',
+      enabled_for_checkout: false,
+      recur: false,
+      usage_limit: 1,
+      custom_data: { tenantId },
+    },
+  });
+}
+
+// Puts a discount on the subscription's next renewal only.
+export async function applyDiscountToNextRenewal({ subscriptionId, discountId }) {
+  return paddleRequest(`/subscriptions/${subscriptionId}`, {
+    method: 'PATCH',
+    body: { discount: { id: discountId, effective_from: 'next_billing_period' } },
   });
 }
 

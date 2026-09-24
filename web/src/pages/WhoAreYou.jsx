@@ -7,6 +7,18 @@ const COUNTRIES = [
   'Canada', 'Australia', 'India', 'Germany', 'France', 'Other',
 ];
 
+// The code from a referral link (?ref=… now, or saved by main.jsx when the
+// link was opened within the last 30 days).
+function readReferralCode() {
+  const fromUrl = new URLSearchParams(window.location.search).get('ref');
+  if (fromUrl) return fromUrl.trim().toUpperCase();
+  try {
+    const saved = JSON.parse(localStorage.getItem('sopy_ref') || 'null');
+    if (saved?.code && Date.now() - saved.at < 30 * 24 * 60 * 60 * 1000) return saved.code;
+  } catch { /* ignore */ }
+  return '';
+}
+
 export default function WhoAreYou() {
   const navigate = useNavigate();
   const { signup } = useAuth();
@@ -18,13 +30,15 @@ export default function WhoAreYou() {
   const [submitting, setSubmitting] = useState(false);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const [referralCode] = useState(readReferralCode);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
     try {
-      await signup(form);
+      await signup({ ...form, referralCode: referralCode || undefined });
+      try { localStorage.removeItem('sopy_ref'); } catch { /* ignore */ }
       navigate('/configure');
     } catch (err) {
       setError(err.message);
@@ -40,6 +54,9 @@ export default function WhoAreYou() {
       </div>
       <h2>Who are you?</h2>
       <p>Tell us a bit about you and your restaurant so we can set things up.</p>
+      {referralCode && (
+        <div className="success-banner" role="status">You were invited by another restaurant on SOPY. Welcome!</div>
+      )}
 
       {error && <div className="error-banner">{error}</div>}
 
