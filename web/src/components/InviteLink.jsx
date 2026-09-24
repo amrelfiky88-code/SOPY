@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 // person can join — it has to be readable and copyable on a phone. It was
 // previously a bare <code> that ran ~475px wide inside a 335px card and got
 // clipped, and the Team page didn't show it at all.
-export default function InviteLink({ path, email }) {
+// kind="reset": the same one-time link, for someone who forgot their password.
+export default function InviteLink({ path, email, kind = 'invite' }) {
   const [copied, setCopied] = useState(false);
   const url = `${window.location.origin}${path}`;
 
@@ -23,7 +24,9 @@ export default function InviteLink({ path, email }) {
   return (
     <div className="card invite-link">
       <p style={{ margin: '0 0 8px' }}>
-        Invite created{email ? ` for ${email}` : ''}. Send them this link to set their password — emails aren't sent automatically yet.
+        {kind === 'reset'
+          ? `Password reset link${email ? ` for ${email}` : ''}. Send it to them — it works once, and signing in with the new password signs out their other devices.`
+          : `Invite created${email ? ` for ${email}` : ''}. Send them this link to set their password — emails aren't sent automatically yet.`}
       </p>
       <div className="invite-link-url">{url}</div>
       <button type="button" className="btn btn-secondary btn-small" onClick={copy} style={{ marginTop: 10 }}>

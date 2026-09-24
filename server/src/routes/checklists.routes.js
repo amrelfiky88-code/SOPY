@@ -217,12 +217,29 @@ checklistsRouter.post('/assignments', requireAuth, requireRole('business_owner',
   if (!owned[0].template_ok || !owned[0].branch_ok || !owned[0].user_ok) {
     return res.status(404).json({ error: 'Checklist, store or user not found' });
   }
-  const { rows } = await query(
-    `INSERT INTO checklist_assignments (tenant_id, template_id, branch_id, user_id, role, due_time)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [req.auth.tenantId, templateId, branchId || null, userId || null, role || null, dueTime || null]
-  );
-  res.status(201).json({ assignment: rows[0] });
+  // The same checklist assigned the same way twice showed up twice on
+  // everyone's dashboard (a double tap on Assign was enough). Hand back the
+  // existing assignment instead.
+  // Check-then-insert under a per-checklist lock, so two simultaneous
+  // taps can't both pass the check.
+  const result = await withTransaction(async (client) => {
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`assign:${req.auth.tenantId}:${templateId}`]);
+    const { rows: same } = await client.query(
+      `SELECT * FROM checklist_assignments
+       WHERE tenant_id = $1 AND template_id = $2 AND active
+         AND branch_id IS NOT DISTINCT FROM $3 AND user_id IS NOT DISTINCT FROM $4
+         AND role::text IS NOT DISTINCT FROM $5::text`,
+      [req.auth.tenantId, templateId, branchId || null, userId || null, role || null]
+    );
+    if (same[0]) return { assignment: same[0], existing: true };
+    const { rows } = await client.query(
+      `INSERT INTO checklist_assignments (tenant_id, template_id, branch_id, user_id, role, due_time)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [req.auth.tenantId, templateId, branchId || null, userId || null, role || null, dueTime || null]
+    );
+    return { assignment: rows[0], existing: false };
+  });
+  res.status(result.existing ? 200 : 201).json(result);
 });
 
 checklistsRouter.delete('/assignments/:id', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
@@ -232,11 +249,45 @@ checklistsRouter.delete('/assignments/:id', requireAuth, requireRole('business_o
 
 // Checklists assigned to the current user, for "My Checklists Today"
 checklistsRouter.get('/my-assignments', requireAuth, async (req, res) => {
+  // Each assignment carries this person's latest submitted run and any run
+  // still in progress, so the dashboard can say "Done" / "Continue" rather
+  // than always "Start" — which gave staff no way to tell what they'd
+  // already finished, and opened a fresh run if they tapped it again.
+  // "Done" means within the checklist's own frequency window.
   const { rows } = await query(
-    `SELECT a.*, t.name AS template_name, t.kind, t.frequency, b.name AS branch_name
-     ${MY_ASSIGNMENTS_FROM}
-     ORDER BY a.due_time NULLS LAST`,
+    `SELECT x.*,
+            last.id AS last_submission_id, last.submitted_at AS last_submitted_at,
+            open.id AS open_submission_id,
+            (last.submitted_at IS NOT NULL AND last.submitted_at >= now() - (CASE x.frequency
+               WHEN 'weekly' THEN interval '7 days'
+               WHEN 'monthly' THEN interval '30 days'
+               WHEN 'quarterly' THEN interval '90 days'
+               ELSE interval '16 hours' END)) AS done
+     FROM (
+       SELECT a.*, t.name AS template_name, t.kind, t.frequency, b.name AS branch_name
+       ${MY_ASSIGNMENTS_FROM}
+     ) x
+     LEFT JOIN LATERAL (
+       SELECT id, submitted_at FROM checklist_submissions
+       WHERE assignment_id = x.id AND submitted_by = $2 AND status = 'submitted'
+       ORDER BY submitted_at DESC LIMIT 1
+     ) last ON true
+     LEFT JOIN LATERAL (
+       SELECT id FROM checklist_submissions
+       WHERE assignment_id = x.id AND submitted_by = $2 AND status = 'in_progress'
+         AND started_at >= now() - interval '16 hours'
+       ORDER BY started_at DESC LIMIT 1
+     ) open ON true
+     ORDER BY done, x.due_time NULLS LAST`,
     myAssignmentParams(req.auth)
   );
-  res.json({ assignments: rows });
+  // The stores this person works at, for "All stores" checklists — which
+  // used to run against the business's first store regardless of where
+  // the person actually works.
+  const { rows: mine } = await query(
+    `SELECT b.id FROM user_branches ub JOIN branches b ON b.id = ub.branch_id
+     WHERE ub.user_id = $1 AND b.is_active ORDER BY b.created_at`,
+    [req.auth.userId]
+  );
+  res.json({ assignments: rows, myBranchIds: mine.map((r) => r.id) });
 });

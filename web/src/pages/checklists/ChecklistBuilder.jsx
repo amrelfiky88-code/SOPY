@@ -29,6 +29,7 @@ export default function ChecklistBuilder() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [assignError, setAssignError] = useState('');
+  const [assigning, setAssigning] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadingItems, setLoadingItems] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -148,21 +149,26 @@ export default function ChecklistBuilder() {
 
   const assign = async (e) => {
     e.preventDefault();
-    if (!assignTemplateId) return;
+    if (!assignTemplateId || assigning) return;
     setAssignError('');
     setNotice('');
+    setAssigning(true);
     try {
-      await api.post('/checklists/assignments', {
+      const res = await api.post('/checklists/assignments', {
         templateId: assignTemplateId,
         branchId: assignBranchId || null,
         role: assignRole || null,
       });
       setAssignBranchId('');
       setAssignRole('');
-      setNotice('Assigned. It now shows under “My checklists today” for the people it applies to.');
+      setNotice(res.existing
+        ? 'That checklist was already assigned this way — nothing changed.'
+        : 'Assigned. It now shows under “My checklists today” for the people it applies to.');
       await loadAssignments();
     } catch (err) {
       setAssignError(err.message);
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -321,7 +327,7 @@ export default function ChecklistBuilder() {
               {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
-          <button className="btn btn-secondary" type="submit">Assign</button>
+          <button className="btn btn-secondary" type="submit" disabled={assigning}>{assigning ? 'Assigning…' : 'Assign'}</button>
         </form>
 
         <div className="table-scroll" style={{ marginTop: 16 }}>

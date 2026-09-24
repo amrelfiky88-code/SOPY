@@ -51,7 +51,10 @@ CREATE TABLE users (
   language      TEXT NOT NULL DEFAULT 'en',       -- UI language: 'en' | 'ar' | 'fr'
   access_level  TEXT NOT NULL DEFAULT 'standard', -- 'admin' | 'manager' | 'standard'
   status        TEXT NOT NULL DEFAULT 'active',   -- 'invited' | 'active' | 'disabled'
-  invite_token  TEXT,
+  invite_token  TEXT,               -- one-time link: an invite, or a manager-issued password reset
+  -- Sessions issued before this are refused: set when a password changes
+  -- or is reset, so a lost phone's session stops working.
+  tokens_valid_after TIMESTAMPTZ,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 -- Login looks users up by email alone (a user belongs to exactly one

@@ -10,12 +10,17 @@ export async function requireAuth(req, res, next) {
   try {
     const payload = verifyToken(token);
     const { rows } = await query(
-      'SELECT id, tenant_id, role, access_level, status FROM users WHERE id = $1',
+      'SELECT id, tenant_id, role, access_level, status, tokens_valid_after FROM users WHERE id = $1',
       [payload.userId]
     );
     const user = rows[0];
     if (!user || user.status === 'disabled') {
       return res.status(401).json({ error: 'Invalid session' });
+    }
+    // Signed in before the password last changed or was reset: that
+    // session (say, on a lost phone) no longer counts. `iat` is in seconds.
+    if (user.tokens_valid_after && payload.iat * 1000 < new Date(user.tokens_valid_after).getTime() - 1000) {
+      return res.status(401).json({ error: 'Your password was changed. Please sign in again.' });
     }
     req.auth = {
       userId: user.id,

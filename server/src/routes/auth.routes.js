@@ -107,18 +107,21 @@ authRouter.post('/accept-invite', async (req, res) => {
   if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
   if (password.length > 200) return res.status(400).json({ error: 'Password is too long' });
 
+  // Also used for manager-issued password resets, where the person is
+  // already active. Disabled accounts can't come back through a link.
   const { rows } = await query(
-    "SELECT * FROM users WHERE invite_token = $1 AND status = 'invited'",
+    "SELECT * FROM users WHERE invite_token = $1 AND status IN ('invited', 'active')",
     [inviteToken]
   );
   const user = rows[0];
-  if (!user) return res.status(404).json({ error: 'Invite not found or already used' });
+  if (!user) return res.status(404).json({ error: 'This link has already been used or is no longer valid' });
 
   const passwordHash = await bcrypt.hash(password, 10);
   await query(
-    "UPDATE users SET password_hash = $1, status = 'active', invite_token = NULL WHERE id = $2",
-    [passwordHash, user.id]
+    "UPDATE users SET password_hash = $1, status = 'active', invite_token = NULL, tokens_valid_after = $2 WHERE id = $3",
+    [passwordHash, new Date(), user.id]
   );
+  clearFailures(`login:${user.email}`);
 
   const token = signToken({ userId: user.id });
   res.json({ token, user: publicUser({ ...user, status: 'active' }) });
@@ -160,6 +163,34 @@ authRouter.patch('/me', requireAuth, async (req, res) => {
   values.push(req.auth.userId);
   const { rows } = await query(`UPDATE users SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`, values);
   res.json({ user: publicUser(rows[0]) });
+});
+
+// Change your own password. Signs out every other device (their sessions
+// predate tokens_valid_after) and hands this one a fresh token.
+authRouter.patch('/password', requireAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+    return res.status(400).json({ error: 'Enter your current and new password' });
+  }
+  if (newPassword.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  if (newPassword.length > 200) return res.status(400).json({ error: 'Password is too long' });
+
+  const lockKey = `password:${req.auth.userId}`;
+  if (isLocked(lockKey)) return res.status(429).json({ error: LOCKED_MESSAGE });
+  const { rows } = await query('SELECT password_hash FROM users WHERE id = $1', [req.auth.userId]);
+  if (!(await bcrypt.compare(currentPassword, rows[0].password_hash))) {
+    recordFailure(lockKey);
+    return res.status(400).json({ error: 'Your current password is not correct' });
+  }
+  clearFailures(lockKey);
+
+  // App-clock time, the same clock that stamps the new token below — a DB
+  // clock running ahead would otherwise reject the fresh session too.
+  await query(
+    'UPDATE users SET password_hash = $1, tokens_valid_after = $2 WHERE id = $3',
+    [await bcrypt.hash(newPassword, 10), new Date(), req.auth.userId]
+  );
+  res.json({ token: signToken({ userId: req.auth.userId }) });
 });
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -47,6 +47,7 @@ export function createApp() {
   app.use('/api/tenants', blockWritesWhenPlanEnded([
     ['PATCH', /^\/current$/],
     ['PATCH', /^\/users\/[^/]+$/],
+    ['POST', /^\/users\/[^/]+\/reset-link$/],
     ['DELETE', /^\/branches\/[^/]+$/],
   ]), tenantsRouter);
   app.use('/api/pricing', pricingRouter);

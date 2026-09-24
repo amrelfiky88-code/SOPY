@@ -13,11 +13,17 @@ export default function Team() {
   const [branches, setBranches] = useState([]);
   const [users, setUsers] = useState([]);
   const [branchForm, setBranchForm] = useState({ name: '', city: '' });
-  const [inviteForm, setInviteForm] = useState({ fullName: '', email: '', role: 'employee' });
+  const [inviteForm, setInviteForm] = useState({ fullName: '', email: '', role: 'employee', branchIds: [] });
   const [lastInvite, setLastInvite] = useState(null);
   const [confirmingRemove, setConfirmingRemove] = useState(null);
   const [error, setError] = useState('');
   const [tab, setTab] = useState('stores');
+  // One request at a time per form: a double tap on a slow connection
+  // used to add the store (or send the invite) twice.
+  const [busy, setBusy] = useState('');
+  // Inline "which stores does this person work at" editor.
+  const [editingStores, setEditingStores] = useState(null); // user id
+  const [storeDraft, setStoreDraft] = useState([]);
 
   // Only offer roles the server will accept from this user.
   const assignableRoles = ROLES.filter((r) => canAssignRole(me?.role, r.value));
@@ -35,12 +41,14 @@ export default function Team() {
 
   const addBranch = async (e) => {
     e.preventDefault();
+    if (busy) return;
     setError('');
+    setBusy('branch');
     try {
       await api.post('/tenants/branches', branchForm);
       setBranchForm({ name: '', city: '' });
       await load();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setError(err.message); } finally { setBusy(''); }
   };
 
   const removeBranch = async (id) => {
@@ -54,13 +62,40 @@ export default function Team() {
 
   const invite = async (e) => {
     e.preventDefault();
+    if (busy) return;
     setError('');
+    setBusy('invite');
     try {
-      const res = await api.post('/tenants/users/invite', { ...inviteForm, branchIds: [] });
+      // The store choice used to be dropped (always []), so people invited
+      // here belonged to no store and never received store checklists.
+      const res = await api.post('/tenants/users/invite', inviteForm);
       setLastInvite({ path: res.inviteLink, email: inviteForm.email });
-      setInviteForm({ fullName: '', email: '', role: assignableRoles.at(-1)?.value || 'employee' });
+      setInviteForm({ fullName: '', email: '', role: assignableRoles.at(-1)?.value || 'employee', branchIds: [] });
       await load();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setError(err.message); } finally { setBusy(''); }
+  };
+
+  const toggle = (list, id) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+  const storeNames = (ids = []) => branches.filter((b) => ids.includes(b.id)).map((b) => b.name).join(', ');
+
+  const resetPassword = async (u) => {
+    setError('');
+    setBusy(`reset:${u.id}`);
+    try {
+      const res = await api.post(`/tenants/users/${u.id}/reset-link`, {});
+      setLastInvite({ path: res.resetLink, email: u.email, kind: 'reset' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) { setError(err.message); } finally { setBusy(''); }
+  };
+
+  const saveStores = async (userId) => {
+    setError('');
+    setBusy(`stores:${userId}`);
+    try {
+      await api.patch(`/tenants/users/${userId}`, { branchIds: storeDraft });
+      setUsers((list) => list.map((u) => (u.id === userId ? { ...u, branch_ids: storeDraft } : u)));
+      setEditingStores(null);
+    } catch (err) { setError(err.message); } finally { setBusy(''); }
   };
 
   // Optimistic, but rolled back if the server refuses — previously a
@@ -127,19 +162,21 @@ export default function Team() {
               <label htmlFor="bcity">City</label>
               <input id="bcity" value={branchForm.city} onChange={(e) => setBranchForm((f) => ({ ...f, city: e.target.value }))} />
             </div>
-            <button className="btn btn-secondary" type="submit">Add branch</button>
+            <button className="btn btn-secondary" type="submit" disabled={busy === 'branch'}>
+              {busy === 'branch' ? 'Adding…' : 'Add branch'}
+            </button>
           </form>
         </div>
       )}
 
       {tab === 'users' && (
         <div>
-          {lastInvite && <InviteLink path={lastInvite.path} email={lastInvite.email} />}
+          {lastInvite && <InviteLink path={lastInvite.path} email={lastInvite.email} kind={lastInvite.kind} />}
 
           <div className="card">
             <div className="table-scroll">
               <table>
-                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Access</th><th>Status</th></tr></thead>
+                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Stores</th><th>Access</th><th>Status</th></tr></thead>
                 <tbody>
                   {users.map((u) => {
                     const isMe = u.id === me?.id;
@@ -154,6 +191,42 @@ export default function Team() {
                               {assignableRoles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                             </select>
                           ) : roleLabel(u.role)}
+                        </td>
+                        <td style={{ minWidth: 150 }}>
+                          {editingStores === u.id ? (
+                            <div>
+                              {branches.map((b) => (
+                                <label key={b.id} className="inline-check" htmlFor={`st-${u.id}-${b.id}`}>
+                                  <input
+                                    id={`st-${u.id}-${b.id}`}
+                                    type="checkbox"
+                                    checked={storeDraft.includes(b.id)}
+                                    onChange={() => setStoreDraft((d) => toggle(d, b.id))}
+                                  />
+                                  {b.name}
+                                </label>
+                              ))}
+                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                                <button type="button" className="btn btn-small btn-primary" style={{ width: 'auto' }} disabled={busy === `stores:${u.id}`} onClick={() => saveStores(u.id)}>
+                                  {busy === `stores:${u.id}` ? 'Saving…' : 'Save'}
+                                </button>
+                                <button type="button" className="btn btn-small btn-secondary" onClick={() => setEditingStores(null)}>Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                              <span className={u.branch_ids?.length ? '' : 'hint'}>
+                                {['business_owner', 'operations_manager'].includes(u.role)
+                                  ? 'All stores'
+                                  : storeNames(u.branch_ids) || 'No store'}
+                              </span>
+                              {editable && !['business_owner', 'operations_manager'].includes(u.role) && branches.length > 0 && (
+                                <button type="button" className="btn btn-small btn-secondary" onClick={() => { setEditingStores(u.id); setStoreDraft(u.branch_ids || []); }}>
+                                  Edit
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td>
                           {editable ? (
@@ -181,6 +254,11 @@ export default function Team() {
                             )}
                             {editable && u.status === 'disabled' && (
                               <button type="button" className="btn btn-small btn-secondary" onClick={() => updateUser(u.id, { status: 'active' })}>Enable</button>
+                            )}
+                            {editable && u.status === 'active' && confirmingDisable !== u.id && (
+                              <button type="button" className="btn btn-small btn-secondary" disabled={busy === `reset:${u.id}`} onClick={() => resetPassword(u)}>
+                                {busy === `reset:${u.id}` ? 'Creating…' : 'Reset password'}
+                              </button>
                             )}
                           </div>
                         </td>
@@ -210,7 +288,26 @@ export default function Team() {
                   {assignableRoles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
-              <button className="btn btn-secondary" type="submit">Invite user</button>
+              {branches.length > 0 && !['operations_manager'].includes(inviteForm.role) && (
+                <fieldset className="field" style={{ border: 0, padding: 0, margin: '0 0 18px' }}>
+                  <legend style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Works at</legend>
+                  {branches.map((b) => (
+                    <label key={b.id} className="inline-check" htmlFor={`inv-${b.id}`}>
+                      <input
+                        id={`inv-${b.id}`}
+                        type="checkbox"
+                        checked={inviteForm.branchIds.includes(b.id)}
+                        onChange={() => setInviteForm((f) => ({ ...f, branchIds: toggle(f.branchIds, b.id) }))}
+                      />
+                      {b.name}
+                    </label>
+                  ))}
+                  <p className="hint" style={{ margin: 0 }}>Store checklists reach people at the stores they work at.</p>
+                </fieldset>
+              )}
+              <button className="btn btn-secondary" type="submit" disabled={busy === 'invite'}>
+                {busy === 'invite' ? 'Sending…' : 'Invite user'}
+              </button>
             </form>
           )}
         </div>

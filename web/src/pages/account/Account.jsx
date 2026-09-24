@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../../api.js';
+import { api, setToken } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { calculatePricing, PLAN_LIMITS, clampPlanCount } from '../../../../shared/pricing.js';
 import QuantityField from '../../components/QuantityField.jsx';
@@ -35,6 +35,7 @@ export default function Account() {
     <div>
       <h2>{t('account.title')}</h2>
       <ProfileCard user={user} tenant={tenant} setUser={setUser} />
+      <PasswordCard />
       <SubscriptionCard user={user} tenant={tenant} />
     </div>
   );
@@ -73,6 +74,60 @@ function LanguageField({ user, setUser }) {
       <p className="hint">{t('account.languageNote')}</p>
       {error && <div className="error-banner" style={{ marginTop: 8 }}>{error}</div>}
     </div>
+  );
+}
+
+// There was no way to change a password at all. Changing it signs out
+// every other device; this one gets a fresh session.
+function PasswordCard() {
+  const { t } = useI18n();
+  const [form, setForm] = useState({ current: '', next: '', confirm: '' });
+  const [status, setStatus] = useState('idle'); // idle | saving | saved
+  const [error, setError] = useState('');
+  const set = (key) => (e) => { setForm((f) => ({ ...f, [key]: e.target.value })); setStatus('idle'); setError(''); };
+
+  const mismatch = form.confirm && form.next !== form.confirm;
+  const canSave = form.current && form.next.length >= 8 && form.next === form.confirm && status !== 'saving';
+
+  const save = async (e) => {
+    e.preventDefault();
+    if (!canSave) return;
+    setError('');
+    setStatus('saving');
+    try {
+      const { token } = await api.patch('/auth/password', { currentPassword: form.current, newPassword: form.next });
+      setToken(token);
+      setForm({ current: '', next: '', confirm: '' });
+      setStatus('saved');
+    } catch (err) {
+      setError(err.message);
+      setStatus('idle');
+    }
+  };
+
+  return (
+    <form className="card" onSubmit={save}>
+      <h3 style={{ fontSize: 16, marginBottom: 12 }}>{t('account.password')}</h3>
+      {error && <div className="error-banner">{error}</div>}
+      {status === 'saved' && <div className="success-banner" role="status">{t('account.passwordChanged')}</div>}
+      <div className="field">
+        <label htmlFor="pw-current">{t('account.currentPassword')}</label>
+        <input id="pw-current" type="password" autoComplete="current-password" value={form.current} onChange={set('current')} />
+      </div>
+      <div className="field">
+        <label htmlFor="pw-new">{t('account.newPassword')}</label>
+        <input id="pw-new" type="password" autoComplete="new-password" minLength={8} value={form.next} onChange={set('next')} />
+        <div className="hint">{t('account.passwordHint')}</div>
+      </div>
+      <div className="field">
+        <label htmlFor="pw-confirm">{t('account.confirmPassword')}</label>
+        <input id="pw-confirm" type="password" autoComplete="new-password" value={form.confirm} onChange={set('confirm')} />
+        {mismatch && <div className="error">{t('account.passwordMismatch')}</div>}
+      </div>
+      <button className="btn btn-primary" type="submit" disabled={!canSave}>
+        {status === 'saving' ? t('common.saving') : t('account.changePassword')}
+      </button>
+    </form>
   );
 }
 

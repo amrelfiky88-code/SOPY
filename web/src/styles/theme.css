@@ -955,3 +955,13 @@ tbody tr:hover { background: var(--paper); }
 [dir='rtl'] .report-list-text > * {
   text-align: right;
 }
+/* A checkbox with its label on one tappable row (Team store pickers). */
+.inline-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  font-size: 15px;
+  min-height: 36px;
+  cursor: pointer;
+}

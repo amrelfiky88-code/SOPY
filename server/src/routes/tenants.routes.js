@@ -225,6 +225,26 @@ tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', '
   });
 });
 
+// A manager creates a one-time link for someone who forgot their password
+// (SOPY doesn't send email, so there was no way back in at all). Opening
+// it lets them set a new password; that also signs out their other
+// devices. Same rank rules as editing the person.
+tenantsRouter.post('/users/:id/reset-link', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
+  const { rows } = await query(
+    'SELECT id, role, status FROM users WHERE id = $1 AND tenant_id = $2',
+    [req.params.id, req.auth.tenantId]
+  ).catch(() => ({ rows: [] }));
+  const target = rows[0];
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  if (target.id === req.auth.userId) return res.status(403).json({ error: 'Change your own password in Profile & billing' });
+  if (!canManageUser(req.auth.role, target.role)) return res.status(403).json({ error: 'You can only manage people below your own role' });
+  if (target.status !== 'active') return res.status(409).json({ error: 'Only active users can be sent a reset link' });
+
+  const token = crypto.randomBytes(24).toString('hex');
+  await query('UPDATE users SET invite_token = $1 WHERE id = $2', [token, target.id]);
+  res.status(201).json({ resetLink: `/accept-invite?token=${token}` });
+});
+
 // Columns safe to send to the browser — never password_hash or invite_token.
 const PUBLIC_USER_COLUMNS = 'id, full_name, title, email, phone, role, access_level, status, language';
 
@@ -275,6 +295,10 @@ tenantsRouter.patch('/users/:id', requireAuth, requireRole('business_owner', 'op
       // marking them 'active' left them with no password and a dead invite link.
       if (target.invite_token) next = 'invited';
     }
+    // Disabling someone who already has a password drops any pending
+    // reset link, so invite_token keeps meaning "never accepted" for the
+    // re-enable rule above.
+    if (status === 'disabled' && target.status === 'active') fields.push('invite_token = NULL');
     fields.push(`status = $${i++}`); values.push(next);
   }
 

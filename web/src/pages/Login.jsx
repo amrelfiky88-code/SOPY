@@ -54,6 +54,9 @@ export default function Login() {
           {submitting ? 'Logging in…' : 'Log in'}
         </button>
       </form>
+      <p className="hint" style={{ marginTop: 14 }}>
+        Forgot your password? Ask your manager for a reset link from Team &amp; stores. Business owners: contact SOPY support.
+      </p>
       <p style={{ marginTop: 16 }}>New to SOPY? <Link to="/get-started">Get started</Link></p>
     </div>
   );
