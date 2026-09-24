@@ -8,6 +8,7 @@ import { clampPlanCount, PLAN_LIMITS } from '../../../shared/pricing.js';
 import { isLocked, recordFailure, clearFailures, LOCKED_MESSAGE } from '../auth/rateLimit.js';
 import { planEnded } from '../auth/plan.js';
 import { tenantForReferralCode } from '../credits.js';
+import { REFERRAL_WELCOME_USD } from '../../../shared/referrals.js';
 
 export const authRouter = Router();
 
@@ -64,6 +65,14 @@ authRouter.post('/signup', async (req, res) => {
          VALUES ($1, $2, $3, $4, $5, $6, 'business_owner', 'admin') RETURNING *`,
         [tenant.id, name, str(title) || null, cleanEmail, str(phone) || null, passwordHash]
       );
+      // Signed up through a referral link: a welcome discount off the
+      // first payment (the referrer's reward comes when that payment is made).
+      if (referredBy) {
+        await client.query(
+          "INSERT INTO account_credits (tenant_id, amount, source) VALUES ($1, $2, 'welcome')",
+          [tenant.id, REFERRAL_WELCOME_USD]
+        );
+      }
       return { tenant, user: userRes.rows[0] };
     });
   } catch (err) {

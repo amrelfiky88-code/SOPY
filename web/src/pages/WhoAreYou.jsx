@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { REFERRAL_WELCOME_USD } from '../../../shared/referrals.js';
 
 const COUNTRIES = [
   'United States', 'United Kingdom', 'United Arab Emirates', 'Saudi Arabia', 'Egypt',
@@ -55,7 +56,9 @@ export default function WhoAreYou() {
       <h2>Who are you?</h2>
       <p>Tell us a bit about you and your restaurant so we can set things up.</p>
       {referralCode && (
-        <div className="success-banner" role="status">You were invited by another restaurant on SOPY. Welcome!</div>
+        <div className="success-banner" role="status">
+          You were invited by another restaurant on SOPY — welcome! You'll get ${REFERRAL_WELCOME_USD} off your first payment.
+        </div>
       )}
 
       {error && <div className="error-banner">{error}</div>}

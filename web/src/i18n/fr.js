@@ -171,10 +171,10 @@ export default {
   'account.planDown': 'Baisse de {amount} par rapport à {current} par mois. Nous calculerons le prorata sur votre prochaine facture.',
 
   'referral.title': 'Parrainez un restaurant, recevez un remboursement',
-  'referral.intro': "Partagez votre lien avec un autre restaurant ou café. Lorsqu'il s'inscrit avec ce lien et effectue son premier paiement, vous recevez {reward} de crédit sur votre prochain paiement SOPY.",
+  'referral.intro': "Partagez votre lien avec un autre restaurant ou café. Il bénéficie de {welcome} de réduction sur son premier paiement, et lorsqu'il l'effectue, vous recevez {reward} de crédit sur votre prochain paiement SOPY.",
   'referral.yourLink': 'Votre lien de parrainage',
   'referral.copied': 'Copié',
-  'referral.shareMessage': "Nous gérons nos check-lists de cuisine et nos rapports quotidiens avec SOPY — jetez un œil : {url}",
+  'referral.shareMessage': "Nous gérons nos check-lists de cuisine et nos rapports quotidiens avec SOPY. Inscrivez-vous avec mon lien et bénéficiez de {welcome} de réduction sur votre premier paiement : {url}",
   'referral.emailSubject': 'Essayez SOPY pour votre restaurant',
   'referral.signedUp': 'Inscrits',
   'referral.paid': 'Devenus clients',

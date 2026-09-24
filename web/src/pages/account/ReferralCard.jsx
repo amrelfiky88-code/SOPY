@@ -33,7 +33,8 @@ export default function ReferralCard() {
 
   const url = `${window.location.origin}${data.path}`;
   const reward = money(data.rewardAmount);
-  const message = t('referral.shareMessage', { reward, url });
+  const welcome = money(data.welcomeAmount);
+  const message = t('referral.shareMessage', { reward, welcome, url });
 
   const copy = async () => {
     try {
@@ -54,7 +55,7 @@ export default function ReferralCard() {
   return (
     <div className="card referral-card">
       <h3 style={{ fontSize: 16, marginBottom: 6 }}>{t('referral.title')}</h3>
-      <p style={{ marginTop: 0 }}>{t('referral.intro', { reward })}</p>
+      <p style={{ marginTop: 0 }}>{t('referral.intro', { reward, welcome })}</p>
 
       <div className="invite-link-url" aria-label={t('referral.yourLink')}>{url}</div>
 

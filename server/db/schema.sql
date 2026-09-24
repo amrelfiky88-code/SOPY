@@ -251,3 +251,5 @@ CREATE TABLE account_credits (
   used_at             TIMESTAMPTZ
 );
 CREATE INDEX idx_account_credits_tenant ON account_credits(tenant_id);
+-- A business gets at most one welcome discount.
+CREATE UNIQUE INDEX idx_account_credits_one_welcome ON account_credits(tenant_id) WHERE source = 'welcome';

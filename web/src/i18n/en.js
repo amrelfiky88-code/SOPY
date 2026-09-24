@@ -171,10 +171,10 @@ export default {
   'account.planDown': "Down {amount} from {current} a month. We'll prorate the difference on your next invoice.",
 
   'referral.title': 'Refer a restaurant, get cash back',
-  'referral.intro': 'Share your link with another restaurant or café. When they sign up with it and make their first payment, you get {reward} of credit off your next SOPY payment.',
+  'referral.intro': 'Share your link with another restaurant or café. They get {welcome} off their first payment, and when they make it you get {reward} of credit off your next SOPY payment.',
   'referral.yourLink': 'Your referral link',
   'referral.copied': 'Copied',
-  'referral.shareMessage': "We run our kitchen checklists and daily reports on SOPY — take a look: {url}",
+  'referral.shareMessage': "We run our kitchen checklists and daily reports on SOPY. Sign up with my link and get {welcome} off your first payment: {url}",
   'referral.emailSubject': 'Try SOPY for your restaurant',
   'referral.signedUp': 'Signed up',
   'referral.paid': 'Became customers',

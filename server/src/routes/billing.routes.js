@@ -3,7 +3,7 @@ import { query } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
 import { calculatePricing, clampPlanCount, PLAN_LIMITS } from '../../../shared/pricing.js';
 import { createCheckoutTransaction, updateSubscriptionQuantities, cancelSubscription, createCreditDiscount } from '../paddle/client.js';
-import { creditForPayment, spendCreditOnCheckout, grantReferralReward, renewalPaid } from '../credits.js';
+import { creditForPayment, availableCreditKind, spendCreditOnCheckout, grantReferralReward, renewalPaid } from '../credits.js';
 import { verifyPaddleSignature } from '../paddle/webhook.js';
 
 export const billingRouter = Router();
@@ -48,6 +48,7 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
   // Recorded on the checkout row and only spent once the payment is
   // confirmed, so an abandoned checkout doesn't eat the credit.
   const creditApplied = await creditForPayment(tenant.id, pricing.monthlyTotal);
+  const creditKind = creditApplied > 0 ? await availableCreditKind(tenant.id) : null;
 
   try {
     let transaction;
@@ -87,6 +88,7 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
       transactionId: transaction.id,
       pricing,
       creditApplied,
+      creditKind,
       dueToday: Math.round((pricing.monthlyTotal - creditApplied) * 100) / 100,
       mock: !process.env.PADDLE_API_KEY,
     });

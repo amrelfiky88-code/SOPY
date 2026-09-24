@@ -7,6 +7,10 @@
 // payment automatically.
 export const REFERRAL_REWARD_USD = 10;
 
+// The new restaurant's side ("give $10, get $10"): credit added when it
+// signs up with a referral link, taken off its first payment.
+export const REFERRAL_WELCOME_USD = 10;
+
 // Letters/digits that can't be confused when read aloud or typed from a
 // screenshot (no 0/O, 1/I/L).
 export const REFERRAL_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';

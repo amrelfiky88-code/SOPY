@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { query } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
 import { ensureReferralCode, creditSummary } from '../credits.js';
-import { REFERRAL_REWARD_USD } from '../../../shared/referrals.js';
+import { REFERRAL_REWARD_USD, REFERRAL_WELCOME_USD } from '../../../shared/referrals.js';
 
 // The Profile page's referral section: this business's link, how its
 // referrals are doing, and its account credit. Owner-only — the credit
@@ -34,6 +34,7 @@ referralsRouter.get('/', requireAuth, requireRole('business_owner'), async (req,
     code,
     path: `/get-started?ref=${code}`,
     rewardAmount: REFERRAL_REWARD_USD,
+    welcomeAmount: REFERRAL_WELCOME_USD,
     signedUp: counts[0].signed_up,
     paid: counts[0].paid,
     credit: await creditSummary(req.auth.tenantId),

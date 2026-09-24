@@ -171,10 +171,10 @@ export default {
   'account.planDown': 'انخفاض {amount} عن {current} شهريًا. سنحتسب الفرق تناسبيًا في فاتورتك القادمة.',
 
   'referral.title': 'رشّح مطعمًا واحصل على استرداد نقدي',
-  'referral.intro': 'شارك رابطك مع مطعم أو مقهى آخر. عندما يشترك من خلاله ويسدّد أول دفعة، تحصل على رصيد بقيمة {reward} يُخصم من دفعتك التالية في SOPY.',
+  'referral.intro': 'شارك رابطك مع مطعم أو مقهى آخر. يحصل على خصم {welcome} من أول دفعة له، وعندما يسدّدها تحصل أنت على رصيد بقيمة {reward} يُخصم من دفعتك التالية في SOPY.',
   'referral.yourLink': 'رابط الترشيح الخاص بك',
   'referral.copied': 'تم النسخ',
-  'referral.shareMessage': 'ندير قوائم فحص المطبخ والتقارير اليومية باستخدام SOPY — ألقِ نظرة: {url}',
+  'referral.shareMessage': 'ندير قوائم فحص المطبخ والتقارير اليومية باستخدام SOPY. اشترك عبر رابطي واحصل على خصم {welcome} من أول دفعة: {url}',
   'referral.emailSubject': 'جرّب SOPY لمطعمك',
   'referral.signedUp': 'اشتركوا',
   'referral.paid': 'أصبحوا عملاء',

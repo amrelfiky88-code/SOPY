@@ -178,3 +178,34 @@ test('with Paddle: credit becomes a one-time discount on the checkout, or on the
   assert.equal((await credit(F.token)).credit.used, 5 + REFERRAL_REWARD_USD);
   delete process.env.PADDLE_API_KEY;
 });
+
+test('the new restaurant gets a welcome discount off its first payment; the referrer is still rewarded', async () => {
+  const { REFERRAL_WELCOME_USD } = await import('../../shared/referrals.js');
+  const before = (await credit(A.token)).credit.earned;
+
+  const H = await signup('ref-h@example.com', { referralCode: A.code });
+  const checkout = await api('POST', '/api/billing/checkout', { token: H.token, body: {} });
+  assert.equal(checkout.body.creditApplied, REFERRAL_WELCOME_USD);
+  assert.equal(checkout.body.creditKind, 'welcome');
+  assert.equal(checkout.body.dueToday, 19 - REFERRAL_WELCOME_USD);
+
+  await api('POST', '/api/billing/mock-complete', { token: H.token, body: {} });
+  const hCredit = (await credit(H.token)).credit;
+  assert.equal(hCredit.used, REFERRAL_WELCOME_USD);
+  assert.equal(hCredit.available, 0, 'the welcome discount is used once');
+  assert.equal((await credit(A.token)).credit.earned, before + REFERRAL_REWARD_USD, 'referrer rewarded as before');
+
+  // Resubscribing later: no second welcome discount.
+  await completeSetup(api, H.token);
+  await api('POST', '/api/billing/subscription/cancel', { token: H.token, body: {} });
+  const again = await api('POST', '/api/billing/checkout', { token: H.token, body: {} });
+  assert.equal(again.body.creditApplied, 0);
+});
+
+test('no referral link, no welcome discount', async () => {
+  const plain = await signup('ref-plain@example.com');
+  const checkout = await api('POST', '/api/billing/checkout', { token: plain.token, body: {} });
+  assert.equal(checkout.body.creditApplied, 0);
+  const { rows } = await pool.query('SELECT count(*)::int AS n FROM account_credits WHERE tenant_id = $1', [plain.tenantId]);
+  assert.equal(rows[0].n, 0);
+});

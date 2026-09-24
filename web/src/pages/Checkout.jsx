@@ -40,7 +40,7 @@ export default function Checkout() {
       const data = await api.post('/billing/checkout', {});
       if (!liveRef.current) return;
       setPricing(data.pricing);
-      setCredit({ applied: Number(data.creditApplied || 0), dueToday: data.dueToday ?? data.pricing?.monthlyTotal });
+      setCredit({ applied: Number(data.creditApplied || 0), kind: data.creditKind, dueToday: data.dueToday ?? data.pricing?.monthlyTotal });
       setMock(!!data.mock);
       setAlreadyActive(!!data.alreadyActive);
       setTransactionId(data.transactionId || null);
@@ -214,7 +214,7 @@ export default function Checkout() {
           {credit.applied > 0 && (
             <>
               <div className="summary-row">
-                <span>Referral credit</span>
+                <span>{credit.kind === 'welcome' ? 'Welcome discount' : credit.kind === 'referral' ? 'Referral credit' : 'Account credit'}</span>
                 <span className="referral-plus">−{money(credit.applied)}</span>
               </div>
               <div className="summary-row summary-total">
@@ -222,7 +222,9 @@ export default function Checkout() {
                 <span>{money(credit.dueToday)}</span>
               </div>
               <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>
-                Your account credit comes off this first payment; after that the plan renews at {money(pricing.monthlyTotal)} a month.
+                {credit.kind === 'welcome'
+                  ? `Thanks for joining through a referral — your welcome discount comes off this first payment. After that the plan renews at ${money(pricing.monthlyTotal)} a month.`
+                  : `Your account credit comes off this payment. After that the plan renews at ${money(pricing.monthlyTotal)} a month.`}
               </p>
             </>
           )}

@@ -55,6 +55,18 @@ export async function creditSummary(tenantId) {
   return { available: round2(r.available), scheduled: round2(r.scheduled), used: round2(r.used), earned: round2(r.earned) };
 }
 
+// What kind of credit a checkout is using, for its label: a new
+// restaurant's welcome discount, referral rewards, or both.
+export async function availableCreditKind(tenantId) {
+  const { rows } = await query(
+    "SELECT DISTINCT source FROM account_credits WHERE tenant_id = $1 AND status = 'available'",
+    [tenantId]
+  );
+  const sources = rows.map((r) => (r.source.startsWith('welcome') ? 'welcome' : 'referral'));
+  const unique = [...new Set(sources)];
+  return unique.length === 1 ? unique[0] : unique.length ? 'mixed' : null;
+}
+
 // How much credit would come off a payment of `total` right now.
 export async function creditForPayment(tenantId, total) {
   const { available } = await creditSummary(tenantId);
@@ -68,7 +80,7 @@ async function moveCredit(client, tenantId, amount, toStatus, { subscriptionId =
   let remaining = round2(amount);
   if (remaining <= 0) return 0;
   const { rows } = await client.query(
-    "SELECT id, amount FROM account_credits WHERE tenant_id = $1 AND status = 'available' ORDER BY created_at, id FOR UPDATE",
+    "SELECT id, amount, source FROM account_credits WHERE tenant_id = $1 AND status = 'available' ORDER BY created_at, id FOR UPDATE",
     [tenantId]
   );
   let moved = 0;
@@ -84,10 +96,12 @@ async function moveCredit(client, tenantId, amount, toStatus, { subscriptionId =
       );
     } else {
       await client.query('UPDATE account_credits SET amount = $1 WHERE id = $2', [round2(rowAmount - take), row.id]);
+      // The split-off part keeps its origin; a welcome discount's part gets
+      // its own label because only one 'welcome' row may exist.
       await client.query(
         `INSERT INTO account_credits (tenant_id, amount, source, status, used_on_subscription_id, paddle_discount_id, used_at)
-         VALUES ($1, $2, 'referral', $3, $4, $5, CASE WHEN $3 = 'used' THEN now() ELSE NULL END)`,
-        [tenantId, take, toStatus, subscriptionId, discountId]
+         VALUES ($1, $2, $6, $3, $4, $5, CASE WHEN $3 = 'used' THEN now() ELSE NULL END)`,
+        [tenantId, take, toStatus, subscriptionId, discountId, row.source === 'welcome' ? 'welcome_part' : row.source]
       );
     }
     remaining = round2(remaining - take);
