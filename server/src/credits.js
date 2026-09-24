@@ -166,12 +166,17 @@ export async function scheduleCreditOnRenewal(tenantId) {
   }
 }
 
-// A renewal carrying our discount was paid: the scheduled credit is spent,
-// and any credit that arrived meanwhile goes on the following renewal.
-export async function renewalPaid(tenantId) {
-  await query(
-    "UPDATE account_credits SET status = 'used', used_at = now() WHERE tenant_id = $1 AND status = 'scheduled'",
-    [tenantId]
-  );
+// A renewal was paid. Only credit whose discount was actually on that
+// payment counts as spent — marking every scheduled credit "used" on any
+// renewal would lose credit when the discount hadn't been applied to it
+// (say, scheduled after that renewal's transaction was already created).
+// Then any credit waiting goes on the following renewal.
+export async function renewalPaid(tenantId, discountId) {
+  if (discountId) {
+    await query(
+      "UPDATE account_credits SET status = 'used', used_at = now() WHERE tenant_id = $1 AND status = 'scheduled' AND paddle_discount_id = $2",
+      [tenantId, discountId]
+    );
+  }
   await scheduleCreditOnRenewal(tenantId);
 }

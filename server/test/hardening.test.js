@@ -233,3 +233,17 @@ test('oversized reports, notes and names are refused', async () => {
   const badStandard = await api('POST', '/api/checklists/library', { token: owner.token, body: { text: 'Custom point', standard: 'MADE_UP' } });
   assert.equal(badStandard.status, 400);
 });
+
+test('unknown API addresses answer JSON 404, and security headers are set', async () => {
+  const res = await fetch(`${baseUrl}/api/no-such-thing`);
+  assert.equal(res.status, 404);
+  assert.match(res.headers.get('content-type'), /application\/json/);
+  assert.equal((await res.json()).error, 'Not found');
+
+  const h = (await fetch(`${baseUrl}/api/health`)).headers;
+  assert.equal(h.get('x-powered-by'), null);
+  assert.equal(h.get('x-content-type-options'), 'nosniff');
+  assert.equal(h.get('x-frame-options'), 'SAMEORIGIN');
+  assert.equal(h.get('referrer-policy'), 'strict-origin-when-cross-origin');
+  assert.match(h.get('permissions-policy'), /camera=\(self\)/);
+});

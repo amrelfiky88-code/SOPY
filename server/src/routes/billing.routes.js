@@ -243,7 +243,7 @@ export async function paddleWebhookHandler(req, res) {
           await paymentConfirmed(tenantId, activated[0]);
         } else if (data.origin === 'subscription_recurring') {
           // A renewal was paid (a scheduled credit discount, if any, is now spent).
-          await renewalPaid(tenantId);
+          await renewalPaid(tenantId, data.discount_id || null);
         }
       }
       break;

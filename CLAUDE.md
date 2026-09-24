@@ -29,7 +29,7 @@ There are no frontend tests. UI changes must be checked in a real browser, inclu
 
 ## Architecture
 
-**Server** (`server/src`): Express. `app.js` exports `createApp()` so tests boot the real app on an ephemeral port (`test-utils/server.js`); `index.js` only calls `listen`. In production the same process serves `web/dist` with SPA fallback — one Node app, no separate static host.
+**Server** (`server/src`): Express. `app.js` exports `createApp()` so tests boot the real app on an ephemeral port (`test-utils/server.js`); `index.js` only calls `listen`. In production the same process serves `web/dist` with SPA fallback — one Node app, no separate static host. Unknown `/api/*` paths get a JSON 404 before that fallback; `api.js` treats a non-JSON 2xx/5xx reply as a connection problem, so the SPA's HTML must never answer an API call.
 
 **Multi-tenancy is enforced in application code, not Postgres RLS.** `requireAuth` puts `tenantId`/`userId`/`role` from the JWT on `req.auth`; every query must scope by `req.auth.tenantId`. `test/tenant-isolation.test.js` guards this. Roles are `business_owner`, `operations_manager`, `area_manager`, `store_manager`, `employee`, checked with `requireRole(...)`.
 

@@ -43,9 +43,14 @@ async function attempt(method, path, body, isForm) {
     try {
       data = JSON.parse(text);
     } catch {
-      // Our API only ever sends JSON; anything else is a proxy/gateway
-      // page or a body cut off mid-transfer.
-      throw Object.assign(new Error(OFFLINE_MESSAGE), { transient: true });
+      // Our API only ever sends JSON. A non-JSON reply that claims success,
+      // or a gateway/server error page, means the request didn't really get
+      // through — treat as a connection problem. Anything else (a 404 page,
+      // say) is a real answer, not an outage.
+      if (res.ok || res.status >= 500) {
+        throw Object.assign(new Error(OFFLINE_MESSAGE), { transient: true });
+      }
+      data = null;
     }
   }
 

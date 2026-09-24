@@ -23,6 +23,24 @@ import { blockWritesWhenPlanEnded } from './auth/plan.js';
 
 export function createApp() {
   const app = express();
+  app.disable('x-powered-by');
+
+  // Baseline security headers (no dependency needed for these few).
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // No embedding in other sites' frames (clickjacking); same-origin only.
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    // Invite, reset and share links carry secret tokens in the path —
+    // never send the full address to another site.
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    // Camera (evidence photos) and location (report GPS) are used by this
+    // site only; nothing else is needed.
+    res.setHeader('Permissions-Policy', 'camera=(self), geolocation=(self), microphone=()');
+    if (process.env.NODE_ENV === 'production' && (req.secure || req.headers['x-forwarded-proto'] === 'https')) {
+      res.setHeader('Strict-Transport-Security', 'max-age=15552000');
+    }
+    next();
+  });
 
   // In production, lock CORS to the configured client origin. In dev,
   // reflect whatever origin asked — this is what lets the Vite dev
@@ -61,6 +79,11 @@ export function createApp() {
   app.use('/api/feedback', feedbackRouter);
   app.use('/api/shared', sharedRouter);
   app.use('/api/referrals', referralsRouter);
+
+  // Unknown API address: answer in JSON. Express's default HTML 404 made
+  // the app think the connection had failed ("Couldn't reach SOPY") and
+  // retry, instead of reporting a real "not found".
+  app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
   // In production this one Node process serves the built React app too, so
   // the whole thing runs as a single Hostinger "Node.js app" alongside

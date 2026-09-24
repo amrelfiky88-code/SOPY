@@ -174,7 +174,16 @@ test('with Paddle: credit becomes a one-time discount on the checkout, or on the
   assert.equal(fCredit.available, 0);
 
   const { renewalPaid } = await import('../src/credits.js');
-  await renewalPaid(F.tenantId);
+  // A renewal that didn't carry our discount leaves the credit waiting.
+  await renewalPaid(F.tenantId, 'dsc_someone_else');
+  assert.equal((await credit(F.token)).credit.scheduled, REFERRAL_REWARD_USD);
+  await renewalPaid(F.tenantId, null);
+  assert.equal((await credit(F.token)).credit.scheduled, REFERRAL_REWARD_USD);
+  // The renewal that carried it spends it.
+  const scheduledDiscount = (await pool.query(
+    "SELECT paddle_discount_id FROM account_credits WHERE tenant_id = $1 AND status = 'scheduled'", [F.tenantId]
+  )).rows[0].paddle_discount_id;
+  await renewalPaid(F.tenantId, scheduledDiscount);
   assert.equal((await credit(F.token)).credit.used, 5 + REFERRAL_REWARD_USD);
   delete process.env.PADDLE_API_KEY;
 });
