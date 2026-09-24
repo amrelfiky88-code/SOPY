@@ -49,6 +49,36 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
   // confirmed, so an abandoned checkout doesn't eat the credit.
   const creditApplied = await creditForPayment(tenant.id, pricing.monthlyTotal);
   const creditKind = creditApplied > 0 ? await availableCreditKind(tenant.id) : null;
+  const respond = (transactionId) => res.json({
+    transactionId,
+    pricing,
+    creditApplied,
+    creditKind,
+    dueToday: Math.round((pricing.monthlyTotal - creditApplied) * 100) / 100,
+    mock: !process.env.PADDLE_API_KEY,
+  });
+
+  // Nothing about the order changed since the last call (a refresh, the
+  // back button, reopening the page while a payment is being confirmed):
+  // hand back the same transaction. Minting a new one each time replaced
+  // the id the customer had just paid, so that payment's webhook matched
+  // no row and they were offered a second transaction to pay again.
+  const { rows: pendingRows } = await query(
+    "SELECT * FROM subscriptions WHERE tenant_id = $1 AND status = 'pending' ORDER BY created_at DESC LIMIT 1",
+    [tenant.id]
+  );
+  const pending = pendingRows[0];
+  const isMockTxn = (id) => String(id || '').startsWith('mock_txn_');
+  if (
+    pending?.paddle_transaction_id &&
+    isMockTxn(pending.paddle_transaction_id) === !process.env.PADDLE_API_KEY &&
+    pending.branch_count === pricing.branchCount &&
+    pending.user_count === pricing.userCount &&
+    Number(pending.monthly_total) === Number(pricing.monthlyTotal) &&
+    Number(pending.credit_applied || 0) === Number(creditApplied)
+  ) {
+    return respond(pending.paddle_transaction_id);
+  }
 
   try {
     let transaction;
@@ -65,16 +95,12 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
     // double-invoked effects in dev, a refresh, back/forward navigation),
     // and each call would otherwise leave behind an orphaned Paddle
     // transaction and a duplicate pending row.
-    const { rows: existingPending } = await query(
-      "SELECT id FROM subscriptions WHERE tenant_id = $1 AND status = 'pending' ORDER BY created_at DESC LIMIT 1",
-      [tenant.id]
-    );
-    if (existingPending[0]) {
+    if (pending) {
       await query(
         `UPDATE subscriptions SET branch_count = $1, user_count = $2, branch_rate = $3, user_rate = $4,
                                    monthly_total = $5, paddle_transaction_id = $6, credit_applied = $7, updated_at = now()
          WHERE id = $8`,
-        [pricing.branchCount, pricing.userCount, pricing.branchBlendedRate, pricing.userBlendedRate, pricing.monthlyTotal, transaction.id, creditApplied, existingPending[0].id]
+        [pricing.branchCount, pricing.userCount, pricing.branchBlendedRate, pricing.userBlendedRate, pricing.monthlyTotal, transaction.id, creditApplied, pending.id]
       );
     } else {
       await query(
@@ -84,14 +110,7 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
       );
     }
 
-    res.json({
-      transactionId: transaction.id,
-      pricing,
-      creditApplied,
-      creditKind,
-      dueToday: Math.round((pricing.monthlyTotal - creditApplied) * 100) / 100,
-      mock: !process.env.PADDLE_API_KEY,
-    });
+    respond(transaction.id);
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
@@ -234,11 +253,24 @@ export async function paddleWebhookHandler(req, res) {
       if (tenantId) {
         // Only a pending checkout row activates, so Paddle retrying the
         // same event can't spend credit or reward a referrer twice.
-        const { rows: activated } = await query(
+        let { rows: activated } = await query(
           `UPDATE subscriptions SET status = 'active', paddle_customer_id = $1, updated_at = now()
            WHERE tenant_id = $2 AND paddle_transaction_id = $3 AND status = 'pending' RETURNING *`,
           [data.customer_id, tenantId, data.id]
         );
+        // A checkout transaction we no longer have on file (the pending row
+        // was re-priced after this one was opened) was still paid: activate
+        // the business's checkout rather than leave a paying customer out.
+        if (!activated[0] && data.origin !== 'subscription_recurring') {
+          ({ rows: activated } = await query(
+            `UPDATE subscriptions SET status = 'active', paddle_customer_id = $1, paddle_transaction_id = $3, updated_at = now()
+             WHERE id = (SELECT id FROM subscriptions WHERE tenant_id = $2 AND status = 'pending' ORDER BY created_at DESC LIMIT 1)
+               AND NOT EXISTS (SELECT 1 FROM subscriptions WHERE tenant_id = $2 AND status IN ('active', 'past_due'))
+             RETURNING *`,
+            [data.customer_id, tenantId, data.id]
+          ));
+          if (activated[0]) console.warn(`Paddle payment ${data.id} matched no checkout on file; activated tenant ${tenantId}'s pending checkout`);
+        }
         if (activated[0]) {
           await advancePastCheckout(tenantId);
           await paymentConfirmed(tenantId, activated[0]);

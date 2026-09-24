@@ -128,6 +128,9 @@ tenantsRouter.post('/branches', requireAuth, requireRole('business_owner', 'oper
   const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
   if (!name) return res.status(400).json({ error: 'Branch name is required' });
   if (name.length > 120) return res.status(400).json({ error: 'That store name is too long' });
+  if ((typeof city === 'string' && city.trim().length > 120) || (typeof address === 'string' && address.length > 300)) {
+    return res.status(400).json({ error: 'That text is too long' });
+  }
   const room = await planRoom(req.auth.tenantId, 'branches');
   if (room.full) return res.status(409).json({ error: planFullMessage('store', room, req.auth.role) });
   const { rows } = await query(

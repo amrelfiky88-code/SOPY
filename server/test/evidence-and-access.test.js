@@ -200,3 +200,39 @@ test("staff can't read a colleague's run, its score, the staff list or the assig
   assert.equal((await api('GET', '/api/checklists/assignments', { token: E1.token })).status, 403);
   assert.equal((await api('GET', '/api/tenants/users', { token: O.token })).status, 200);
 });
+
+test('the reports list pages through every report, newest submitted first, without form data', async () => {
+  // Several finished runs for E1.
+  for (let n = 0; n < 3; n++) {
+    const sub = await start(E1.token);
+    await respond(E1.token, sub, { itemId: itemIds[0], isCompliant: 'true' });
+    await respond(E1.token, sub, { itemId: itemIds[1], isCompliant: 'true' });
+    await api('POST', `/api/submissions/${sub}/submit`, { token: E1.token, body: {} });
+  }
+  const seen = [];
+  let before = null;
+  do {
+    const q = new URLSearchParams({ status: 'submitted', limit: '2', ...(before ? { before } : {}) });
+    const page = await api('GET', `/api/submissions?${q}`, { token: O.token });
+    assert.equal(page.status, 200, JSON.stringify(page.body));
+    assert.ok(page.body.submissions.length <= 2);
+    assert.ok(page.body.submissions.every((s) => !('form_data' in s)));
+    seen.push(...page.body.submissions);
+    before = page.body.nextBefore;
+  } while (before);
+  const { rows } = await pool.query("SELECT count(*)::int AS n FROM checklist_submissions s JOIN users u ON u.id = s.submitted_by WHERE u.tenant_id = (SELECT tenant_id FROM users WHERE email = 'ev-owner@example.com') AND s.status = 'submitted'");
+  assert.equal(seen.length, rows[0].n, 'every report is reachable');
+  assert.equal(new Set(seen.map((s) => s.id)).size, seen.length, 'no duplicates across pages');
+  const times = seen.map((s) => new Date(s.submitted_at).getTime());
+  assert.deepEqual(times, [...times].sort((a, b) => b - a), 'newest submitted first');
+  assert.equal((await api('GET', '/api/submissions?status=bogus', { token: O.token })).status, 400);
+});
+
+test('names and details have sensible length limits', async () => {
+  const long = 'x'.repeat(500);
+  const signup = await api('POST', '/api/auth/signup', { body: { fullName: long, email: 'long@example.com', password: 'OwnerPass123', restaurantName: 'L', country: 'Egypt' } });
+  assert.equal(signup.status, 400);
+  assert.equal((await api('PATCH', '/api/auth/me', { token: E1.token, body: { fullName: long } })).status, 400);
+  assert.equal((await api('PATCH', '/api/auth/me', { token: E1.token, body: { phone: '1'.repeat(60) } })).status, 400);
+  assert.equal((await api('PATCH', '/api/auth/me', { token: E1.token, body: { title: 'Line cook' } })).status, 200);
+});

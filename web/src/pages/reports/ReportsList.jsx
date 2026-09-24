@@ -11,15 +11,25 @@ import { FileTextIcon, ClipboardEmptyIcon } from '../../components/icons.jsx';
 export default function ReportsList() {
   const { t, lang } = useI18n();
   const [submissions, setSubmissions] = useState(null);
+  const [nextBefore, setNextBefore] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
 
-  const load = () => {
+  // Pages of 50, newest first; "Load more" fetches the next page.
+  const load = (before) => {
     setError('');
-    api.get('/submissions?status=submitted')
-      .then((d) => setSubmissions(d.submissions))
-      .catch((err) => setError(err.message));
+    if (before) setLoadingMore(true);
+    const params = new URLSearchParams({ status: 'submitted' });
+    if (before) params.set('before', before);
+    api.get(`/submissions?${params}`)
+      .then((d) => {
+        setSubmissions((prev) => (before ? [...(prev || []), ...d.submissions] : d.submissions));
+        setNextBefore(d.nextBefore);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoadingMore(false));
   };
-  useEffect(load, []);
+  useEffect(() => load(), []);
 
   return (
     <div>
@@ -28,7 +38,7 @@ export default function ReportsList() {
       {error && (
         <div className="error-banner">
           {error}{' '}
-          <button type="button" className="link-btn" onClick={load}>{t('common.tryAgain')}</button>
+          <button type="button" className="link-btn" onClick={() => load(submissions?.length ? nextBefore : undefined)}>{t('common.tryAgain')}</button>
         </div>
       )}
       {!submissions && !error && <p>{t('reports.loading')}</p>}
@@ -53,6 +63,11 @@ export default function ReportsList() {
             </Link>
           ))}
         </div>
+      )}
+      {nextBefore && (
+        <button type="button" className="btn btn-secondary" onClick={() => load(nextBefore)} disabled={loadingMore}>
+          {loadingMore ? t('reports.loading') : t('reports.loadMore')}
+        </button>
       )}
     </div>
   );

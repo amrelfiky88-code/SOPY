@@ -188,3 +188,30 @@ test('once a canceled plan runs out, new work is blocked but history stays open'
   assert.ok([200, 201].includes(again.status), JSON.stringify(again.body));
   assert.equal((await api('GET', '/api/auth/me', { token })).body.tenant.plan_ended, false);
 });
+
+test('reopening checkout while a payment is confirming keeps the same transaction, and a paid old one still activates', async () => {
+  process.env.PADDLE_API_KEY = 'test_key';
+  const s = await api('POST', '/api/auth/signup', {
+    body: { fullName: 'R', email: 'race@example.com', password: 'OwnerPass123', restaurantName: 'Race', country: 'Egypt', branchCount: 1, userCount: 1 },
+  });
+  const t = s.body.token;
+  const tid = s.body.tenant.id;
+
+  const first = await api('POST', '/api/billing/checkout', { token: t, body: {} });
+  const calls = sentToPaddle.length;
+  const again = await api('POST', '/api/billing/checkout', { token: t, body: {} });
+  assert.equal(again.body.transactionId, first.body.transactionId, 'same order, same transaction');
+  assert.equal(sentToPaddle.length, calls, 'no second transaction was created at Paddle');
+
+  // The plan changes after the first transaction was opened, so the
+  // pending row now points at a newer one — but the customer paid the first.
+  await pool.query('UPDATE tenants SET user_count = 2 WHERE id = $1', [tid]);
+  const repriced = await api('POST', '/api/billing/checkout', { token: t, body: {} });
+  assert.notEqual(repriced.body.transactionId, first.body.transactionId);
+
+  const paid = await webhook({ event_type: 'transaction.completed', data: { id: first.body.transactionId, customer_id: 'ctm_r', origin: 'web', custom_data: { tenantId: tid } } });
+  assert.equal(paid.status, 200);
+  const { rows } = await pool.query("SELECT count(*)::int AS n FROM subscriptions WHERE tenant_id = $1 AND status = 'active'", [tid]);
+  assert.equal(rows[0].n, 1, 'the paying customer is active, not stuck pending');
+  delete process.env.PADDLE_API_KEY;
+});

@@ -129,3 +129,20 @@ test('a response for a checkpoint outside the checklist is rejected', async () =
   const res = await postResponse(emp.token, start.body.submission.id, { itemId: outsider.id, isCompliant: 'true' });
   assert.equal(res.status, 400);
 });
+
+test('retaking a photo removes the replaced file from disk', async () => {
+  const fsMod = await import('node:fs');
+  const pathMod = await import('node:path');
+  const start = await api('POST', '/api/submissions', { token: emp.token, body: { templateId, branchId } });
+  const subId = start.body.submission.id;
+  await postResponse(emp.token, subId, { itemId: itemIds[0] }, true);
+  const first = (await api('GET', `/api/submissions/${subId}`, { token: emp.token })).body.responses[0].photo_path.split('?')[0];
+  await new Promise((r) => setTimeout(r, 5));
+  await postResponse(emp.token, subId, { itemId: itemIds[0] }, true);
+  const second = (await api('GET', `/api/submissions/${subId}`, { token: emp.token })).body.responses[0].photo_path.split('?')[0];
+  assert.notEqual(first, second);
+  const onDisk = (p) => fsMod.existsSync(pathMod.resolve('uploads', p.slice('/uploads/'.length)));
+  await new Promise((r) => setTimeout(r, 50));
+  assert.equal(onDisk(first), false, 'the old photo is gone');
+  assert.equal(onDisk(second), true);
+});

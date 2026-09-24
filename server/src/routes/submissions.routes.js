@@ -177,7 +177,7 @@ submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), as
   // (Inserting a row per call left an answer given after the photo
   // unsaved, and duplicate rows skewed the scorecard.)
   const { rows: existing } = await query(
-    `SELECT id FROM checklist_submission_responses WHERE submission_id = $1 AND item_id = $2
+    `SELECT id, photo_path FROM checklist_submission_responses WHERE submission_id = $1 AND item_id = $2
      ORDER BY created_at DESC LIMIT 1`,
     [req.params.id, itemId]
   );
@@ -199,6 +199,12 @@ submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), as
       [existing[0].id, compliant, valueText !== undefined, valueText || null, photoPath, ...gps,
         capturedAt]
     ));
+    // A retake replaces the photo; the old file used to stay on disk for
+    // ever with nothing pointing at it.
+    const old = existing[0].photo_path;
+    if (photoPath && old && old !== photoPath && old.startsWith('/uploads/')) {
+      fs.rm(path.join(UPLOAD_ROOT, old.slice('/uploads/'.length)), { force: true }, () => {});
+    }
   } else {
     ({ rows } = await query(
       `INSERT INTO checklist_submission_responses
@@ -449,8 +455,17 @@ submissionsRouter.post('/:id/share', requireAuth, pdfUpload.single('pdf'), async
   res.status(201).json({ path: `/api/shared/${token}`, expiresAt: shareRows[0].expires_at });
 });
 
+// The list pages through with ?before=<cursor> (nextBefore from the
+// previous page). It used to stop at the newest 200 — a busy restaurant's
+// older reports simply vanished from it — and sent every report's whole
+// form_data, which the list never shows.
+const LIST_COLUMNS = `s.id, s.tenant_id, s.template_id, s.branch_id, s.assignment_id, s.submitted_by, s.status,
+  s.started_at, s.submitted_at, s.has_incident, coalesce(s.submitted_at, s.started_at) AS sort_at`;
+
 submissionsRouter.get('/', requireAuth, async (req, res) => {
-  const { branchId, from, to, status } = req.query;
+  const { branchId, from, to, status, before } = req.query;
+  if (status !== undefined && !['in_progress', 'submitted'].includes(status)) return res.status(400).json({ error: 'Unknown status' });
+  const limit = Math.min(200, Math.max(1, Number.parseInt(req.query.limit, 10) || 50));
   // Qualified with s. — branches, users and templates share these column
   // names, and unqualified they made every call fail as ambiguous.
   const clauses = ['s.tenant_id = $1'];
@@ -461,16 +476,29 @@ submissionsRouter.get('/', requireAuth, async (req, res) => {
   if (from) { clauses.push(`s.started_at >= $${i++}`); params.push(from); }
   if (to) { clauses.push(`s.started_at <= $${i++}`); params.push(to); }
   if (status) { clauses.push(`s.status = $${i++}`); params.push(status); }
+  if (before) {
+    const [at, id] = String(before).split('|');
+    if (!at || !id) return res.status(400).json({ error: 'Invalid id' });
+    clauses.push(`(coalesce(s.submitted_at, s.started_at), s.id) < ($${i++}::timestamptz, $${i++}::uuid)`);
+    params.push(at, id);
+  }
+  params.push(limit + 1);
 
   const { rows } = await query(
-    `SELECT s.*, t.name AS template_name, t.kind, b.name AS branch_name, u.full_name AS submitted_by_name
+    `SELECT ${LIST_COLUMNS}, t.name AS template_name, t.kind, b.name AS branch_name, u.full_name AS submitted_by_name
      FROM checklist_submissions s
      JOIN checklist_templates t ON t.id = s.template_id
      JOIN branches b ON b.id = s.branch_id
      JOIN users u ON u.id = s.submitted_by
      WHERE ${clauses.join(' AND ')}
-     ORDER BY s.started_at DESC LIMIT 200`,
+     ORDER BY coalesce(s.submitted_at, s.started_at) DESC, s.id DESC LIMIT $${i}`,
     params
   );
-  res.json({ submissions: rows });
+  const more = rows.length > limit;
+  const page = more ? rows.slice(0, limit) : rows;
+  const last = page[page.length - 1];
+  res.json({
+    submissions: page,
+    nextBefore: more ? `${new Date(last.sort_at).toISOString()}|${last.id}` : null,
+  });
 });

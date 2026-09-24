@@ -27,6 +27,7 @@ authRouter.post('/signup', async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
   if (!EMAIL_RE.test(cleanEmail)) return res.status(400).json({ error: 'Enter a valid email address' });
+  if (tooLong(req.body)) return res.status(400).json({ error: 'That text is too long' });
   if (password.length < 8) {
     return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
@@ -162,6 +163,7 @@ authRouter.get('/me', requireAuth, async (req, res) => {
 // flow rather than a profile edit.
 authRouter.patch('/me', requireAuth, async (req, res) => {
   const { fullName, title, phone, language } = req.body;
+  if (tooLong({ fullName, title, phone })) return res.status(400).json({ error: 'That text is too long' });
 
   const fields = [];
   const values = [];
@@ -216,6 +218,10 @@ authRouter.patch('/password', requireAuth, async (req, res) => {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
+// Names and details show on every report and PDF; there was no limit at
+// all, so a pasted essay became someone's name.
+const MAX_LENGTH = { fullName: 120, title: 120, phone: 40, restaurantName: 120, country: 80, email: 200 };
+const tooLong = (body) => Object.entries(MAX_LENGTH).some(([k, max]) => typeof body[k] === 'string' && body[k].trim().length > max);
 // The language someone signed up in, falling back to the default.
 const uiLanguage = (v) => (isSupportedLanguage(v) ? v : DEFAULT_LANGUAGE);
 export const normalizeEmail = (v) => str(v).toLowerCase();
