@@ -4,12 +4,21 @@
 // listed here renders in English, and rows marked 'reviewed' in the
 // database are never overwritten by a re-run.
 import { sopCategoryTranslations } from './sopCategories.js';
-import { cStoreCategories, cStoreItems } from './cStore.js';
+import { cStoreCategories, cStoreItems, cStoreDescriptions } from './cStore.js';
+import { qcItems } from './qcItems.js';
+import { sopItems } from './sopItems.js';
+import { sopResearchedItems } from './sopResearchedItems.js';
+import { starterDescriptions } from './starterDescriptions.js';
 
 export default {
   ...sopCategoryTranslations().fr,
   ...cStoreCategories.fr,
   ...cStoreItems.fr,
+  ...cStoreDescriptions.fr,
+  ...qcItems.fr,
+  ...sopItems.fr,
+  ...sopResearchedItems.fr,
+  ...starterDescriptions.fr,
 
   // --- QC audit system categories -----------------------------------
   // The A/B/C and W1/M1/Q1 letters are kept as-is: they're the client's

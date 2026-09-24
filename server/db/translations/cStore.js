@@ -5,6 +5,7 @@
 //
 // The "C-Store — A." section letters are preserved in every language:
 // they order the sections and are how staff refer to them out loud.
+import { byLanguage } from './rows.js';
 
 export const cStoreCategories = {
   ar: {
@@ -308,3 +309,59 @@ export const cStoreItems = {
     'Safety Data Sheet binder current and accessible': 'Classeur des fiches de données de sécurité à jour et accessible',
   },
 };
+
+// Checkpoint descriptions. Temperatures keep both scales as the source
+// gives them (US FDA figures, pending local confirmation).
+export const cStoreDescriptions = byLanguage([
+  [`Disarm the alarm and walk the store before unlocking to customers. Check for signs of forced entry, damage or anything disturbed overnight, and report immediately if found.`,
+    `أوقف الإنذار وتجوّل في المتجر قبل فتحه للعملاء. ابحث عن علامات الدخول بالقوة أو الأضرار أو أي شيء تم العبث به ليلًا، وأبلغ فورًا إن وجدت شيئًا.`,
+    `Désactivez l'alarme et faites le tour du magasin avant d'ouvrir aux clients. Recherchez tout signe d'effraction, de dégât ou de dérangement pendant la nuit, et signalez-le immédiatement.`],
+  [`Count the safe against the expected balance and record it. Investigate and escalate any variance before trading starts.`,
+    `عدّ محتوى الخزنة وقارنه بالرصيد المتوقع وسجّله. تحقق من أي فرق وصعّده قبل بدء البيع.`,
+    `Comptez le coffre par rapport au solde attendu et notez-le. Analysez et remontez tout écart avant l'ouverture.`],
+  [`Count the opening float into each register and record the amount.`,
+    `عدّ العهدة الافتتاحية في كل صندوق وسجّل المبلغ.`,
+    `Comptez le fond de caisse de chaque caisse et notez le montant.`],
+  [`Confirm the recorder shows no error state and that register and forecourt views are unobstructed.`,
+    `تأكد أن جهاز التسجيل لا يُظهر أي خطأ وأن رؤية الصناديق وساحة الوقود غير محجوبة.`,
+    `Vérifiez que l'enregistreur n'affiche aucune erreur et que les vues sur les caisses et la piste sont dégagées.`],
+  [`Look for splits, perforation or leaking at the hose and nozzle. Bag off any pump with damaged equipment until it is repaired.`,
+    `ابحث عن تشققات أو ثقوب أو تسرب في الخرطوم والفوهة. غطِّ أي مضخة بمعدات تالفة وأوقفها حتى تُصلح.`,
+    `Recherchez fissures, perforations ou fuites sur le flexible et le pistolet. Condamnez toute pompe dont l'équipement est endommagé jusqu'à sa réparation.`],
+  [`The emergency stop must be reachable without moving anything. Nothing may be stored or parked in front of it.`,
+    `يجب أن يكون الوصول إلى زر الإيقاف الطارئ ممكنًا دون تحريك أي شيء. لا يجوز تخزين أي شيء أو ركن أي مركبة أمامه.`,
+    `L'arrêt d'urgence doit être accessible sans rien déplacer. Rien ne doit être stocké ni stationné devant.`],
+  [`Any spill is contained with absorbent from the spill kit immediately, the area cordoned, and the incident logged.`,
+    `يُحتوى أي انسكاب فورًا بمادة ماصة من عدة الانسكاب، وتُطوَّق المنطقة، وتُسجَّل الحادثة.`,
+    `Tout déversement est immédiatement contenu avec l'absorbant du kit antipollution, la zone est balisée et l'incident consigné.`],
+  [`Walk the aisles checking date codes. Pull anything out of date, log it as waste and dispose of it — never return it to the shelf.`,
+    `تجوّل في الممرات وافحص تواريخ الصلاحية. اسحب أي منتج منتهي الصلاحية، وسجّله كهدر وتخلّص منه — ولا تُعده إلى الرف أبدًا.`,
+    `Parcourez les rayons en vérifiant les dates. Retirez tout produit périmé, enregistrez-le en perte et jetez-le — ne le remettez jamais en rayon.`],
+  [`Cooler cases 34-41F (1-5C). Anything outside range: move product to a working unit, log it, and report the fault before stocking continues.`,
+    `واجهات التبريد بين 34-41 °ف (1-5 °م). أي قراءة خارج النطاق: انقل المنتجات إلى وحدة تعمل، وسجّل ذلك، وأبلغ عن العطل قبل متابعة التعبئة.`,
+    `Meubles réfrigérés entre 34-41 °F (1-5 °C). Hors plage : transférez les produits dans une unité qui fonctionne, consignez-le et signalez la panne avant de poursuivre la mise en rayon.`],
+  [`Probe the hot case and roller grill rather than trusting the dial. Anything below the threshold for an unknown period is discarded, not reheated.`,
+    `قِس حرارة واجهة العرض الساخنة وشواية الأسطوانات بالمجس بدلًا من الاعتماد على المؤشر. أي منتج تحت الحد لمدة غير معروفة يُتخلَّص منه ولا يُعاد تسخينه.`,
+    `Contrôlez la vitrine chaude et le grill à rouleaux à la sonde plutôt que de vous fier au cadran. Tout produit sous le seuil depuis une durée inconnue est jeté, pas réchauffé.`],
+  [`A single unchallenged sale to a minor can cost the licence. If in any doubt about age, ask for ID; if still in doubt, refuse the sale and log it.`,
+    `بيعة واحدة لقاصر دون تحقق قد تكلّف المتجر ترخيصه. عند أي شك في العمر، اطلب الهوية؛ وإن بقي الشك، ارفض البيع وسجّله.`,
+    `Une seule vente non contrôlée à un mineur peut coûter la licence. Au moindre doute sur l'âge, demandez une pièce d'identité ; si le doute persiste, refusez la vente et consignez-la.`],
+  [`Test to the local schedule rather than every shift, and notify the monitoring company before testing so it is not treated as a live alarm.`,
+    `اختبر وفق الجدول المحلي لا في كل وردية، وأبلغ شركة المراقبة قبل الاختبار حتى لا يُعامل كإنذار حقيقي.`,
+    `Testez selon le calendrier local plutôt qu'à chaque service, et prévenez la société de télésurveillance avant le test pour qu'il ne soit pas traité comme une vraie alarme.`],
+  [`Temperature logs, age verification log and cash count all completed and filed before handover is signed.`,
+    `إتمام سجلات الحرارة وسجل التحقق من العمر وعدّ النقدية وحفظها جميعًا قبل توقيع التسليم.`,
+    `Relevés de température, registre de vérification d'âge et comptage de caisse complétés et classés avant la signature de la passation.`],
+  [`Apply disinfectant and respect the label dwell time — wiping it straight off does not disinfect. Mop from the far corner toward the door.`,
+    `ضع المطهر والتزم بمدة التلامس المذكورة على الملصق — مسحه فورًا لا يطهّر. امسح الأرضية من الزاوية البعيدة باتجاه الباب.`,
+    `Appliquez le désinfectant en respectant le temps de contact indiqué — l'essuyer aussitôt ne désinfecte pas. Lavez le sol du coin le plus éloigné vers la porte.`],
+  [`Food-contact surfaces are washed, rinsed, then sanitized and left to air dry. Use only food-safe products on prep surfaces.`,
+    `تُغسل الأسطح الملامسة للطعام وتُشطف ثم تُعقَّم وتُترك لتجف في الهواء. استخدم منتجات آمنة للغذاء فقط على أسطح التحضير.`,
+    `Les surfaces en contact alimentaire sont lavées, rincées, puis désinfectées et séchées à l'air. N'utilisez que des produits adaptés au contact alimentaire sur les plans de préparation.`],
+  [`Chemicals are never stored near food or food packaging, and secondary containers must be labelled.`,
+    `لا تُخزَّن المواد الكيميائية أبدًا قرب الطعام أو عبواته، ويجب وضع ملصقات على الحاويات الثانوية.`,
+    `Les produits chimiques ne sont jamais stockés près des aliments ou de leurs emballages, et les contenants secondaires doivent être étiquetés.`],
+  [`Grease behind hot equipment is a fire risk, not just a cleanliness issue.`,
+    `الدهون خلف المعدات الساخنة خطر حريق، لا مجرد مسألة نظافة.`,
+    `La graisse derrière les équipements chauds est un risque d'incendie, pas seulement un problème de propreté.`],
+]);
