@@ -86,10 +86,13 @@ tenantsRouter.get('/current', requireAuth, async (req, res) => {
 // submissions keep their store. Every list must therefore filter on it —
 // this one didn't, so a "removed" store stayed in every picker while the
 // dashboard's active-store count (which did filter) disagreed with it.
+// works_here marks the stores the signed-in person belongs to, so report
+// forms can default to their own store rather than the business's first.
 tenantsRouter.get('/branches', requireAuth, async (req, res) => {
   const { rows } = await query(
-    'SELECT * FROM branches WHERE tenant_id = $1 AND is_active ORDER BY created_at',
-    [req.auth.tenantId]
+    `SELECT b.*, EXISTS (SELECT 1 FROM user_branches ub WHERE ub.branch_id = b.id AND ub.user_id = $2) AS works_here
+     FROM branches b WHERE b.tenant_id = $1 AND b.is_active ORDER BY b.created_at`,
+    [req.auth.tenantId, req.auth.userId]
   );
   res.json({ branches: rows });
 });

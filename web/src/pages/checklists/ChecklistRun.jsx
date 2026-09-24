@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, getToken } from '../../api.js';
 import CameraCapture from '../../components/CameraCapture.jsx';
@@ -26,6 +26,13 @@ export default function ChecklistRun() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [scorecard, setScorecard] = useState(null);
+  // Saves for one checkpoint go out one after another: tapping Compliant
+  // then Not compliant quickly could otherwise arrive in reverse and leave
+  // the server holding the first answer while the screen shows the second.
+  const queues = useRef({});
+  // Typed readings/findings not yet saved (they save on blur, which can
+  // race a tap on Submit).
+  const unsavedText = useRef(new Set());
 
   useEffect(() => {
     (async () => {
@@ -62,7 +69,7 @@ export default function ChecklistRun() {
   // Each save sends only its own fields; the server merges them into the
   // checkpoint's single response. Throws on failure so callers can tell
   // the user instead of showing the checkpoint as done.
-  const postResponse = async (fields) => {
+  const sendResponse = async (fields) => {
     const form = new FormData();
     for (const [key, value] of Object.entries(fields)) {
       if (value !== undefined && value !== null) form.append(key, value);
@@ -76,6 +83,14 @@ export default function ChecklistRun() {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error || t('run.saveFailed'));
     }
+  };
+  const postResponse = (fields) => {
+    const previous = queues.current[fields.itemId] || Promise.resolve();
+    const next = previous.then(() => sendResponse(fields));
+    // The queue itself never rejects: a failed save is reported (and rolled
+    // back) by its caller, and mustn't block every later save or Submit.
+    queues.current[fields.itemId] = next.catch(() => {});
+    return next;
   };
 
   const savePhoto = async (itemId, blob) => {
@@ -107,13 +122,20 @@ export default function ChecklistRun() {
 
   const saveTextResponse = async (item) => {
     const r = responses[item.id] || {};
-    if (r.valueText === undefined) return;
+    if (r.valueText === undefined || !unsavedText.current.has(item.id)) return;
+    unsavedText.current.delete(item.id);
     setError('');
     try {
       await postResponse({ itemId: item.id, valueText: r.valueText });
     } catch (err) {
+      unsavedText.current.add(item.id);
       setError(err.message);
+      throw err;
     }
+  };
+  const editText = (itemId, valueText) => {
+    unsavedText.current.add(itemId);
+    setResponse(itemId, { valueText });
   };
 
   // Location is best-effort. Chained with .then so a failure inside fn
@@ -144,6 +166,9 @@ export default function ChecklistRun() {
     setError('');
     setSubmitting(true);
     try {
+      // Everything typed or tapped must be on the server before sign-off.
+      for (const item of items) if (unsavedText.current.has(item.id)) await saveTextResponse(item);
+      await Promise.all(Object.values(queues.current));
       await withGps(async (lat, lng) => {
         await api.post(`/submissions/${submissionId}/submit`, { gpsLat: lat, gpsLng: lng });
       });
@@ -220,8 +245,8 @@ export default function ChecklistRun() {
                   rows={2}
                   placeholder={t('run.finding')}
                   value={r.valueText || ''}
-                  onChange={(e) => setResponse(item.id, { valueText: e.target.value })}
-                  onBlur={() => saveTextResponse(item)}
+                  onChange={(e) => editText(item.id, e.target.value)}
+                  onBlur={() => saveTextResponse(item).catch(() => {})}
                 />
                 {renderPhotoControl(item, r)}
               </div>
@@ -253,12 +278,14 @@ export default function ChecklistRun() {
 
                 {isTemperatureItem(item) && (
                   <div className="field" style={{ maxWidth: 160 }}>
-                    <label>{t('run.reading')}</label>
+                    <label htmlFor={`reading-${item.id}`}>{t('run.reading')}</label>
                     <input
+                      id={`reading-${item.id}`}
                       type="number"
+                      inputMode="decimal"
                       value={r.valueText || ''}
-                      onChange={(e) => setResponse(item.id, { valueText: e.target.value })}
-                      onBlur={() => saveTextResponse(item)}
+                      onChange={(e) => editText(item.id, e.target.value)}
+                      onBlur={() => saveTextResponse(item).catch(() => {})}
                     />
                   </div>
                 )}

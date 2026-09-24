@@ -46,8 +46,12 @@ export function useOpsReport({ kind, onResume }) {
   useEffect(() => {
     api.get('/tenants/branches')
       .then((d) => {
-        setBranches(d.branches);
-        if (d.branches.length) setBranchId(d.branches[0].id);
+        // The person's own stores first, and one of those picked by default —
+        // it used to default to the business's first store, so staff at
+        // another branch filed reports against the wrong one.
+        const sorted = [...d.branches].sort((a, b) => Number(!!b.works_here) - Number(!!a.works_here));
+        setBranches(sorted);
+        if (sorted.length) setBranchId(sorted[0].id);
       })
       .catch((err) => setError(err.message));
   }, []);

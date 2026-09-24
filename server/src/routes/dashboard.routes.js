@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db.js';
-import { requireAuth } from '../auth/middleware.js';
-import { MY_ASSIGNMENTS_FROM, myAssignmentParams } from '../assignments.js';
+import { requireAuth, requireRole } from '../auth/middleware.js';
+import { MY_ASSIGNMENTS_FROM, myAssignmentParams, ALL_STORE_ROLES } from '../assignments.js';
 
 export const dashboardRouter = Router();
 
@@ -39,14 +39,31 @@ function wasteFromForm(formData) {
 
 // KPI dashboard: compliance %, temperature deviations, waste value, incident count.
 // Only submitted reports count — a half-finished run isn't a result yet.
-dashboardRouter.get('/kpi', requireAuth, async (req, res) => {
+//
+// Business-wide numbers (waste value, incidents) are for managers. Owners
+// and operations managers see every store; area and store managers see
+// the stores they work at. (Any signed-in employee used to get the whole
+// business's figures.)
+dashboardRouter.get('/kpi', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager', 'store_manager'), async (req, res) => {
   const period = PERIODS.includes(req.query.period) ? req.query.period : 'daily';
   const branchId = req.query.branchId || null;
   const since = periodStart(period);
 
-  const branchClause = branchId ? 'AND s.branch_id = $3' : '';
+  let scopedBranchIds = null; // null = every store
+  if (!ALL_STORE_ROLES.includes(req.auth.role)) {
+    const { rows } = await query(
+      `SELECT ub.branch_id FROM user_branches ub JOIN branches b ON b.id = ub.branch_id
+       WHERE ub.user_id = $1 AND b.tenant_id = $2 AND b.is_active`,
+      [req.auth.userId, req.auth.tenantId]
+    );
+    scopedBranchIds = rows.map((r) => r.branch_id);
+  }
+
   const params = [req.auth.tenantId, since];
-  if (branchId) params.push(branchId);
+  const clauses = [];
+  if (branchId) { params.push(branchId); clauses.push(`s.branch_id = $${params.length}`); }
+  if (scopedBranchIds) { params.push(scopedBranchIds); clauses.push(`s.branch_id = ANY($${params.length}::uuid[])`); }
+  const branchClause = clauses.map((c) => `AND ${c}`).join(' ');
 
   const { rows: submissionRows } = await query(
     `SELECT s.id, s.has_incident, s.form_data
@@ -87,6 +104,7 @@ dashboardRouter.get('/kpi', requireAuth, async (req, res) => {
   res.json({
     period,
     branchId,
+    scopedBranchIds,
     compliancePct,
     temperatureDeviations,
     wasteValue: Math.round(wasteValue * 100) / 100,

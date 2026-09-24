@@ -55,6 +55,7 @@ before(async () => {
   form.append('itemId', itemId);
   form.append('isCompliant', 'true');
   form.append('valueText', '3');
+  form.append('photo', new Blob([Buffer.from([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' }), 'evidence.jpg');
   await fetch(`${baseUrl}/api/submissions/${submissionId}/responses`, { method: 'POST', headers: { Authorization: `Bearer ${emp.token}` }, body: form });
 });
 

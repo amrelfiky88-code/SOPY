@@ -73,6 +73,13 @@ function OfflineScreen({ onRetry }) {
   );
 }
 
+// Pages that are for managers only; staff land on their dashboard instead
+// of an "Insufficient permissions" error.
+function StaffRedirect({ children }) {
+  const { user } = useAuth();
+  return user?.role === 'employee' ? <Navigate to="/app/dashboard" replace /> : children;
+}
+
 function NotFoundRedirect() {
   const { user, loading } = useAuth();
   if (loading) return null;
@@ -95,7 +102,7 @@ export default function App() {
       <Route path="/app" element={<RequireAuth><AppLayout /></RequireAuth>}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<DashboardRouter />} />
-        <Route path="kpi" element={<KpiDashboard />} />
+        <Route path="kpi" element={<StaffRedirect><KpiDashboard /></StaffRedirect>} />
         <Route path="checklists" element={<ChecklistBuilder />} />
         <Route path="checklists/run/:submissionId" element={<ChecklistRun />} />
         <Route path="forms/kitchen" element={<KitchenDailyForm />} />

@@ -27,12 +27,17 @@ const upload = multer({
 
 // Writes are only allowed on this tenant's submissions, and only while
 // they're still in progress — a submitted report is a record, not a draft.
+// Staff can only change their own runs (as they can only see their own);
+// before, any employee could answer or sign off a colleague's checklist.
 async function findOpenSubmission(req, res) {
   const { rows } = await query(
-    'SELECT id, status, template_id FROM checklist_submissions WHERE id = $1 AND tenant_id = $2',
+    'SELECT id, status, template_id, submitted_by FROM checklist_submissions WHERE id = $1 AND tenant_id = $2',
     [req.params.id, req.auth.tenantId]
   );
-  if (!rows[0]) { res.status(404).json({ error: 'Not found' }); return null; }
+  if (!rows[0] || (SEES_OWN_ONLY.includes(req.auth.role) && rows[0].submitted_by !== req.auth.userId)) {
+    res.status(404).json({ error: 'Not found' });
+    return null;
+  }
   if (rows[0].status !== 'in_progress') { res.status(409).json({ error: 'This report has already been submitted' }); return null; }
   return rows[0];
 }
@@ -127,11 +132,19 @@ submissionsRouter.patch('/:id', requireAuth, async (req, res) => {
   res.json({ submission: rows[0] });
 });
 
+// A latitude/longitude from the phone, or null if missing or nonsense
+// (Number('abc') is NaN, which Postgres happily stores).
+function coordinate(value, max) {
+  if (value === undefined || value === null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) && Math.abs(n) <= max ? n : null;
+}
+
 // One checklist-item response. Photo evidence must arrive as a multipart
 // 'photo' field captured live in-app — see CameraCapture.jsx on the
 // frontend, which never renders a file input.
 submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), async (req, res) => {
-  const { itemId, isCompliant, valueText, gpsLat, gpsLng, capturedAt } = req.body;
+  const { itemId, isCompliant, valueText, gpsLat, gpsLng } = req.body;
   if (!itemId) return res.status(400).json({ error: 'itemId is required' });
   if (typeof valueText === 'string' && valueText.length > 2000) {
     return res.status(400).json({ error: 'Keep the note under 2000 characters' });
@@ -167,7 +180,10 @@ submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), as
      ORDER BY created_at DESC LIMIT 1`,
     [req.params.id, itemId]
   );
-  const gps = [gpsLat ? Number(gpsLat) : null, gpsLng ? Number(gpsLng) : null];
+  const gps = [coordinate(gpsLat, 90), coordinate(gpsLng, 180)];
+  // Evidence time is the server's clock, never the client's: accepting a
+  // capturedAt from the request let a photo be backdated.
+  const capturedAt = new Date().toISOString();
   let rows;
   if (existing[0]) {
     ({ rows } = await query(
@@ -180,14 +196,14 @@ submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), as
          captured_at  = CASE WHEN $5::text IS NULL THEN captured_at ELSE $8::timestamptz END
        WHERE id = $1 RETURNING *`,
       [existing[0].id, compliant, valueText !== undefined, valueText || null, photoPath, ...gps,
-        capturedAt || new Date().toISOString()]
+        capturedAt]
     ));
   } else {
     ({ rows } = await query(
       `INSERT INTO checklist_submission_responses
          (submission_id, item_id, is_compliant, value_text, photo_path, gps_lat, gps_lng, captured_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [req.params.id, itemId, compliant, valueText || null, photoPath, ...gps, capturedAt || new Date().toISOString()]
+      [req.params.id, itemId, compliant, valueText || null, photoPath, ...gps, capturedAt]
     ));
   }
 
@@ -207,13 +223,37 @@ submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), as
 
 submissionsRouter.post('/:id/submit', requireAuth, async (req, res) => {
   const { gpsLat, gpsLng } = req.body;
-  if (!(await findOpenSubmission(req, res))) return;
+  const open = await findOpenSubmission(req, res);
+  if (!open) return;
+
+  // Photo evidence is mandatory for every checkpoint, and each needs an
+  // answer (a written finding for the Consumer Behavior observation
+  // points). The run page enforces this, but the API didn't: a direct
+  // call could sign off a checklist with nothing answered.
+  const { rows: missing } = await query(
+    `SELECT count(*)::int AS n
+     FROM checklist_template_items ti
+     JOIN checklist_items ci ON ci.id = ti.item_id
+     LEFT JOIN LATERAL (
+       SELECT is_compliant, value_text, photo_path FROM checklist_submission_responses
+       WHERE submission_id = $1 AND item_id = ci.id ORDER BY created_at DESC LIMIT 1
+     ) r ON true
+     WHERE ti.template_id = $2
+       AND (r.photo_path IS NULL
+            OR (coalesce(ci.category, '') LIKE '%Consumer Behavior%' AND coalesce(btrim(r.value_text), '') = '')
+            OR (coalesce(ci.category, '') NOT LIKE '%Consumer Behavior%' AND r.is_compliant IS NULL))`,
+    [open.id, open.template_id]
+  );
+  if (missing[0].n > 0) {
+    return res.status(400).json({ error: `Answer every checkpoint, with a photo, before submitting (${missing[0].n} left).` });
+  }
+
   const { rows } = await query(
     `UPDATE checklist_submissions
      SET status = 'submitted', submitted_at = now(), gps_lat = $1, gps_lng = $2,
          signed_off_by = $3, signed_off_at = now()
      WHERE id = $4 AND tenant_id = $5 RETURNING *`,
-    [gpsLat || null, gpsLng || null, req.auth.userId, req.params.id, req.auth.tenantId]
+    [coordinate(gpsLat, 90), coordinate(gpsLng, 180), req.auth.userId, req.params.id, req.auth.tenantId]
   );
   if (!rows[0]) return res.status(404).json({ error: 'Not found' });
   res.json({ submission: rows[0] });

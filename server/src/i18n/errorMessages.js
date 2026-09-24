@@ -68,6 +68,9 @@ const MESSAGES = [
   ['Invalid role', 'دور غير صالح', 'Rôle non valide'],
   ['Invalid onboarding step', 'خطوة إعداد غير صالحة', 'Étape de configuration non valide'],
   ['Invalid id', 'معرّف غير صالح', 'Identifiant non valide'],
+  ['Invalid date', 'تاريخ غير صالح', 'Date non valide'],
+  ['That number is out of range', 'هذا الرقم خارج النطاق المسموح', 'Ce nombre est hors limites'],
+  ['That text is too long', 'هذا النص طويل جدًا', 'Ce texte est trop long'],
   ['Invalid email or password', 'البريد الإلكتروني أو كلمة المرور غير صحيحة', 'E-mail ou mot de passe incorrect'],
   ['Insufficient permissions', 'ليست لديك صلاحية لهذا الإجراء', "Vous n'avez pas l'autorisation pour cette action"],
   ['Finish onboarding before building checklists', 'أكمل الإعداد قبل إنشاء قوائم الفحص', 'Terminez la configuration avant de créer des check-lists'],
@@ -110,6 +113,11 @@ const PATTERNS = [
     re: /^You have (\d+) active stores\. Remove stores in Team & stores before lowering the plan to (\d+)\.$/,
     ar: ([, n, to]) => `لديك ${n} فروع نشطة. احذف فروعًا من الفريق والفروع قبل تخفيض الخطة إلى ${to}.`,
     fr: ([, n, to]) => `Vous avez ${n} établissements actifs. Supprimez des établissements dans Équipe et établissements avant de réduire la formule à ${to}.`,
+  },
+  {
+    re: /^Answer every checkpoint, with a photo, before submitting \((\d+) left\)\.$/,
+    ar: ([, n]) => `أجب عن كل نقاط الفحص مع صورة لكل منها قبل الإرسال (المتبقي: ${n}).`,
+    fr: ([, n]) => `Répondez à chaque point de contrôle, avec une photo, avant d'envoyer (${n} restant${n === '1' ? '' : 's'}).`,
   },
   {
     re: /^Keep it under (\d+) characters\.$/,

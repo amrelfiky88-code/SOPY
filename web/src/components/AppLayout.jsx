@@ -72,6 +72,8 @@ export default function AppLayout() {
   }
 
   const canManage = ['business_owner', 'operations_manager', 'area_manager'].includes(user?.role);
+  // Business-wide KPIs are for managers; staff get Reports in that slot.
+  const seesKpi = !!user && user.role !== 'employee';
 
   return (
     <div className="layout">
@@ -94,7 +96,7 @@ export default function AppLayout() {
         <span className="brand">SOPY</span>
         <nav>
           <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}><GridIcon size={18} /> {t('nav.dashboard')}</NavLink>
-          <NavLink to="/app/kpi" className={({ isActive }) => (isActive ? 'active' : '')}><BarChartIcon size={18} /> {t('nav.kpi')}</NavLink>
+          {seesKpi && <NavLink to="/app/kpi" className={({ isActive }) => (isActive ? 'active' : '')}><BarChartIcon size={18} /> {t('nav.kpi')}</NavLink>}
           <NavLink to="/app/forms/kitchen" className={({ isActive }) => (isActive ? 'active' : '')}><StoveIcon size={18} /> {t('nav.kitchen')}</NavLink>
           <NavLink to="/app/forms/bar" className={({ isActive }) => (isActive ? 'active' : '')}><CoffeeIcon size={18} /> {t('nav.bar')}</NavLink>
           <NavLink to="/app/forms/opening" className={({ isActive }) => (isActive ? 'active' : '')}><DoorOpenIcon size={18} /> {t('nav.opening')}</NavLink>
@@ -140,10 +142,17 @@ export default function AppLayout() {
           <CoffeeIcon size={20} />
           {t('tab.bar')}
         </NavLink>
-        <NavLink to="/app/kpi" className={({ isActive }) => (isActive ? 'active' : '')}>
-          <BarChartIcon size={20} />
-          {t('tab.kpi')}
-        </NavLink>
+        {seesKpi ? (
+          <NavLink to="/app/kpi" className={({ isActive }) => (isActive ? 'active' : '')}>
+            <BarChartIcon size={20} />
+            {t('tab.kpi')}
+          </NavLink>
+        ) : (
+          <NavLink to="/app/reports" className={({ isActive }) => (isActive ? 'active' : '')}>
+            <FileTextIcon size={20} />
+            {t('tab.reports')}
+          </NavLink>
+        )}
       </nav>
     </div>
   );

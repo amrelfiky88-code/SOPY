@@ -73,6 +73,7 @@ test('My checklists today shows in progress, then done, with the person\'s own s
   const form = new FormData();
   form.append('itemId', itemId);
   form.append('isCompliant', 'true');
+  form.append('photo', new Blob([Buffer.from([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' }), 'evidence.jpg');
   await fetch(`${baseUrl}/api/submissions/${sub.id}/responses`, { method: 'POST', headers: { Authorization: `Bearer ${emp.token}` }, body: form });
   await api('POST', `/api/submissions/${sub.id}/submit`, { token: emp.token, body: {} });
 

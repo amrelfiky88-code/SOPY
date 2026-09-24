@@ -7,6 +7,7 @@
 const ROWS = [
   // --- Shared ---------------------------------------------------------
   ['page.back', 'Back', 'رجوع', 'Retour'],
+  ['tab.reports', 'Reports', 'التقارير', 'Rapports'],
   ['page.remove', 'Remove', 'حذف', 'Supprimer'],
   ['page.keep', 'Keep', 'إبقاء', 'Garder'],
   ['page.edit', 'Edit', 'تعديل', 'Modifier'],

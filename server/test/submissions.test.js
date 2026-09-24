@@ -41,9 +41,12 @@ after(async () => {
 // The response endpoint is parsed by multer, which only understands
 // multipart/form-data (not urlencoded or JSON) — even for fields with no
 // file attached — so it can't go through the plain-JSON test client.
-async function postResponse(subId, fields) {
+// Every checkpoint needs photo evidence before a run can be submitted,
+// so answers carry one unless a test says { photo: false }.
+async function postResponse(subId, { photo = true, ...fields }) {
   const form = new FormData();
   for (const [key, value] of Object.entries(fields)) form.append(key, value);
+  if (photo) form.append('photo', new Blob([Buffer.from([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' }), 'evidence.jpg');
   return fetch(`${baseUrl}/api/submissions/${subId}/responses`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },

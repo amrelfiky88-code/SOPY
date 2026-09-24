@@ -44,7 +44,10 @@ export default function KpiDashboard() {
         <label htmlFor="branchFilter">{t('common.store')}</label>
         <select id="branchFilter" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
           <option value="">{t('common.allStores')}</option>
-          {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          {/* Area and store managers only see their own stores' numbers. */}
+          {branches
+            .filter((b) => !kpi?.scopedBranchIds || kpi.scopedBranchIds.includes(b.id))
+            .map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
       </div>
 

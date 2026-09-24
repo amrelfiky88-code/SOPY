@@ -111,6 +111,11 @@ export function createApp() {
   app.use((err, req, res, next) => {
     // Malformed ids (e.g. /submissions/abc) are a client mistake, not a crash.
     if (err.code === '22P02') return res.status(400).json({ error: 'Invalid id' });
+    // A date filter like ?from=yesterday, a number past Postgres' range, or
+    // text past a column's limit: also the client's mistake.
+    if (err.code === '22007' || err.code === '22008') return res.status(400).json({ error: 'Invalid date' });
+    if (err.code === '22003') return res.status(400).json({ error: 'That number is out of range' });
+    if (err.code === '22001') return res.status(400).json({ error: 'That text is too long' });
     // Deleting something other records still point at (e.g. a checklist
     // that has been run) — refuse cleanly rather than a 500.
     if (err.code === '23503') return res.status(409).json({ error: 'This is still in use and can’t be removed' });
