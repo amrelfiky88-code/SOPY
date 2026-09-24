@@ -192,7 +192,7 @@ checklistsRouter.delete('/templates/:id', requireAuth, requireRole('business_own
 // --- Assignments: assign a template to stores / users / roles ---
 checklistsRouter.get('/assignments', requireAuth, async (req, res) => {
   const { rows } = await query(
-    `SELECT a.*, t.name AS template_name, b.name AS branch_name
+    `SELECT a.*, t.name AS template_name, t.kind, b.name AS branch_name
      FROM checklist_assignments a
      JOIN checklist_templates t ON t.id = a.template_id
      LEFT JOIN branches b ON b.id = a.branch_id

@@ -1,13 +1,21 @@
+// Role and access-level values, in the order they're offered. Their names
+// and descriptions are translated: role.* / roleDesc.* in the main
+// dictionary, access.* / accessDesc.* in i18n/pageLabels.js.
 export const ROLES = [
-  { value: 'business_owner', label: 'Business Owner', description: 'Full access across all branches: billing, users, and every checklist.' },
-  { value: 'operations_manager', label: 'Operations Manager', description: 'Manages checklists, users, and stores across the whole business.' },
-  { value: 'area_manager', label: 'Area Manager', description: 'Oversees a group of branches and the staff assigned to them.' },
-  { value: 'store_manager', label: 'Store Manager', description: 'Runs day-to-day compliance for a single branch.' },
-  { value: 'employee', label: 'Employee', description: 'Completes assigned checklists and daily operation reports.' },
+  { value: 'business_owner' },
+  { value: 'operations_manager' },
+  { value: 'area_manager' },
+  { value: 'store_manager' },
+  { value: 'employee' },
 ];
 
 export const ACCESS_LEVELS = [
-  { value: 'admin', label: 'Admin — can manage users, stores, and checklists' },
-  { value: 'manager', label: 'Manager — can assign checklists and review submissions' },
-  { value: 'standard', label: 'Standard — can complete assigned checklists only' },
+  { value: 'admin' },
+  { value: 'manager' },
+  { value: 'standard' },
 ];
+
+export const roleName = (t, role) => (role ? t(`role.${role}`) : '');
+export const roleDescription = (t, role) => t(`roleDesc.${role}`);
+export const accessName = (t, level) => (level ? t(`access.${level}`) : '');
+export const accessWithDescription = (t, level) => `${t(`access.${level}`)} — ${t(`accessDesc.${level}`)}`;

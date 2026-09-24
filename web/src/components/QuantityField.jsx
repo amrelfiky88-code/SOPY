@@ -1,10 +1,12 @@
 import React from 'react';
 import { clampPlanCount } from '../../../shared/pricing.js';
+import { useT } from '../i18n/index.jsx';
 
 // Slider for a quick sweep, plus a −/+ stepper that stays usable with a
 // fingertip and can't be pushed outside the plan limits. Shared by the
 // signup Pricing page and the in-app plan editor on the account page.
 export default function QuantityField({ id, label, value, onChange, limits, sliderMax }) {
+  const t = useT();
   const commit = (next) => {
     const clamped = clampPlanCount(next, limits);
     if (clamped !== null) onChange(clamped);
@@ -18,7 +20,7 @@ export default function QuantityField({ id, label, value, onChange, limits, slid
           type="button"
           onClick={() => commit(value - 1)}
           disabled={value <= limits.min}
-          aria-label={`One fewer ${label.toLowerCase()}`}
+          aria-label={t('qty.fewer', { label })}
         >
           −
         </button>
@@ -41,7 +43,7 @@ export default function QuantityField({ id, label, value, onChange, limits, slid
           type="button"
           onClick={() => commit(Number(value || 0) + 1)}
           disabled={value >= limits.max}
-          aria-label={`One more ${label.toLowerCase()}`}
+          aria-label={t('qty.more', { label })}
         >
           +
         </button>

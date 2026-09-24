@@ -1,3 +1,5 @@
+import { PAGE_LABELS } from './i18n/pageLabels.js';
+
 const TOKEN_KEY = 'sopy_token';
 
 export function getToken() {
@@ -11,10 +13,20 @@ export function setToken(token) {
 // A phone on shaky signal can leave a request hanging with no error at
 // all; give up after this long so the page can say so and offer a retry.
 const TIMEOUT_MS = 20_000;
-const OFFLINE_MESSAGE = "Couldn't reach SOPY — check your connection and try again.";
+
+// The UI language (set by i18n/index.jsx). Sent with every request so the
+// server's error messages come back in it, and used for this file's own.
+function uiLanguage() {
+  try { return localStorage.getItem('sopy_lang') || 'en'; } catch { return 'en'; }
+}
+const say = (key, vars = {}) => {
+  let out = (PAGE_LABELS[uiLanguage()] || PAGE_LABELS.en)[key] || PAGE_LABELS.en[key];
+  for (const [k, v] of Object.entries(vars)) out = out.replaceAll(`{${k}}`, v);
+  return out;
+};
 
 async function attempt(method, path, body, isForm) {
-  const headers = {};
+  const headers = { 'Accept-Language': uiLanguage() };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
   if (!isForm && body !== undefined) headers['Content-Type'] = 'application/json';
@@ -33,7 +45,7 @@ async function attempt(method, path, body, isForm) {
     text = await res.text();
   } catch {
     // Network failure, dropped connection or timeout.
-    throw Object.assign(new Error(OFFLINE_MESSAGE), { transient: true });
+    throw Object.assign(new Error(say('api.offline')), { transient: true });
   } finally {
     clearTimeout(timer);
   }
@@ -48,14 +60,14 @@ async function attempt(method, path, body, isForm) {
       // through — treat as a connection problem. Anything else (a 404 page,
       // say) is a real answer, not an outage.
       if (res.ok || res.status >= 500) {
-        throw Object.assign(new Error(OFFLINE_MESSAGE), { transient: true });
+        throw Object.assign(new Error(say('api.offline')), { transient: true });
       }
       data = null;
     }
   }
 
   if (!res.ok) {
-    const message = (data && data.error) || `Request failed (${res.status})`;
+    const message = (data && data.error) || say('api.failed', { status: res.status });
     // A signed-in request rejected as unauthenticated means the session is
     // over (expired, or the account was disabled): tell the app to sign
     // out, rather than every page showing "Invalid session".

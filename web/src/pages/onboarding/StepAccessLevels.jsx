@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
-import { ACCESS_LEVELS, ROLES } from './roles.js';
+import { useT } from '../../i18n/index.jsx';
+import { ACCESS_LEVELS, roleName, accessName, accessWithDescription } from './roles.js';
 
 export default function StepAccessLevels({ onNext, onBack, finishing }) {
+  const t = useT();
   const { user: me } = useAuth();
   const [users, setUsers] = useState([]);
   const [error, setError] = useState('');
@@ -32,27 +34,27 @@ export default function StepAccessLevels({ onNext, onBack, finishing }) {
 
   return (
     <div>
-      <h2>Set access levels</h2>
-      <p>Decide how much each person can manage beyond completing their own checklists.</p>
+      <h2>{t('onb.access.title')}</h2>
+      <p>{t('onb.access.intro')}</p>
       {error && <div className="error-banner">{error}</div>}
 
       <div className="card">
         <div className="table-scroll">
           <table>
             <thead>
-              <tr><th>Name</th><th>Role</th><th>Access level</th></tr>
+              <tr><th>{t('page.name')}</th><th>{t('page.role')}</th><th>{t('onb.access.level')}</th></tr>
             </thead>
             <tbody>
               {users.map((u) => (
                 <tr key={u.id}>
-                  <td>{u.full_name}{u.id === me?.id ? ' (you)' : ''}</td>
-                  <td>{ROLES.find((r) => r.value === u.role)?.label}</td>
+                  <td>{u.full_name}{u.id === me?.id ? ` ${t('page.you')}` : ''}</td>
+                  <td>{roleName(t, u.role)}</td>
                   <td>
                     {u.id === me?.id ? (
-                      ACCESS_LEVELS.find((a) => a.value === u.access_level)?.label.split(' —')[0]
+                      accessName(t, u.access_level)
                     ) : (
-                      <select value={u.access_level} onChange={(e) => updateAccess(u.id, e.target.value)} aria-label={`Access for ${u.full_name}`}>
-                        {ACCESS_LEVELS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
+                      <select value={u.access_level} onChange={(e) => updateAccess(u.id, e.target.value)} aria-label={t('team.accessFor', { name: u.full_name })}>
+                        {ACCESS_LEVELS.map((a) => <option key={a.value} value={a.value}>{accessWithDescription(t, a.value)}</option>)}
                       </select>
                     )}
                   </td>
@@ -64,9 +66,9 @@ export default function StepAccessLevels({ onNext, onBack, finishing }) {
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-        <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        <button className="btn btn-secondary" onClick={onBack}>{t('page.back')}</button>
         <button className="btn btn-primary" onClick={onNext} disabled={finishing}>
-          {finishing ? 'Finishing…' : 'Finish onboarding'}
+          {finishing ? t('onb.access.finishing') : t('onb.access.finish')}
         </button>
       </div>
     </div>

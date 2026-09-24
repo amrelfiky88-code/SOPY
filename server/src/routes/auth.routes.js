@@ -61,9 +61,9 @@ authRouter.post('/signup', async (req, res) => {
       const tenant = tenantRes.rows[0];
 
       const userRes = await client.query(
-        `INSERT INTO users (tenant_id, full_name, title, email, phone, password_hash, role, access_level)
-         VALUES ($1, $2, $3, $4, $5, $6, 'business_owner', 'admin') RETURNING *`,
-        [tenant.id, name, str(title) || null, cleanEmail, str(phone) || null, passwordHash]
+        `INSERT INTO users (tenant_id, full_name, title, email, phone, password_hash, role, access_level, language)
+         VALUES ($1, $2, $3, $4, $5, $6, 'business_owner', 'admin', $7) RETURNING *`,
+        [tenant.id, name, str(title) || null, cleanEmail, str(phone) || null, passwordHash, uiLanguage(req.body.language)]
       );
       // Signed up through a referral link: a welcome discount off the
       // first payment (the referrer's reward comes when that payment is made).
@@ -132,14 +132,17 @@ authRouter.post('/accept-invite', async (req, res) => {
   if (!user) return res.status(404).json({ error: 'This link has already been used or is no longer valid' });
 
   const passwordHash = await bcrypt.hash(password, 10);
+  // The language they read the invite page in becomes their setting,
+  // unless they already had one (a password reset keeps it).
+  const language = user.status === 'invited' && isSupportedLanguage(req.body.language) ? req.body.language : user.language;
   await query(
-    "UPDATE users SET password_hash = $1, status = 'active', invite_token = NULL, tokens_valid_after = $2 WHERE id = $3",
-    [passwordHash, new Date(), user.id]
+    "UPDATE users SET password_hash = $1, status = 'active', invite_token = NULL, tokens_valid_after = $2, language = $3 WHERE id = $4",
+    [passwordHash, new Date(), language, user.id]
   );
   clearFailures(`login:${user.email}`);
 
   const token = signToken({ userId: user.id });
-  res.json({ token, user: publicUser({ ...user, status: 'active' }) });
+  res.json({ token, user: publicUser({ ...user, status: 'active', language }) });
 });
 
 authRouter.get('/me', requireAuth, async (req, res) => {
@@ -210,6 +213,8 @@ authRouter.patch('/password', requireAuth, async (req, res) => {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
+// The language someone signed up in, falling back to the default.
+const uiLanguage = (v) => (isSupportedLanguage(v) ? v : DEFAULT_LANGUAGE);
 export const normalizeEmail = (v) => str(v).toLowerCase();
 
 function publicUser(u) {

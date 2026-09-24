@@ -25,10 +25,18 @@ export async function translateRows(rows, lang, fields) {
   );
   if (!translations.length) return rows;
 
+  // The English original stays alongside as <field>_en: screens show the
+  // translation, but code that decides how to treat an item (say, the
+  // "Consumer Behavior" observation points) must not depend on the language.
   const map = new Map(translations.map((t) => [t.source_text, t.translated]));
   return rows.map((row) => {
     const out = { ...row };
-    for (const f of fields) if (out[f] && map.has(out[f])) out[f] = map.get(out[f]);
+    for (const f of fields) {
+      if (out[f] && map.has(out[f])) {
+        out[`${f}_en`] = out[f];
+        out[f] = map.get(out[f]);
+      }
+    }
     return out;
   });
 }

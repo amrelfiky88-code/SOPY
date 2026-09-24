@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useT } from '../i18n/index.jsx';
 
 // SOPY doesn't send email yet, so this link is the *only* way an invited
 // person can join — it has to be readable and copyable on a phone. It was
@@ -6,6 +7,7 @@ import React, { useState } from 'react';
 // clipped, and the Team page didn't show it at all.
 // kind="reset": the same one-time link, for someone who forgot their password.
 export default function InviteLink({ path, email, kind = 'invite' }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   const url = `${window.location.origin}${path}`;
 
@@ -24,13 +26,11 @@ export default function InviteLink({ path, email, kind = 'invite' }) {
   return (
     <div className="card invite-link">
       <p style={{ margin: '0 0 8px' }}>
-        {kind === 'reset'
-          ? `Password reset link${email ? ` for ${email}` : ''}. Send it to them — it works once, and signing in with the new password signs out their other devices.`
-          : `Invite created${email ? ` for ${email}` : ''}. Send them this link to set their password — emails aren't sent automatically yet.`}
+        {t(kind === 'reset' ? 'invite.resetFor' : 'invite.createdFor', { email: email || '' })}
       </p>
-      <div className="invite-link-url">{url}</div>
+      <div className="invite-link-url" dir="ltr">{url}</div>
       <button type="button" className="btn btn-secondary btn-small" onClick={copy} style={{ marginTop: 10 }}>
-        {copied ? 'Copied' : 'Copy link'}
+        {copied ? t('invite.copied') : t('invite.copy')}
       </button>
     </div>
   );

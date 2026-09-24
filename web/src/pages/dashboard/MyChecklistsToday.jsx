@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../api.js';
 import { PlayIcon, ClipboardEmptyIcon, CheckCircleIcon } from '../../components/icons.jsx';
 import { useT } from '../../i18n/index.jsx';
+import { reportTitle } from '../../i18n/formLabels.js';
 
 export default function MyChecklistsToday() {
   const [assignments, setAssignments] = useState([]);
@@ -65,7 +66,7 @@ export default function MyChecklistsToday() {
         return (
           <div className="checklist-row" key={a.id}>
             <div style={{ minWidth: 0 }}>
-              <strong>{a.template_name}</strong>
+              <strong>{reportTitle(t, a.kind, a.template_name)}</strong>
               <div className="hint">{a.branch_name || t('common.allStores')} · {t(`kpi.${a.frequency}`)}</div>
               {pickStore && (
                 <select

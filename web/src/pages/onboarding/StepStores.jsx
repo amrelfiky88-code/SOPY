@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
+import { useT } from '../../i18n/index.jsx';
 
 export default function StepStores({ onNext, onBack }) {
+  const t = useT();
   const { tenant } = useAuth();
   const [branches, setBranches] = useState([]);
   const [name, setName] = useState('');
@@ -48,37 +50,37 @@ export default function StepStores({ onNext, onBack }) {
 
   return (
     <div>
-      <h2>Set up your stores</h2>
-      <p>You planned for {tenant?.branch_count} branch{tenant?.branch_count === 1 ? '' : 'es'}. Add them below.</p>
+      <h2>{t('onb.stores.title')}</h2>
+      <p>{t('onb.stores.intro', { n: tenant?.branch_count ?? '' })}</p>
 
       {error && <div className="error-banner">{error}</div>}
 
       {branches.map((b) => (
         <div className="checklist-row" key={b.id}>
           <div><strong>{b.name}</strong>{b.city ? ` — ${b.city}` : ''}</div>
-          <button className="btn btn-small btn-danger" onClick={() => removeBranch(b.id)}>Remove</button>
+          <button className="btn btn-small btn-danger" onClick={() => removeBranch(b.id)}>{t('page.remove')}</button>
         </div>
       ))}
 
       <form onSubmit={addBranch} style={{ marginTop: 16 }}>
         <div className="field">
-          <label htmlFor="branchName">Branch name</label>
-          <input id="branchName" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Downtown" />
+          <label htmlFor="branchName">{t('page.branchName')}</label>
+          <input id="branchName" required value={name} onChange={(e) => setName(e.target.value)} placeholder={t('onb.stores.placeholder')} />
         </div>
         <div className="field">
-          <label htmlFor="branchCity">City</label>
+          <label htmlFor="branchCity">{t('page.city')}</label>
           <input id="branchCity" value={city} onChange={(e) => setCity(e.target.value)} />
         </div>
-        <button className="btn btn-secondary" type="submit" disabled={submitting}>Add branch</button>
+        <button className="btn btn-secondary" type="submit" disabled={submitting}>{t('page.addBranch')}</button>
       </form>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-        <button className="btn btn-secondary" onClick={onBack}>Back</button>
+        <button className="btn btn-secondary" onClick={onBack}>{t('page.back')}</button>
         <button className="btn btn-primary" onClick={onNext} disabled={branches.length === 0}>
-          Continue
+          {t('common.continue')}
         </button>
       </div>
-      {branches.length === 0 && <p className="hint">Add at least one branch to continue.</p>}
+      {branches.length === 0 && <p className="hint">{t('onb.stores.needOne')}</p>}
     </div>
   );
 }

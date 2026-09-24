@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useT } from '../i18n/index.jsx';
 
 // Live in-app camera capture ONLY. There is deliberately no <input type="file">
 // anywhere in this component — evidence photos must come from getUserMedia,
@@ -26,35 +27,31 @@ const isEmbeddedBrowser = () =>
 export const openInChromeHref = () =>
   `intent://${location.host}${location.pathname}${location.search}#Intent;scheme=https;package=com.android.chrome;end`;
 
+// Errors are kept as a message key (cam.* in i18n/pageLabels.js) plus
+// whether it's a permission block, which is when "Open in Chrome" helps.
 function permissionHelp() {
-  if (isIOS()) {
-    return isEmbeddedBrowser()
-      ? 'This app’s built-in browser can’t use the camera. Tap the ••• or share menu → Open in Safari, then try again.'
-      : 'Camera permission was denied. In Safari, tap “aA” in the address bar → Website Settings → Camera → Allow (or iPhone Settings → Safari → Camera → Allow), then try again.';
-  }
-  if (isAndroid()) {
-    return 'The camera was blocked. If this page opened inside another app (an ✕ bar at the top or bottom), tap “Open in Chrome” below. In Chrome, tap the icon left of the address bar → Permissions → Camera → Allow. If it’s still blocked, allow Camera for Chrome in Android Settings → Apps → Chrome → Permissions.';
-  }
-  return 'Camera permission was denied. Open this site’s settings in your browser (tap the lock/info icon next to the address bar) and set Camera to Allow, then try again.';
+  if (isIOS()) return { key: isEmbeddedBrowser() ? 'cam.iosInApp' : 'cam.iosDenied', blocked: true };
+  if (isAndroid()) return { key: 'cam.androidDenied', blocked: true };
+  return { key: 'cam.denied', blocked: true };
 }
 
-function messageForError(err) {
+function errorForException(err) {
   switch (err?.name) {
     case 'NotAllowedError':
     case 'PermissionDeniedError':
       return permissionHelp();
     case 'NotFoundError':
     case 'DevicesNotFoundError':
-      return 'No camera was found on this device.';
+      return { key: 'cam.notFound' };
     case 'NotReadableError':
     case 'TrackStartError':
-      return 'The camera is already in use by another app. Close any other app using the camera and try again.';
+      return { key: 'cam.inUse' };
     case 'OverconstrainedError':
-      return 'This device’s camera doesn’t support the requested mode.';
+      return { key: 'cam.unsupportedMode' };
     case 'SecurityError':
-      return 'Camera access is blocked on this page — it must be loaded over HTTPS.';
+      return { key: 'cam.insecure', blocked: true };
     default:
-      return `Camera access failed (${err?.name || 'unknown error'}${err?.message ? `: ${err.message}` : ''}). Try again.`;
+      return { key: 'cam.failed', vars: { detail: `${err?.name || 'unknown error'}${err?.message ? `: ${err.message}` : ''}` } };
   }
 }
 
@@ -70,10 +67,11 @@ const CONSTRAINTS = {
 };
 
 export default function CameraCapture({ onCapture }) {
+  const t = useT();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null); // { key, vars?, blocked? }
   const [previewUrl, setPreviewUrl] = useState(null);
   const [ready, setReady] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -81,11 +79,11 @@ export default function CameraCapture({ onCapture }) {
   useEffect(() => {
     if (previewUrl) return undefined; // showing the shot — don't hold the camera open
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError('This browser does not support in-app camera capture. Try opening this page in Chrome or Safari directly (not an in-app browser).');
+      setError({ key: 'cam.noSupport', blocked: true });
       return undefined;
     }
     let active = true;
-    setError('');
+    setError(null);
     setReady(false);
     navigator.mediaDevices
       .getUserMedia(CONSTRAINTS)
@@ -102,7 +100,7 @@ export default function CameraCapture({ onCapture }) {
           video.play().catch(() => {});
         }
       })
-      .catch((err) => { if (active) setError(messageForError(err)); });
+      .catch((err) => { if (active) setError(errorForException(err)); });
 
     // Phones stop the camera when the app goes to the background; the
     // preview then sits frozen on return. Reopen it if that happened.
@@ -134,7 +132,7 @@ export default function CameraCapture({ onCapture }) {
     canvas.height = Math.round(video.videoHeight * scale);
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
     canvas.toBlob((blob) => {
-      if (!blob) { setError('Could not take the photo. Try again.'); return; }
+      if (!blob) { setError({ key: 'cam.captureFailed' }); return; }
       setPreviewUrl(URL.createObjectURL(blob));
       onCapture(blob);
     }, 'image/jpeg', 0.85);
@@ -146,16 +144,15 @@ export default function CameraCapture({ onCapture }) {
   };
 
   if (error) {
-    const blocked = /permission|blocked|built-in browser|support in-app/i.test(error);
     return (
       <div>
-        <div className="error-banner">{error}</div>
+        <div className="error-banner">{t(error.key, error.vars)}</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-          {blocked && isAndroid() && (
-            <a className="btn btn-primary btn-small" href={openInChromeHref()}>Open in Chrome</a>
+          {error.blocked && isAndroid() && (
+            <a className="btn btn-primary btn-small" href={openInChromeHref()}>{t('cam.openInChrome')}</a>
           )}
           <button type="button" className="btn btn-secondary btn-small" onClick={() => { setPreviewUrl(null); setAttempt((a) => a + 1); }}>
-            Try again
+            {t('common.tryAgain')}
           </button>
         </div>
       </div>
@@ -166,18 +163,18 @@ export default function CameraCapture({ onCapture }) {
     <div>
       <div className="camera-box">
         {previewUrl ? (
-          <img src={previewUrl} alt="Captured evidence" />
+          <img src={previewUrl} alt={t('cam.captured')} />
         ) : (
           <>
             <video ref={videoRef} autoPlay playsInline muted onLoadedData={() => setReady(true)} />
-            <button type="button" className="capture-btn" onClick={capture} disabled={!ready} aria-label="Capture photo" />
+            <button type="button" className="capture-btn" onClick={capture} disabled={!ready} aria-label={t('cam.capture')} />
           </>
         )}
       </div>
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       {previewUrl && (
         <button type="button" className="btn btn-secondary btn-small" style={{ marginTop: 8 }} onClick={retake}>
-          Retake
+          {t('cam.retake')}
         </button>
       )}
     </div>

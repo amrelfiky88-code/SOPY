@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { useT } from '../i18n/index.jsx';
+import { money } from '../i18n/pageLabels.js';
 import { CheckCircleIcon, ShieldIcon } from '../components/icons.jsx';
 
-const money = (n) => `$${Number(n || 0).toFixed(2)}`;
-
 export default function Checkout() {
+  const t = useT();
   const { user, tenant, setTenant } = useAuth();
   const navigate = useNavigate();
   const [pricing, setPricing] = useState(null);
@@ -74,17 +75,17 @@ export default function Checkout() {
       if (subscription?.status === 'active') return finish();
     }
     if (liveRef.current) {
-      setError('Your payment went through but is taking longer than usual to confirm. Refresh this page in a moment.');
+      setError(t('checkout.slowConfirm'));
       setStatus('ready');
     }
-  }, [finish]);
+  }, [finish, t]);
 
   const handlePay = async () => {
     setError('');
     try {
       const clientToken = import.meta.env.VITE_PADDLE_CLIENT_TOKEN;
       if (!clientToken) {
-        setError('Card payments are not available right now. Please contact support.');
+        setError(t('checkout.cardsUnavailable'));
         return;
       }
       const { initializePaddle } = await import('@paddle/paddle-js');
@@ -121,12 +122,9 @@ export default function Checkout() {
     return (
       <div className="screen-narrow">
         <CheckoutStepper />
-        <h2>Checkout</h2>
+        <h2>{t('checkout.title')}</h2>
         <div className="card">
-          <p style={{ margin: 0 }}>
-            Only the business owner can set up billing for {tenant?.restaurant_name || 'this account'}. Ask them to
-            finish checkout — once the subscription is active you'll be able to sign in and get to work.
-          </p>
+          <p style={{ margin: 0 }}>{t('checkout.ownerOnly', { restaurant: tenant?.restaurant_name || t('checkout.thisAccount') })}</p>
         </div>
       </div>
     );
@@ -136,8 +134,8 @@ export default function Checkout() {
     return (
       <div className="screen-narrow">
         <CheckoutStepper />
-        <h2>Checkout</h2>
-        <p>Preparing your order…</p>
+        <h2>{t('checkout.title')}</h2>
+        <p>{t('checkout.preparing')}</p>
       </div>
     );
   }
@@ -151,30 +149,30 @@ export default function Checkout() {
     return (
       <div className="screen-narrow">
         {!setUp && <CheckoutStepper />}
-        <h2>Checkout</h2>
+        <h2>{t('checkout.title')}</h2>
         <div className="card empty-state">
           <CheckCircleIcon size={32} style={{ color: 'var(--green)', opacity: 1 }} />
-          <p style={{ margin: 0 }}>
-            {tenant?.restaurant_name} already has an active subscription at {money(pricing?.monthlyTotal)} a month.
-            You won't be charged again here.
-          </p>
+          <p style={{ margin: 0 }}>{t('checkout.alreadyActive', { restaurant: tenant?.restaurant_name || '', amount: money(pricing?.monthlyTotal) })}</p>
         </div>
-        <button className="btn btn-primary" onClick={finish}>{setUp ? 'Back to the app' : 'Continue to setup'}</button>
+        <button className="btn btn-primary" onClick={finish}>{setUp ? t('checkout.backToApp') : t('checkout.continueSetup')}</button>
       </div>
     );
   }
 
+  const creditLabel = credit.kind === 'welcome' ? t('checkout.welcomeDiscount')
+    : credit.kind === 'referral' ? t('checkout.referralCredit') : t('checkout.accountCredit');
+
   return (
     <div className="screen-narrow">
       {!setUp && <CheckoutStepper />}
-      {setUp && <Link to="/app/account" className="auth-brand" style={{ fontSize: 15, marginBottom: 12 }}>← Profile &amp; billing</Link>}
-      <h2>Checkout</h2>
-      <p>Review your plan, then pay to activate {tenant?.restaurant_name || 'your account'}.</p>
+      {setUp && <Link to="/app/account" className="auth-brand" style={{ fontSize: 15, marginBottom: 12 }}>{t('checkout.backToAccount')}</Link>}
+      <h2>{t('checkout.title')}</h2>
+      <p>{t('checkout.intro', { restaurant: tenant?.restaurant_name || t('checkout.yourAccount') })}</p>
 
       {error && (
         <div className="error-banner">
           {error}{' '}
-          <button type="button" className="link-btn" onClick={loadOrder}>Try again</button>
+          <button type="button" className="link-btn" onClick={loadOrder}>{t('common.tryAgain')}</button>
         </div>
       )}
 
@@ -182,59 +180,56 @@ export default function Checkout() {
           most of these failures are fixed by editing the plan. */}
       {error && !pricing && (
         <div className="card">
-          <p style={{ margin: 0 }}>Adjust your branch and user counts, then come back to checkout.</p>
-          <Link to="/pricing" className="btn btn-secondary" style={{ marginTop: 12 }}>Change plan</Link>
+          <p style={{ margin: 0 }}>{t('checkout.adjustPlan')}</p>
+          <Link to="/pricing" className="btn btn-secondary" style={{ marginTop: 12 }}>{t('checkout.changePlan')}</Link>
         </div>
       )}
 
       {pricing && (
         <div className="card">
-          <h3 style={{ fontSize: 16, marginBottom: 12 }}>Order summary</h3>
+          <h3 style={{ fontSize: 16, marginBottom: 12 }}>{t('checkout.summary')}</h3>
 
           <div className="summary-row">
             <span>
-              Branches
-              <span className="hint"> {pricing.branchCount} × {money(pricing.branchBlendedRate)} avg</span>
+              {t('page.branchesLabel')}
+              <span className="hint"> {t('page.avgRate', { n: pricing.branchCount, rate: money(pricing.branchBlendedRate) })}</span>
             </span>
             <span>{money(pricing.branchSubtotal)}</span>
           </div>
           <div className="summary-row">
             <span>
-              Users
-              <span className="hint"> {pricing.userCount} × {money(pricing.userBlendedRate)} avg</span>
+              {t('page.usersLabel')}
+              <span className="hint"> {t('page.avgRate', { n: pricing.userCount, rate: money(pricing.userBlendedRate) })}</span>
             </span>
             <span>{money(pricing.userSubtotal)}</span>
           </div>
 
           <div className="summary-row summary-total">
-            <span>Billed monthly</span>
+            <span>{t('checkout.billedMonthly')}</span>
             <span>{money(pricing.monthlyTotal)}</span>
           </div>
 
           {credit.applied > 0 && (
             <>
               <div className="summary-row">
-                <span>{credit.kind === 'welcome' ? 'Welcome discount' : credit.kind === 'referral' ? 'Referral credit' : 'Account credit'}</span>
+                <span>{creditLabel}</span>
                 <span className="referral-plus">−{money(credit.applied)}</span>
               </div>
               <div className="summary-row summary-total">
-                <span>Due today</span>
+                <span>{t('checkout.dueToday')}</span>
                 <span>{money(credit.dueToday)}</span>
               </div>
               <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>
-                {credit.kind === 'welcome'
-                  ? `Thanks for joining through a referral — your welcome discount comes off this first payment. After that the plan renews at ${money(pricing.monthlyTotal)} a month.`
-                  : `Your account credit comes off this payment. After that the plan renews at ${money(pricing.monthlyTotal)} a month.`}
+                {t(credit.kind === 'welcome' ? 'checkout.welcomeNote' : 'checkout.creditNote', { amount: money(pricing.monthlyTotal) })}
               </p>
             </>
           )}
 
           <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>
-            {pricing.currency || 'USD'} · Renews monthly · Cancel anytime. Change your branch or user count later and
-            we'll prorate the difference on your next invoice.
+            {t('checkout.terms', { currency: pricing.currency || 'USD' })}
           </p>
           <Link to="/pricing" className="link-btn" style={{ display: 'inline-block', marginTop: 10 }}>
-            Change plan
+            {t('checkout.changePlan')}
           </Link>
         </div>
       )}
@@ -243,28 +238,25 @@ export default function Checkout() {
           button next to the error would just offer to charge $0.00. */}
       {!pricing ? null : status === 'processing' ? (
         <div className="card">
-          <p style={{ margin: 0 }}>Confirming your payment…</p>
-          <p className="hint" style={{ marginBottom: 0 }}>This usually takes a few seconds. Don't close this page.</p>
+          <p style={{ margin: 0 }}>{t('checkout.confirming')}</p>
+          <p className="hint" style={{ marginBottom: 0 }}>{t('checkout.confirmingHint')}</p>
         </div>
       ) : mock ? (
         <div className="card">
-          <h3 style={{ fontSize: 16, marginBottom: 8 }}>Payment</h3>
-          <p className="hint" style={{ marginTop: 0 }}>
-            Card payments aren't switched on for this account yet, so you can activate in demo mode and add billing
-            details later.
-          </p>
+          <h3 style={{ fontSize: 16, marginBottom: 8 }}>{t('checkout.payment')}</h3>
+          <p className="hint" style={{ marginTop: 0 }}>{t('checkout.demoNote')}</p>
           <button className="btn btn-primary" onClick={handleMockComplete}>
-            Activate in demo mode
+            {t('checkout.activateDemo')}
           </button>
         </div>
       ) : (
         <div className="card">
-          <h3 style={{ fontSize: 16, marginBottom: 8 }}>Payment</h3>
+          <h3 style={{ fontSize: 16, marginBottom: 8 }}>{t('checkout.payment')}</h3>
           <button className="btn btn-primary" onClick={handlePay} disabled={!transactionId}>
-            Pay {money(credit.applied > 0 ? credit.dueToday : pricing?.monthlyTotal)} and activate
+            {t('checkout.pay', { amount: money(credit.applied > 0 ? credit.dueToday : pricing?.monthlyTotal) })}
           </button>
           <p className="hint secure-note">
-            <ShieldIcon size={14} /> Card details are entered on Paddle's secure checkout — SOPY never sees them.
+            <ShieldIcon size={14} /> {t('checkout.secure')}
           </p>
         </div>
       )}

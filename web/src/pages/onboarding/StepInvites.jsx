@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
-import { ROLES } from './roles.js';
+import { useT } from '../../i18n/index.jsx';
+import { ROLES, roleName } from './roles.js';
 import InviteLink from '../../components/InviteLink.jsx';
 
 export default function StepInvites({ onNext, onBack }) {
+  const t = useT();
   const { tenant } = useAuth();
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -51,8 +53,8 @@ export default function StepInvites({ onNext, onBack }) {
 
   return (
     <div>
-      <h2>Invite your team</h2>
-      <p>You planned for {tenant?.user_count} user{tenant?.user_count === 1 ? '' : 's'} (you're already one of them).</p>
+      <h2>{t('onb.invites.title')}</h2>
+      <p>{t('onb.invites.intro', { n: tenant?.user_count ?? '' })}</p>
 
       {error && <div className="error-banner">{error}</div>}
       {lastInviteLink && <InviteLink path={lastInviteLink.path} email={lastInviteLink.email} />}
@@ -61,44 +63,44 @@ export default function StepInvites({ onNext, onBack }) {
         <div className="checklist-row" key={u.id}>
           <div>
             <strong>{u.full_name}</strong> — {u.email}
-            <div className="hint">{ROLES.find((r) => r.value === u.role)?.label} · {u.status}</div>
+            <div className="hint">{roleName(t, u.role)} · {t(`userStatus.${u.status}`)}</div>
           </div>
         </div>
       ))}
 
       <form onSubmit={invite} style={{ marginTop: 16 }}>
         <div className="field">
-          <label htmlFor="fullName">Full name</label>
+          <label htmlFor="fullName">{t('page.fullName')}</label>
           <input id="fullName" required value={form.fullName} onChange={set('fullName')} />
         </div>
         <div className="field">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">{t('page.email')}</label>
           <input id="email" type="email" autoComplete="off" autoCapitalize="none" spellCheck={false} required value={form.email} onChange={set('email')} />
         </div>
         <div className="field">
-          <label htmlFor="role">Role</label>
+          <label htmlFor="role">{t('page.role')}</label>
           <select id="role" value={form.role} onChange={set('role')}>
             {ROLES.filter((r) => r.value !== 'business_owner').map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
+              <option key={r.value} value={r.value}>{roleName(t, r.value)}</option>
             ))}
           </select>
         </div>
-        <div className="field">
-          <label>Assign to branches</label>
-          {branches.length === 0 && <p className="hint">Add a branch first to assign one.</p>}
+        <fieldset className="field" style={{ border: 0, padding: 0, margin: '0 0 18px' }}>
+          <legend style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{t('onb.invites.assignBranches')}</legend>
+          {branches.length === 0 && <p className="hint">{t('onb.invites.addBranchFirst')}</p>}
           {branches.map((b) => (
             <label key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 400, marginBottom: 6 }}>
               <input type="checkbox" checked={form.branchIds.includes(b.id)} onChange={() => toggleBranch(b.id)} />
               {b.name}
             </label>
           ))}
-        </div>
-        <button className="btn btn-secondary" type="submit" disabled={submitting}>Send invite</button>
+        </fieldset>
+        <button className="btn btn-secondary" type="submit" disabled={submitting}>{t('onb.invites.send')}</button>
       </form>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-        <button className="btn btn-secondary" onClick={onBack}>Back</button>
-        <button className="btn btn-primary" onClick={onNext}>Continue</button>
+        <button className="btn btn-secondary" onClick={onBack}>{t('page.back')}</button>
+        <button className="btn btn-primary" onClick={onNext}>{t('common.continue')}</button>
       </div>
     </div>
   );

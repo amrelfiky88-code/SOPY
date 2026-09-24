@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
-import { ACCESS_LEVELS, ROLES } from '../onboarding/roles.js';
+import { useT } from '../../i18n/index.jsx';
+import { ACCESS_LEVELS, ROLES, roleName, accessName } from '../onboarding/roles.js';
 import { canAssignRole, canManageUser } from '../../../../shared/roles.js';
 import { StorefrontIcon } from '../../components/icons.jsx';
 import InviteLink from '../../components/InviteLink.jsx';
 
-const roleLabel = (role) => ROLES.find((r) => r.value === role)?.label || role;
-
 export default function Team() {
+  const t = useT();
   const { user: me } = useAuth();
   const [branches, setBranches] = useState([]);
   const [users, setUsers] = useState([]);
@@ -119,12 +119,12 @@ export default function Team() {
 
   return (
     <div>
-      <h2>Team &amp; stores</h2>
+      <h2>{t('team.title')}</h2>
       {error && <div className="error-banner">{error}</div>}
 
       <div className="filter-row">
-        <button className={tab === 'stores' ? 'active' : ''} onClick={() => setTab('stores')}>Stores ({branches.length})</button>
-        <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}>Users ({users.length})</button>
+        <button className={tab === 'stores' ? 'active' : ''} onClick={() => setTab('stores')}>{t('team.storesTab', { n: branches.length })}</button>
+        <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}>{t('team.usersTab', { n: users.length })}</button>
       </div>
 
       {tab === 'stores' && (
@@ -135,35 +135,33 @@ export default function Team() {
                 <div><strong>{b.name}</strong>{b.city ? ` — ${b.city}` : ''}</div>
                 {confirmingRemove === b.id ? (
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    <button className="btn btn-small btn-danger" onClick={() => removeBranch(b.id)}>Remove store</button>
-                    <button className="btn btn-small btn-secondary" onClick={() => setConfirmingRemove(null)}>Keep</button>
+                    <button className="btn btn-small btn-danger" onClick={() => removeBranch(b.id)}>{t('team.removeStore')}</button>
+                    <button className="btn btn-small btn-secondary" onClick={() => setConfirmingRemove(null)}>{t('page.keep')}</button>
                   </div>
                 ) : (
-                  <button className="btn btn-small btn-danger" onClick={() => setConfirmingRemove(b.id)}>Remove</button>
+                  <button className="btn btn-small btn-danger" onClick={() => setConfirmingRemove(b.id)}>{t('page.remove')}</button>
                 )}
               </div>
             ))}
             {branches.length === 0 && (
               <div className="empty-state">
                 <StorefrontIcon size={32} />
-                <span>No stores yet.</span>
+                <span>{t('team.noStores')}</span>
               </div>
             )}
-            {confirmingRemove && (
-              <p className="hint">Past checklists and reports for this store are kept; it just stops appearing in store lists.</p>
-            )}
+            {confirmingRemove && <p className="hint">{t('team.removeHint')}</p>}
           </div>
           <form onSubmit={addBranch} className="card">
             <div className="field">
-              <label htmlFor="bname">Branch name</label>
+              <label htmlFor="bname">{t('page.branchName')}</label>
               <input id="bname" required value={branchForm.name} onChange={(e) => setBranchForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
             <div className="field">
-              <label htmlFor="bcity">City</label>
+              <label htmlFor="bcity">{t('page.city')}</label>
               <input id="bcity" value={branchForm.city} onChange={(e) => setBranchForm((f) => ({ ...f, city: e.target.value }))} />
             </div>
             <button className="btn btn-secondary" type="submit" disabled={busy === 'branch'}>
-              {busy === 'branch' ? 'Adding…' : 'Add branch'}
+              {busy === 'branch' ? t('page.adding') : t('page.addBranch')}
             </button>
           </form>
         </div>
@@ -176,21 +174,26 @@ export default function Team() {
           <div className="card">
             <div className="table-scroll">
               <table>
-                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Stores</th><th>Access</th><th>Status</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>{t('page.name')}</th><th>{t('page.email')}</th><th>{t('page.role')}</th>
+                    <th>{t('page.stores')}</th><th>{t('page.access')}</th><th>{t('page.status')}</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {users.map((u) => {
                     const isMe = u.id === me?.id;
                     const editable = !isMe && canManageUser(me?.role, u.role);
                     return (
                       <tr key={u.id}>
-                        <td>{u.full_name}{isMe ? ' (you)' : ''}</td>
+                        <td>{u.full_name}{isMe ? ` ${t('page.you')}` : ''}</td>
                         <td>{u.email}</td>
                         <td>
                           {editable ? (
-                            <select value={u.role} onChange={(e) => updateUser(u.id, { role: e.target.value })} aria-label={`Role for ${u.full_name}`}>
-                              {assignableRoles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                            <select value={u.role} onChange={(e) => updateUser(u.id, { role: e.target.value })} aria-label={t('team.roleFor', { name: u.full_name })}>
+                              {assignableRoles.map((r) => <option key={r.value} value={r.value}>{roleName(t, r.value)}</option>)}
                             </select>
-                          ) : roleLabel(u.role)}
+                          ) : roleName(t, u.role)}
                         </td>
                         <td style={{ minWidth: 150 }}>
                           {editingStores === u.id ? (
@@ -208,21 +211,21 @@ export default function Team() {
                               ))}
                               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
                                 <button type="button" className="btn btn-small btn-primary" style={{ width: 'auto' }} disabled={busy === `stores:${u.id}`} onClick={() => saveStores(u.id)}>
-                                  {busy === `stores:${u.id}` ? 'Saving…' : 'Save'}
+                                  {busy === `stores:${u.id}` ? t('common.saving') : t('common.save')}
                                 </button>
-                                <button type="button" className="btn btn-small btn-secondary" onClick={() => setEditingStores(null)}>Cancel</button>
+                                <button type="button" className="btn btn-small btn-secondary" onClick={() => setEditingStores(null)}>{t('common.cancel')}</button>
                               </div>
                             </div>
                           ) : (
                             <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                               <span className={u.branch_ids?.length ? '' : 'hint'}>
                                 {['business_owner', 'operations_manager'].includes(u.role)
-                                  ? 'All stores'
-                                  : storeNames(u.branch_ids) || 'No store'}
+                                  ? t('page.allStores')
+                                  : storeNames(u.branch_ids) || t('page.noStore')}
                               </span>
                               {editable && !['business_owner', 'operations_manager'].includes(u.role) && branches.length > 0 && (
                                 <button type="button" className="btn btn-small btn-secondary" onClick={() => { setEditingStores(u.id); setStoreDraft(u.branch_ids || []); }}>
-                                  Edit
+                                  {t('page.edit')}
                                 </button>
                               )}
                             </div>
@@ -230,34 +233,34 @@ export default function Team() {
                         </td>
                         <td>
                           {editable ? (
-                            <select value={u.access_level} onChange={(e) => updateUser(u.id, { accessLevel: e.target.value })} aria-label={`Access for ${u.full_name}`}>
-                              {ACCESS_LEVELS.map((a) => <option key={a.value} value={a.value}>{a.label.split(' —')[0]}</option>)}
+                            <select value={u.access_level} onChange={(e) => updateUser(u.id, { accessLevel: e.target.value })} aria-label={t('team.accessFor', { name: u.full_name })}>
+                              {ACCESS_LEVELS.map((a) => <option key={a.value} value={a.value}>{accessName(t, a.value)}</option>)}
                             </select>
-                          ) : ACCESS_LEVELS.find((a) => a.value === u.access_level)?.label.split(' —')[0]}
+                          ) : accessName(t, u.access_level)}
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span className={`pill ${u.status === 'disabled' ? 'pill-red' : u.status === 'active' ? 'pill-green' : ''}`}>{u.status}</span>
+                            <span className={`pill ${u.status === 'disabled' ? 'pill-red' : u.status === 'active' ? 'pill-green' : ''}`}>{t(`userStatus.${u.status}`)}</span>
                             {editable && u.status !== 'disabled' && (
                               confirmingDisable === u.id ? (
                                 <>
                                   <button type="button" className="btn btn-small btn-danger" onClick={() => { setConfirmingDisable(null); updateUser(u.id, { status: 'disabled' }); }}>
-                                    {u.status === 'invited' ? 'Cancel invite' : 'Disable'}
+                                    {u.status === 'invited' ? t('team.cancelInvite') : t('team.disable')}
                                   </button>
-                                  <button type="button" className="btn btn-small btn-secondary" onClick={() => setConfirmingDisable(null)}>Keep</button>
+                                  <button type="button" className="btn btn-small btn-secondary" onClick={() => setConfirmingDisable(null)}>{t('page.keep')}</button>
                                 </>
                               ) : (
                                 <button type="button" className="btn btn-small btn-secondary" onClick={() => setConfirmingDisable(u.id)}>
-                                  {u.status === 'invited' ? 'Cancel invite' : 'Disable'}
+                                  {u.status === 'invited' ? t('team.cancelInvite') : t('team.disable')}
                                 </button>
                               )
                             )}
                             {editable && u.status === 'disabled' && (
-                              <button type="button" className="btn btn-small btn-secondary" onClick={() => updateUser(u.id, { status: 'active' })}>Enable</button>
+                              <button type="button" className="btn btn-small btn-secondary" onClick={() => updateUser(u.id, { status: 'active' })}>{t('team.enable')}</button>
                             )}
                             {editable && u.status === 'active' && confirmingDisable !== u.id && (
                               <button type="button" className="btn btn-small btn-secondary" disabled={busy === `reset:${u.id}`} onClick={() => resetPassword(u)}>
-                                {busy === `reset:${u.id}` ? 'Creating…' : 'Reset password'}
+                                {busy === `reset:${u.id}` ? t('team.creating') : t('team.resetPassword')}
                               </button>
                             )}
                           </div>
@@ -270,27 +273,27 @@ export default function Team() {
             </div>
           </div>
 
-          <p className="hint">Disabled people can't sign in and don't count toward your plan's users. Their past reports are kept.</p>
+          <p className="hint">{t('team.disabledHint')}</p>
 
           {assignableRoles.length > 0 && (
             <form onSubmit={invite} className="card">
               <div className="field">
-                <label htmlFor="ifn">Full name</label>
+                <label htmlFor="ifn">{t('page.fullName')}</label>
                 <input id="ifn" required value={inviteForm.fullName} onChange={(e) => setInviteForm((f) => ({ ...f, fullName: e.target.value }))} />
               </div>
               <div className="field">
-                <label htmlFor="iem">Email</label>
+                <label htmlFor="iem">{t('page.email')}</label>
                 <input id="iem" type="email" autoComplete="off" autoCapitalize="none" spellCheck={false} required value={inviteForm.email} onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))} />
               </div>
               <div className="field">
-                <label htmlFor="irole">Role</label>
+                <label htmlFor="irole">{t('page.role')}</label>
                 <select id="irole" value={inviteForm.role} onChange={(e) => setInviteForm((f) => ({ ...f, role: e.target.value }))}>
-                  {assignableRoles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  {assignableRoles.map((r) => <option key={r.value} value={r.value}>{roleName(t, r.value)}</option>)}
                 </select>
               </div>
               {branches.length > 0 && !['operations_manager'].includes(inviteForm.role) && (
                 <fieldset className="field" style={{ border: 0, padding: 0, margin: '0 0 18px' }}>
-                  <legend style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Works at</legend>
+                  <legend style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{t('team.worksAt')}</legend>
                   {branches.map((b) => (
                     <label key={b.id} className="inline-check" htmlFor={`inv-${b.id}`}>
                       <input
@@ -302,11 +305,11 @@ export default function Team() {
                       {b.name}
                     </label>
                   ))}
-                  <p className="hint" style={{ margin: 0 }}>Store checklists reach people at the stores they work at.</p>
+                  <p className="hint" style={{ margin: 0 }}>{t('team.worksAtHint')}</p>
                 </fieldset>
               )}
               <button className="btn btn-secondary" type="submit" disabled={busy === 'invite'}>
-                {busy === 'invite' ? 'Sending…' : 'Invite user'}
+                {busy === 'invite' ? t('team.sending') : t('team.inviteUser')}
               </button>
             </form>
           )}

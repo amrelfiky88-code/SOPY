@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, setToken } from '../api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { useI18n } from '../i18n/index.jsx';
+import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
 
 export default function AcceptInvite() {
+  const { t, lang } = useI18n();
   const [params] = useSearchParams();
   const token = params.get('token');
   const navigate = useNavigate();
@@ -17,7 +20,8 @@ export default function AcceptInvite() {
     setError('');
     setSubmitting(true);
     try {
-      const data = await api.post('/auth/accept-invite', { inviteToken: token, password });
+      // A new person's account takes the language they chose here.
+      const data = await api.post('/auth/accept-invite', { inviteToken: token, password, language: lang });
       setToken(data.token);
       await refresh();
       navigate('/app/dashboard');
@@ -28,24 +32,31 @@ export default function AcceptInvite() {
     }
   };
 
-  if (!token) {
-    return <div className="screen-narrow"><p>This invite link is missing its token.</p></div>;
-  }
-
   return (
     <div className="screen-narrow">
-      <h2>Set your password</h2>
-      <p>Finish setting up your SOPY account.</p>
-      {error && <div className="error-banner">{error}</div>}
-      <form onSubmit={handleSubmit}>
-        <div className="field">
-          <label htmlFor="password">Password</label>
-          <input id="password" type="password" autoComplete="new-password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
-        <button className="btn btn-primary" type="submit" disabled={submitting}>
-          {submitting ? 'Saving…' : 'Set password and log in'}
-        </button>
-      </form>
+      <div className="signed-out-bar">
+        <span className="auth-brand">SOPY</span>
+        <LanguageSwitcher />
+      </div>
+      {!token ? (
+        <p>{t('accept.missingToken')}</p>
+      ) : (
+        <>
+          <h2>{t('accept.title')}</h2>
+          <p>{t('accept.intro')}</p>
+          {error && <div className="error-banner">{error}</div>}
+          <form onSubmit={handleSubmit}>
+            <div className="field">
+              <label htmlFor="password">{t('page.password')}</label>
+              <input id="password" type="password" autoComplete="new-password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <div className="hint">{t('signup.passwordHint')}</div>
+            </div>
+            <button className="btn btn-primary" type="submit" disabled={submitting}>
+              {submitting ? t('common.saving') : t('accept.submit')}
+            </button>
+          </form>
+        </>
+      )}
     </div>
   );
 }

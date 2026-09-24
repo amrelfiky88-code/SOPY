@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { useI18n } from '../i18n/index.jsx';
+import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
 import { REFERRAL_WELCOME_USD } from '../../../shared/referrals.js';
 
+// Stored as the English name (tenants.country); shown via country.* labels.
 const COUNTRIES = [
   'United States', 'United Kingdom', 'United Arab Emirates', 'Saudi Arabia', 'Egypt',
-  'Canada', 'Australia', 'India', 'Germany', 'France', 'Other',
+  'Morocco', 'Canada', 'Australia', 'India', 'Germany', 'France', 'Other',
 ];
 
 // The code from a referral link (?ref=… now, or saved by main.jsx when the
@@ -21,6 +24,7 @@ function readReferralCode() {
 }
 
 export default function WhoAreYou() {
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
   const { signup } = useAuth();
   const [form, setForm] = useState({
@@ -38,7 +42,8 @@ export default function WhoAreYou() {
     setError('');
     setSubmitting(true);
     try {
-      await signup({ ...form, referralCode: referralCode || undefined });
+      // The account keeps the language this page was filled in.
+      await signup({ ...form, language: lang, referralCode: referralCode || undefined });
       try { localStorage.removeItem('sopy_ref'); } catch { /* ignore */ }
       navigate('/configure');
     } catch (err) {
@@ -50,14 +55,17 @@ export default function WhoAreYou() {
 
   return (
     <div className="screen-narrow">
-      <div className="stepper">
-        <div className="dot done" /><div className="dot" /><div className="dot" /><div className="dot" /><div className="dot" />
+      <div className="signed-out-bar">
+        <div className="stepper" style={{ marginBottom: 0 }}>
+          <div className="dot done" /><div className="dot" /><div className="dot" /><div className="dot" /><div className="dot" />
+        </div>
+        <LanguageSwitcher />
       </div>
-      <h2>Who are you?</h2>
-      <p>Tell us a bit about you and your restaurant so we can set things up.</p>
+      <h2>{t('signup.title')}</h2>
+      <p>{t('signup.intro')}</p>
       {referralCode && (
         <div className="success-banner" role="status">
-          You were invited by another restaurant on SOPY — welcome! You'll get ${REFERRAL_WELCOME_USD} off your first payment.
+          {t('signup.referral', { amount: REFERRAL_WELCOME_USD })}
         </div>
       )}
 
@@ -65,48 +73,48 @@ export default function WhoAreYou() {
 
       <form onSubmit={handleSubmit}>
         <div className="field">
-          <label htmlFor="fullName">Full name</label>
+          <label htmlFor="fullName">{t('page.fullName')}</label>
           <input id="fullName" required value={form.fullName} onChange={set('fullName')} />
         </div>
         <div className="field">
-          <label htmlFor="title">Title</label>
-          <input id="title" placeholder="e.g. Owner, Operations Manager" value={form.title} onChange={set('title')} />
+          <label htmlFor="title">{t('signup.jobTitle')}</label>
+          <input id="title" placeholder={t('signup.jobTitlePlaceholder')} value={form.title} onChange={set('title')} />
         </div>
         <div className="field">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">{t('page.email')}</label>
           <input id="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required value={form.email} onChange={set('email')} />
         </div>
         <div className="field">
-          <label htmlFor="phone">Phone</label>
+          <label htmlFor="phone">{t('page.phone')}</label>
           <input id="phone" type="tel" autoComplete="tel" value={form.phone} onChange={set('phone')} />
         </div>
         <div className="field">
-          <label htmlFor="password">Create a password</label>
+          <label htmlFor="password">{t('signup.password')}</label>
           <input id="password" type="password" autoComplete="new-password" minLength={8} required value={form.password} onChange={set('password')} />
-          <div className="hint">At least 8 characters.</div>
+          <div className="hint">{t('signup.passwordHint')}</div>
         </div>
         <div className="field">
-          <label htmlFor="restaurantName">Restaurant name</label>
+          <label htmlFor="restaurantName">{t('signup.restaurantName')}</label>
           <input id="restaurantName" required value={form.restaurantName} onChange={set('restaurantName')} />
         </div>
         <div className="field">
-          <label htmlFor="country">Country</label>
+          <label htmlFor="country">{t('signup.country')}</label>
           <select id="country" required value={form.country} onChange={set('country')}>
-            <option value="" disabled>Select a country</option>
-            {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            <option value="" disabled>{t('signup.selectCountry')}</option>
+            {COUNTRIES.map((c) => <option key={c} value={c}>{t(`country.${c}`)}</option>)}
           </select>
         </div>
         <div className="field">
-          <label htmlFor="branchCount">Number of branches</label>
+          <label htmlFor="branchCount">{t('page.numBranches')}</label>
           <input id="branchCount" type="number" min={1} required value={form.branchCount} onChange={set('branchCount')} />
         </div>
         <div className="field">
-          <label htmlFor="userCount">Number of users</label>
+          <label htmlFor="userCount">{t('page.numUsers')}</label>
           <input id="userCount" type="number" min={1} required value={form.userCount} onChange={set('userCount')} />
         </div>
 
         <button className="btn btn-primary" type="submit" disabled={submitting}>
-          {submitting ? 'Creating your account…' : 'Continue'}
+          {submitting ? t('signup.submitting') : t('common.continue')}
         </button>
       </form>
     </div>

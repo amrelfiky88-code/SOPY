@@ -1,104 +1,62 @@
 import React, { useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
-import ReportLink from '../../components/ReportLink.jsx';
-import { Section, TemperatureLogTable, OpeningClosingChecklist, FixedRowDataTable, FixedRowStatusTable, LabeledInput, LabeledSelect, LabeledTextarea } from './OpsFormParts.jsx';
-import { CheckCircleIcon } from '../../components/icons.jsx';
+import {
+  Section, TemperatureLogTable, OpeningClosingChecklist, FixedRowDataTable, FixedRowStatusTable,
+  LabeledInput, LabeledSelect, LabeledTextarea, ReportStart, ReportSubmitted, ReportActions, useFormLabels, choiceOptions,
+} from './OpsFormParts.jsx';
 
-const TITLE = 'Bar & Beverage Daily Operation Report';
 const KIND = 'bar_daily';
 
+// Labels live in i18n/formLabels.js under f.bar_daily.<form_data path>.
 const TEMP_ROWS = [
-  { key: 'displayFridge', label: 'Beverage Display Fridge', safeRange: '2°C – 7°C' },
-  { key: 'backBar', label: 'Back-Bar Refrigerator', safeRange: '1°C – 5°C' },
-  { key: 'juiceFridge', label: 'Juice / Ingredient Fridge', safeRange: '1°C – 5°C' },
-  { key: 'frozenDessert', label: 'Frozen Dessert Unit / Ice Cream', safeRange: 'Below -14°C' },
-  { key: 'fountain', label: 'Fountain Machine (ambient)', safeRange: 'Ambient (18°C+)' },
-  { key: 'coffeeMachine', label: 'Coffee Machine (boiler temp)', safeRange: '90°C – 95°C' },
-  { key: 'boiler', label: 'Hot Water Boiler / Urn', safeRange: '95°C – 100°C' },
+  { key: 'displayFridge', range: 'display' },
+  { key: 'backBar', range: 'fridge' },
+  { key: 'juiceFridge', range: 'fridge' },
+  { key: 'frozenDessert', range: 'frozenDessert' },
+  { key: 'fountain', range: 'fountain' },
+  { key: 'coffeeMachine', range: 'coffee' },
+  { key: 'boiler', range: 'boiler' },
 ];
 
-const STOCK_ITEMS = [
-  'Bottled Water (500ml)', 'Bottled Water (1L)', 'Cola (can/bottle)', 'Lemon-Lime Soda',
-  'Orange Juice (carton)', 'Apple Juice (carton)', 'Fresh Orange Juice (L)', 'Mango Juice (L)',
-  'Milk (full cream)', 'Milk (skimmed)', 'Espresso Beans (kg)', 'Filter Coffee (kg)',
-  'Tea Bags (assorted)', 'Sugar / Sweetener (kg)', 'Chocolate Powder (kg)', 'Cups (hot — S/M/L)', 'Cups (cold — S/M/L)',
-].map((label, i) => ({ key: `stock${i}`, label }));
-
+const STOCK_ITEM_COUNT = 17;
 const STOCK_COLUMNS = [
-  { key: 'opening', label: 'Opening', type: 'number' },
-  { key: 'received', label: 'Received', type: 'number' },
-  { key: 'sold', label: 'Sold / Used', type: 'number' },
-  { key: 'waste', label: 'Waste / Loss', type: 'number' },
-  { key: 'closing', label: 'Closing', type: 'number' },
+  { key: 'opening', type: 'number' },
+  { key: 'received', type: 'number' },
+  { key: 'sold', type: 'number' },
+  { key: 'waste', type: 'number' },
+  { key: 'closing', type: 'number' },
 ];
 
-const SALES_ROWS = [
-  { key: 'hot', label: 'Hot Beverages (Coffee / Tea)' },
-  { key: 'coldSoft', label: 'Cold Soft Drinks' },
-  { key: 'juices', label: 'Fresh Juices & Smoothies' },
-  { key: 'bottled', label: 'Bottled Beverages' },
-  { key: 'specialty', label: 'Specialty Drinks / Promotions' },
-  { key: 'addons', label: 'Add-ons (extra shots, syrups)' },
-];
+const SALES_KEYS = ['hot', 'coldSoft', 'juices', 'bottled', 'specialty', 'addons'];
 const SALES_COLUMNS = [
-  { key: 'target', label: 'Target (EGP)', type: 'number' },
-  { key: 'actual', label: 'Actual (EGP)', type: 'number' },
-  { key: 'variance', label: 'Variance (EGP)', type: 'number' },
-  { key: 'variancePct', label: 'Variance %', type: 'number' },
+  { key: 'target', type: 'number' },
+  { key: 'actual', type: 'number' },
+  { key: 'variance', type: 'number' },
+  { key: 'variancePct', type: 'number' },
 ];
 
 const CLEANING_ROWS = [
-  { key: 'espresso', label: 'Espresso Machine — backflush & wipe', na: ['mid'] },
-  { key: 'steamWand', label: 'Steam wand — purge & wipe after each use', na: ['start'] },
-  { key: 'grinder', label: 'Coffee grinder — brush & wipe', na: ['start', 'mid'] },
-  { key: 'blenderRinse', label: 'Blender / Juicer — rinse between orders' },
-  { key: 'blenderSanitize', label: 'Blender / Juicer — full disassembly & sanitize', na: ['start', 'mid'] },
-  { key: 'iceMachine', label: 'Ice machine bin — sanitize & air dry', na: ['mid'] },
-  { key: 'counter', label: 'Bar counter & drip trays' },
-  { key: 'fountainNozzles', label: 'Fountain machine nozzles — soak & rinse', na: ['mid'] },
-  { key: 'fridgeShelves', label: 'Refrigerator shelves — wipe', na: ['mid'] },
-  { key: 'glassware', label: 'Glassware & cup storage — wipe clean', na: ['mid'] },
-  { key: 'floor', label: 'Bar floor — sweep & mop', na: ['start'] },
+  { key: 'espresso', na: ['mid'] },
+  { key: 'steamWand', na: ['start'] },
+  { key: 'grinder', na: ['start', 'mid'] },
+  { key: 'blenderRinse' },
+  { key: 'blenderSanitize', na: ['start', 'mid'] },
+  { key: 'iceMachine', na: ['mid'] },
+  { key: 'counter' },
+  { key: 'fountainNozzles', na: ['mid'] },
+  { key: 'fridgeShelves', na: ['mid'] },
+  { key: 'glassware', na: ['mid'] },
+  { key: 'floor', na: ['start'] },
 ];
 const CLEANING_COLUMNS = [
-  { key: 'start', label: 'Shift start', type: 'checkbox' },
-  { key: 'mid', label: 'Mid-shift', type: 'checkbox' },
-  { key: 'endBy', label: 'End of shift — by' },
+  { key: 'start', type: 'checkbox' },
+  { key: 'mid', type: 'checkbox' },
+  { key: 'endBy' },
 ];
 
-const COMPLIANCE_ROWS = [
-  'All beverage ingredients labeled with date received and use-by date',
-  'Allergen information board updated and visible to all bar staff',
-  'Staff informed of any new allergen-containing products or changes',
-  'Customer allergen inquiries logged (if any)',
-  'All garnish ingredients prepared fresh today (no carry-over garnishes)',
-  'Expired or near-expiry products removed from service',
-  'All beverages prepared per standardized recipe card (no free-pouring)',
-  'Correct cups, sizes, and lids used for each beverage category',
-  'Temperature complaints or quality rejections received',
-].map((label, i) => ({ key: `c${i}`, label }));
-const COMPLIANCE_STATUS_OPTIONS = [{ value: 'ok', label: 'OK' }, { value: 'action_needed', label: 'Action needed' }];
-
-const OPENING_TASKS = [
-  'Bar area fully sanitized before service',
-  'All equipment temperature checks logged',
-  'Ice machine sanitized; ice bin filled',
-  'Garnish prep completed (fresh only)',
-  'Glassware & cups stocked & inspected',
-  'Syrup & ingredient levels checked',
-  'Bar stock par levels verified',
-  'Team briefed on specials & out-of-stocks',
-];
-const CLOSING_TASKS = [
-  'All perishable garnishes disposed of & fridged items covered',
-  'Juice machines emptied, disassembled & sanitized',
-  'Blenders & all equipment cleaned, dried & stored',
-  'Fountain nozzles removed & soaked in sanitizer',
-  'Coffee machine fully cleaned & back-flushed',
-  'Ice bin drained, sanitized & left to air dry',
-  'End-of-shift stock count completed & logged',
-  'Closing checklist signed & submitted to supervisor',
-];
+const COMPLIANCE_ITEM_COUNT = 9;
+const OPENING_TASK_COUNT = 8;
+const CLOSING_TASK_COUNT = 8;
 
 const emptyState = () => ({
   shift: { reportNo: '', shiftType: 'morning', dayOfWeek: '', barManager: '', headBartender: '', startTime: '', endTime: '', bartenders: '', support: '', reportType: 'opening' },
@@ -116,7 +74,8 @@ const emptyState = () => ({
 });
 
 export default function BarDailyForm() {
-  const report = useOpsReport({ kind: KIND, title: TITLE, onResume: (saved) => setForm({ ...emptyState(), ...saved }) });
+  const { t, L } = useFormLabels(KIND);
+  const report = useOpsReport({ kind: KIND, onResume: (saved) => setForm({ ...emptyState(), ...saved }) });
   const [form, setForm] = useState(emptyState());
 
   const patch = (section, value) => setForm((f) => ({ ...f, [section]: { ...f[section], ...value } }));
@@ -126,142 +85,125 @@ export default function BarDailyForm() {
   const toggleTask = (which, i) =>
     setForm((f) => ({ ...f, checklist: { ...f.checklist, [which]: { ...f.checklist[which], [i]: !f.checklist[which]?.[i] } } }));
 
+  const rows = (section, list) => list.map((r) => ({ ...(typeof r === 'string' ? { key: r } : r), label: L(`${section}.${typeof r === 'string' ? r : r.key}`) }));
+  const columns = (section, cols) => cols.map((c) => ({ ...c, label: L(`${section}.*.${c.key}`) }));
+  const numbered = (prefix, n) => Array.from({ length: n }, (_, i) => `${prefix}${i}`);
+  const tasks = (which, n) => Array.from({ length: n }, (_, i) => L(`checklist.${which}.${i}`));
+
   const hasIncident = !!(form.notes.staffIssues?.trim() || form.tempDeviation.found || form.tempDeviation.faultReported);
+  const title = L('title');
 
-  if (report.status === 'idle') {
-    return (
-      <div>
-        <h2>{TITLE}</h2>
-        {report.error && <div className="error-banner">{report.error}</div>}
-        <div className="card">
-          <div className="field">
-            <label htmlFor="branch">Store</label>
-            <select id="branch" value={report.branchId} onChange={(e) => report.setBranchId(e.target.value)}>
-              {report.branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-          </div>
-          <button className="btn btn-primary" onClick={report.start} disabled={!report.branchId}>{report.hasDraft ? 'Continue saved draft' : "Start today's report"}</button>
-          {report.branches.length === 0 && <p className="hint">Add a store first, under Team &amp; stores.</p>}
-        </div>
-      </div>
-    );
-  }
-
+  if (report.status === 'idle') return <ReportStart report={report} title={title} />;
   if (report.status === 'submitted') {
-    return (
-      <div className="card empty-state">
-        <CheckCircleIcon size={32} style={{ color: 'var(--green)', opacity: 1 }} />
-        <p style={{ margin: 0 }}>Bar & Beverage Daily Report submitted (BDR-{form.shift.reportNo || '—'}). Retain per policy for 90 days.</p>
-        <ReportLink submissionId={report.submissionId} />
-      </div>
-    );
+    return <ReportSubmitted report={report} message={L('submitted', { no: form.shift.reportNo || '—' })} />;
   }
+
+  const shiftInput = (key, type) => (
+    <LabeledInput label={L(`shift.${key}`)} type={type} value={form.shift[key]} onChange={(v) => patchNested('shift', key, v)} />
+  );
+  const noteArea = (key) => (
+    <LabeledTextarea label={L(`notes.${key}`)} value={form.notes[key]} onChange={(v) => patchNested('notes', key, v)} />
+  );
+  const textInput = (section, key, type) => (
+    <input placeholder={L(`${section}.${key}`)} aria-label={L(`${section}.${key}`)} type={type} value={form[section][key]} onChange={(e) => patch(section, { [key]: e.target.value })} />
+  );
+  const checkbox = (section, key) => (
+    <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400 }}>
+      <input type="checkbox" checked={form[section][key]} onChange={(e) => patch(section, { [key]: e.target.checked })} />
+      {L(`${section}.${key}`)}
+    </label>
+  );
+  const choice = (section, key, values) => (
+    <select aria-label={L(`${section}.${key}`)} value={form[section][key]} onChange={(e) => patch(section, { [key]: e.target.value })}>
+      {values.map((v) => <option key={v} value={v}>{t(`f.v.${v}`)}</option>)}
+    </select>
+  );
 
   return (
     <div>
-      <h2>{TITLE}</h2>
+      <h2>{title}</h2>
       {report.error && <div className="error-banner">{report.error}</div>}
 
-      <Section title="A. Shift identification">
+      <Section title={L('sec.A')}>
         <div className="form-grid-2col">
-          <LabeledInput label="Report No. (BDR-)" value={form.shift.reportNo} onChange={(v) => patchNested('shift', 'reportNo', v)} />
-          <LabeledSelect label="Shift" value={form.shift.shiftType} onChange={(v) => patchNested('shift', 'shiftType', v)}
-            options={[['morning', 'Morning (Open)'], ['afternoon', 'Afternoon'], ['evening', 'Evening (Close)']]} />
-          <LabeledInput label="Day of week" value={form.shift.dayOfWeek} onChange={(v) => patchNested('shift', 'dayOfWeek', v)} />
-          <LabeledSelect label="Report type" value={form.shift.reportType} onChange={(v) => patchNested('shift', 'reportType', v)}
-            options={[['opening', 'Opening'], ['mid', 'Mid'], ['closing', 'Closing']]} />
-          <LabeledInput label="Bar Manager / Lead" value={form.shift.barManager} onChange={(v) => patchNested('shift', 'barManager', v)} />
-          <LabeledInput label="Head Bartender" value={form.shift.headBartender} onChange={(v) => patchNested('shift', 'headBartender', v)} />
-          <LabeledInput label="Shift start (hrs)" type="time" value={form.shift.startTime} onChange={(v) => patchNested('shift', 'startTime', v)} />
-          <LabeledInput label="Shift end (hrs)" type="time" value={form.shift.endTime} onChange={(v) => patchNested('shift', 'endTime', v)} />
-          <LabeledInput label="Bartenders on duty" type="number" value={form.shift.bartenders} onChange={(v) => patchNested('shift', 'bartenders', v)} />
-          <LabeledInput label="Support staff on duty" type="number" value={form.shift.support} onChange={(v) => patchNested('shift', 'support', v)} />
+          {shiftInput('reportNo')}
+          <LabeledSelect label={L('shift.shiftType')} value={form.shift.shiftType} onChange={(v) => patchNested('shift', 'shiftType', v)}
+            options={['morning', 'afternoon', 'evening'].map((v) => [v, t(`f.v.${v}`)])} />
+          {shiftInput('dayOfWeek')}
+          <LabeledSelect label={L('shift.reportType')} value={form.shift.reportType} onChange={(v) => patchNested('shift', 'reportType', v)}
+            options={['opening', 'mid', 'closing'].map((v) => [v, t(`f.v.${v}`)])} />
+          {shiftInput('barManager')}
+          {shiftInput('headBartender')}
+          {shiftInput('startTime', 'time')}
+          {shiftInput('endTime', 'time')}
+          {shiftInput('bartenders', 'number')}
+          {shiftInput('support', 'number')}
         </div>
       </Section>
 
-      <Section title="B. Equipment & temperature monitoring">
-        <TemperatureLogTable rows={TEMP_ROWS} values={form.temperatureLog} onChange={setFixedRow('temperatureLog')} />
+      <Section title={L('sec.B')}>
+        <TemperatureLogTable
+          rows={TEMP_ROWS.map((r) => ({ ...r, label: L(`temperatureLog.${r.key}`), safeRange: L(`range.${r.range}`) }))}
+          values={form.temperatureLog}
+          onChange={setFixedRow('temperatureLog')}
+        />
         <div className="form-grid-2col" style={{ marginTop: 12 }}>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400 }}>
-            <input type="checkbox" checked={form.tempDeviation.found} onChange={(e) => patch('tempDeviation', { found: e.target.checked })} />
-            Temperature deviation noted
-          </label>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400 }}>
-            <input type="checkbox" checked={form.tempDeviation.faultReported} onChange={(e) => patch('tempDeviation', { faultReported: e.target.checked })} />
-            Equipment fault reported
-          </label>
-          <input placeholder="Action taken" value={form.tempDeviation.actionTaken} onChange={(e) => patch('tempDeviation', { actionTaken: e.target.value })} />
-          <input placeholder="Manager / maintenance notified" value={form.tempDeviation.notified} onChange={(e) => patch('tempDeviation', { notified: e.target.value })} />
+          {checkbox('tempDeviation', 'found')}
+          {checkbox('tempDeviation', 'faultReported')}
+          {textInput('tempDeviation', 'actionTaken')}
+          {textInput('tempDeviation', 'notified')}
         </div>
       </Section>
 
-      <Section title="C. Beverage stock & inventory log">
-        <FixedRowDataTable rows={STOCK_ITEMS} columns={STOCK_COLUMNS} values={form.stockLog} onChange={setFixedRow('stockLog')} />
+      <Section title={L('sec.C')}>
+        <FixedRowDataTable rows={rows('stockLog', numbered('stock', STOCK_ITEM_COUNT))} columns={columns('stockLog', STOCK_COLUMNS)} values={form.stockLog} onChange={setFixedRow('stockLog')} />
         <div className="form-grid-2col" style={{ marginTop: 12 }}>
-          <input placeholder="Items below par level" value={form.stockNotes.belowPar} onChange={(e) => patch('stockNotes', { belowPar: e.target.value })} />
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400 }}>
-            <input type="checkbox" checked={form.stockNotes.reorderPlaced} onChange={(e) => patch('stockNotes', { reorderPlaced: e.target.checked })} />
-            Reorder placed
-          </label>
-          <input placeholder="Reorder details" value={form.stockNotes.reorderDetails} onChange={(e) => patch('stockNotes', { reorderDetails: e.target.value })} />
-          <input placeholder="Total beverage waste value" type="number" value={form.stockNotes.wasteValue} onChange={(e) => patch('stockNotes', { wasteValue: e.target.value })} />
-          <select value={form.stockNotes.wasteReason} onChange={(e) => patch('stockNotes', { wasteReason: e.target.value })}>
-            <option value="expired">Expired</option>
-            <option value="spillage">Spillage</option>
-            <option value="quality">Quality</option>
-          </select>
+          {textInput('stockNotes', 'belowPar')}
+          {checkbox('stockNotes', 'reorderPlaced')}
+          {textInput('stockNotes', 'reorderDetails')}
+          {textInput('stockNotes', 'wasteValue', 'number')}
+          {choice('stockNotes', 'wasteReason', ['expired', 'spillage', 'quality'])}
         </div>
       </Section>
 
-      <Section title="D. Beverage sales performance">
-        <FixedRowDataTable rows={SALES_ROWS} columns={SALES_COLUMNS} values={form.salesPerformance} onChange={setFixedRow('salesPerformance')} />
+      <Section title={L('sec.D')}>
+        <FixedRowDataTable rows={rows('salesPerformance', SALES_KEYS)} columns={columns('salesPerformance', SALES_COLUMNS)} values={form.salesPerformance} onChange={setFixedRow('salesPerformance')} />
         <div className="form-grid-2col" style={{ marginTop: 12 }}>
-          <input placeholder="Best-selling item today" value={form.salesNotes.bestSeller} onChange={(e) => patch('salesNotes', { bestSeller: e.target.value })} />
-          <input placeholder="Slowest-moving item" value={form.salesNotes.slowest} onChange={(e) => patch('salesNotes', { slowest: e.target.value })} />
-          <input placeholder="Promotion / offer active" value={form.salesNotes.promoActive} onChange={(e) => patch('salesNotes', { promoActive: e.target.value })} />
-          <select value={form.salesNotes.promoPerformance} onChange={(e) => patch('salesNotes', { promoPerformance: e.target.value })}>
-            <option value="above">Above target</option>
-            <option value="on_target">On target</option>
-            <option value="below">Below target</option>
-          </select>
+          {textInput('salesNotes', 'bestSeller')}
+          {textInput('salesNotes', 'slowest')}
+          {textInput('salesNotes', 'promoActive')}
+          {choice('salesNotes', 'promoPerformance', ['above', 'on_target', 'below'])}
         </div>
       </Section>
 
-      <Section title="E. Equipment cleaning & sanitation log">
-        <FixedRowDataTable rows={CLEANING_ROWS} columns={CLEANING_COLUMNS} values={form.cleaningLog} onChange={setFixedRow('cleaningLog')} />
+      <Section title={L('sec.E')}>
+        <FixedRowDataTable rows={rows('cleaningLog', CLEANING_ROWS)} columns={columns('cleaningLog', CLEANING_COLUMNS)} values={form.cleaningLog} onChange={setFixedRow('cleaningLog')} />
       </Section>
 
-      <Section title="F. Quality, allergen & compliance check">
-        <FixedRowStatusTable rows={COMPLIANCE_ROWS} values={form.complianceCheck} onChange={setFixedRow('complianceCheck')} statusOptions={COMPLIANCE_STATUS_OPTIONS} />
+      <Section title={L('sec.F')}>
+        <FixedRowStatusTable rows={rows('complianceCheck', numbered('c', COMPLIANCE_ITEM_COUNT))} values={form.complianceCheck} onChange={setFixedRow('complianceCheck')} statusOptions={choiceOptions(t, ['ok', 'action_needed'])} />
       </Section>
 
-      <Section title="G. Opening & closing checklist">
-        <OpeningClosingChecklist opening={OPENING_TASKS} closing={CLOSING_TASKS} values={form.checklist} onToggle={toggleTask} />
+      <Section title={L('sec.G')}>
+        <OpeningClosingChecklist opening={tasks('opening', OPENING_TASK_COUNT)} closing={tasks('closing', CLOSING_TASK_COUNT)} values={form.checklist} onToggle={toggleTask} />
       </Section>
 
-      <Section title="H. Incidents, complaints & shift notes">
-        <LabeledTextarea label="Customer complaints or quality issues received" value={form.notes.complaints} onChange={(v) => patchNested('notes', 'complaints', v)} />
-        <LabeledTextarea label="Equipment faults / maintenance required" value={form.notes.equipmentFaults} onChange={(v) => patchNested('notes', 'equipmentFaults', v)} />
-        <LabeledTextarea label="Out-of-stock or low-stock items" value={form.notes.lowStock} onChange={(v) => patchNested('notes', 'lowStock', v)} />
-        <LabeledTextarea label="Staff issues or incidents during shift" value={form.notes.staffIssues} onChange={(v) => patchNested('notes', 'staffIssues', v)} />
-        <LabeledTextarea label="General bar manager notes & recommendations" value={form.notes.managerNotes} onChange={(v) => patchNested('notes', 'managerNotes', v)} />
+      <Section title={L('sec.H')}>
+        {noteArea('complaints')}
+        {noteArea('equipmentFaults')}
+        {noteArea('lowStock')}
+        {noteArea('staffIssues')}
+        {noteArea('managerNotes')}
       </Section>
 
-      <Section title="I. Sign-off & authorization">
+      <Section title={L('sec.I')}>
         <div className="form-grid-2col">
-          <LabeledInput label="Bar Manager / Shift Lead name" value={form.signOff.barManagerName} onChange={(v) => patchNested('signOff', 'barManagerName', v)} />
-          <LabeledInput label="Operations Manager name" value={form.signOff.opsManagerName} onChange={(v) => patchNested('signOff', 'opsManagerName', v)} />
+          <LabeledInput label={L('signOff.barManagerName')} value={form.signOff.barManagerName} onChange={(v) => patchNested('signOff', 'barManagerName', v)} />
+          <LabeledInput label={L('signOff.opsManagerName')} value={form.signOff.opsManagerName} onChange={(v) => patchNested('signOff', 'opsManagerName', v)} />
         </div>
       </Section>
 
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button className="btn btn-secondary" onClick={() => report.save(form, hasIncident)} disabled={report.status === 'saving'}>{report.status === 'saving' ? 'Saving…' : report.justSaved ? 'Saved ✓' : 'Save progress'}</button>
-        <button className="btn btn-primary" onClick={() => report.submit(form, hasIncident)} disabled={report.status === 'saving' || !form.signOff.barManagerName.trim()}>
-          Submit &amp; sign off
-        </button>
-      </div>
-      {!form.signOff.barManagerName.trim() && <p className="hint">Add the Bar Manager's name in Sign-off before submitting.</p>}
+      <ReportActions report={report} form={form} hasIncident={hasIncident} signerName={form.signOff.barManagerName} needNameHint={L('needName')} />
     </div>
   );
 }
-

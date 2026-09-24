@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api.js';
 import { useI18n } from '../../i18n/index.jsx';
 import { formatDateTime } from '../../lib/reportModel.js';
+import { reportTitle } from '../../i18n/formLabels.js';
 import { FileTextIcon, ClipboardEmptyIcon } from '../../components/icons.jsx';
 
 // Submitted reports and checklists, newest first — the way back to a
@@ -43,7 +44,7 @@ export default function ReportsList() {
             <Link key={s.id} to={`/app/reports/${s.id}`} className="report-list-row">
               <span className="report-list-icon"><FileTextIcon size={22} /></span>
               <span className="report-list-text">
-                <strong>{s.template_name}</strong>
+                <strong>{reportTitle(t, s.kind, s.template_name)}</strong>
                 <span className="hint">
                   {s.branch_name} · {formatDateTime(s.submitted_at || s.started_at, lang)} · {s.submitted_by_name}
                 </span>

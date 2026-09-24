@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api.js';
+import { FORM_LABELS } from '../../i18n/formLabels.js';
 
 // Shared start/save/submit lifecycle for the Kitchen Daily and Bar &
 // Beverage Daily Operation Report pages — everything about them that
@@ -31,7 +32,7 @@ function withFieldOrder(formData) {
   return { ...formData, _fieldOrder: order };
 }
 
-export function useOpsReport({ kind, title, onResume }) {
+export function useOpsReport({ kind, onResume }) {
   const [branches, setBranches] = useState([]);
   const [branchId, setBranchId] = useState('');
   const [submissionId, setSubmissionId] = useState(null);
@@ -61,11 +62,15 @@ export function useOpsReport({ kind, title, onResume }) {
     return () => { cancelled = true; };
   }, [branchId, kind]);
 
+  // The template row keeps the English name; every screen shows the
+  // report's title in the viewer's language by its kind instead.
+  const templateName = FORM_LABELS.en[`f.${kind}.title`];
+
   const ensureTemplate = async () => {
     const { templates } = await api.get('/checklists/templates');
     const existing = templates.find((t) => t.kind === kind);
     if (existing) return existing.id;
-    const { template } = await api.post('/checklists/templates', { name: title, kind, frequency: 'daily', itemIds: [] });
+    const { template } = await api.post('/checklists/templates', { name: templateName, kind, frequency: 'daily', itemIds: [] });
     return template.id;
   };
 

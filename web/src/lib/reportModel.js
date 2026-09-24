@@ -1,12 +1,12 @@
+import { reportTitle } from '../i18n/formLabels.js';
+
 // Turns GET /submissions/:id/report into a list of layout-free blocks.
 // Both the on-screen report and the PDF are drawn from the same blocks,
 // so what someone shares is exactly what they looked at.
 
-const SHORT_KEYS = { s: 'Start', m: 'Mid', e: 'End' };
-
+// Last-resort label for a form_data key nobody wrote a label for:
 // "foodSafety" → "Food safety", "3" → "#4" (row/task indexes are 0-based).
 export function humanizeKey(key) {
-  if (SHORT_KEYS[key]) return SHORT_KEYS[key];
   if (/^\d+$/.test(key)) return `#${Number(key) + 1}`;
   const words = String(key)
     .replace(/_/g, ' ')
@@ -18,9 +18,32 @@ export function humanizeKey(key) {
 
 const isEmpty = (v) => v === undefined || v === null || (typeof v === 'string' && !v.trim());
 
+// t() returns the key itself when no dictionary has it.
+const lookup = (t, key) => {
+  const out = t(key);
+  return out === key ? null : out;
+};
+
+// Pinned-report labels come from i18n/formLabels.js, keyed by form_data
+// path: the specific path first, then a column shared by every row of the
+// table (path with "*"), then a column name every form shares.
+function labeler(t, kind) {
+  return (paths, key) => {
+    if (kind) {
+      for (const path of paths) {
+        const hit = lookup(t, `f.${kind}.${path}`);
+        if (hit) return hit;
+      }
+    }
+    return lookup(t, `f.col.${key}`) || humanizeKey(key);
+  };
+}
+
 function formatValue(v, t) {
   if (typeof v === 'boolean') return v ? t('common.yes') : t('common.no');
-  return String(v).trim();
+  const text = String(v).trim();
+  // Dropdown choices are saved as codes ("needs_improvement").
+  return (/^[a-z_]+$/.test(text) && lookup(t, `f.v.${text}`)) || text;
 }
 
 // Reports saved before _fieldOrder existed come back in jsonb's key
@@ -53,17 +76,19 @@ function orderedEntries(obj, prefix, order) {
 }
 
 // One line summarising a nested object: "Start: 3 · Mid: 4 · End: 5".
-function inline(obj, t, prefix, order) {
+// labelPaths(k) lists the label keys to try for sub-key k.
+function inline(obj, t, prefix, order, label, labelPaths) {
   if (!obj || typeof obj !== 'object') return isEmpty(obj) ? '' : formatValue(obj, t);
   return orderedEntries(obj, prefix, order)
     .filter(([, v]) => !isEmpty(v) && typeof v !== 'object')
-    .map(([k, v]) => `${humanizeKey(k)}: ${formatValue(v, t)}`)
+    .map(([k, v]) => `${label(labelPaths(k), k)}: ${formatValue(v, t)}`)
     .join(' · ');
 }
 
 // Pinned reports store free-form form_data; lay each top-level section
 // out as label/value rows, skipping anything left blank.
-export function formDataSections(formData, t) {
+export function formDataSections(formData, t, kind) {
+  const label = labeler(t, kind);
   const order = new Map((formData?._fieldOrder || []).map((path, i) => [path, i]));
   const sections = [];
   for (const [key, value] of orderedEntries(formData || {}, '', order)) {
@@ -71,19 +96,21 @@ export function formDataSections(formData, t) {
     const rows = [];
     if (Array.isArray(value)) {
       value.forEach((row, i) => {
-        const text = inline(row, t, `${key}[].`, order);
+        const text = inline(row, t, `${key}[].`, order, label, (k) => [`${key}[].${k}`]);
         if (text) rows.push({ label: `#${i + 1}`, value: text });
       });
     } else if (typeof value === 'object') {
       for (const [k, v] of orderedEntries(value, `${key}.`, order)) {
         if (isEmpty(v)) continue;
-        const text = typeof v === 'object' ? inline(v, t, `${key}.${k}.`, order) : formatValue(v, t);
-        if (text) rows.push({ label: humanizeKey(k), value: text });
+        const text = typeof v === 'object'
+          ? inline(v, t, `${key}.${k}.`, order, label, (sub) => [`${key}.${k}.${sub}`, `${key}.*.${sub}`])
+          : formatValue(v, t);
+        if (text) rows.push({ label: label([`${key}.${k}`], k), value: text });
       }
     } else {
-      rows.push({ label: humanizeKey(key), value: formatValue(value, t) });
+      rows.push({ label: label([key], key), value: formatValue(value, t) });
     }
-    if (rows.length) sections.push({ title: humanizeKey(key), rows });
+    if (rows.length) sections.push({ title: label([key], key), rows });
   }
   return sections;
 }
@@ -104,10 +131,11 @@ export function formatDateTime(value, lang) {
  */
 export function buildReportModel(report, t, lang) {
   const { submission: s, items = [], scorecard } = report;
+  const title = reportTitle(t, s.kind, s.template_name);
   const when = s.submitted_at || s.started_at;
   const blocks = [];
 
-  blocks.push({ type: 'title', text: s.template_name, subtitle: s.restaurant_name });
+  blocks.push({ type: 'title', text: title, subtitle: s.restaurant_name });
   blocks.push({
     type: 'meta',
     rows: [
@@ -162,7 +190,7 @@ export function buildReportModel(report, t, lang) {
     });
   }
 
-  const sections = formDataSections(s.form_data, t);
+  const sections = formDataSections(s.form_data, t, s.kind);
   if (sections.length) {
     blocks.push({ type: 'heading', text: t('report.details') });
     sections.forEach((sec) => {
@@ -172,9 +200,9 @@ export function buildReportModel(report, t, lang) {
   }
 
   const dateForName = when ? new Date(when).toISOString().slice(0, 10) : '';
-  const fileName = `${s.template_name} - ${s.branch_name}${dateForName ? ` - ${dateForName}` : ''}.pdf`.replace(/[\\/:*?"<>|]/g, '-');
+  const fileName = `${title} - ${s.branch_name}${dateForName ? ` - ${dateForName}` : ''}.pdf`.replace(/[\\/:*?"<>|]/g, '-');
   const score = scorecard && scorecard.totalScored ? ` · ${t('report.score')} ${scorecard.percentage}%` : '';
-  const shareText = `${s.template_name} — ${s.branch_name}, ${formatDateTime(when, lang)}${score}`;
+  const shareText = `${title} — ${s.branch_name}, ${formatDateTime(when, lang)}${score}`;
 
-  return { title: s.template_name, fileName, shareText, blocks };
+  return { title, fileName, shareText, blocks };
 }

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { useT } from '../i18n/index.jsx';
+import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
 
 export default function Login() {
+  const t = useT();
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,26 +41,27 @@ export default function Login() {
 
   return (
     <div className="screen-narrow">
-      <Link to="/" className="auth-brand">SOPY</Link>
-      <h2>Log in</h2>
+      <div className="signed-out-bar">
+        <Link to="/" className="auth-brand">SOPY</Link>
+        <LanguageSwitcher />
+      </div>
+      <h2>{t('login.title')}</h2>
       {error && <div className="error-banner">{error}</div>}
       <form onSubmit={handleSubmit}>
         <div className="field">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">{t('login.email')}</label>
           <input id="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">{t('login.password')}</label>
           <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
         <button className="btn btn-primary" type="submit" disabled={submitting} style={{ width: '100%' }}>
-          {submitting ? 'Logging in…' : 'Log in'}
+          {submitting ? t('login.signingIn') : t('login.submit')}
         </button>
       </form>
-      <p className="hint" style={{ marginTop: 14 }}>
-        Forgot your password? Ask your manager for a reset link from Team &amp; stores. Business owners: contact SOPY support.
-      </p>
-      <p style={{ marginTop: 16 }}>New to SOPY? <Link to="/get-started">Get started</Link></p>
+      <p className="hint" style={{ marginTop: 14 }}>{t('login.forgot')}</p>
+      <p style={{ marginTop: 16 }}>{t('login.newToSopy')} <Link to="/get-started">{t('login.getStarted')}</Link></p>
     </div>
   );
 }

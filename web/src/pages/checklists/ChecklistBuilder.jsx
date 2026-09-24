@@ -1,19 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../../api.js';
-import { ROLES } from '../onboarding/roles.js';
+import { ROLES, roleName } from '../onboarding/roles.js';
 import { ClipboardEmptyIcon } from '../../components/icons.jsx';
 import { useT } from '../../i18n/index.jsx';
+import { reportTitle } from '../../i18n/formLabels.js';
 
-const STANDARDS = [
-  { value: '', label: 'All standards' },
-  { value: 'HACCP', label: 'HACCP' },
-  { value: 'ISO_22000', label: 'ISO 22000' },
-  { value: 'LOCAL_CODE', label: 'Local code' },
-  { value: 'INTERNAL_QC', label: 'Internal QC' },
-  { value: 'SOP', label: 'SOP procedures' },
-  { value: 'C_STORE', label: 'Convenience store' },
-  { value: 'CUSTOM', label: 'Custom' },
-];
+// Filter chips; names are std.* in i18n/pageLabels.js ('' = all).
+const STANDARDS = ['', 'HACCP', 'ISO_22000', 'LOCAL_CODE', 'INTERNAL_QC', 'SOP', 'C_STORE', 'CUSTOM'];
+const FREQUENCIES = ['daily', 'weekly', 'monthly', 'quarterly'];
 
 export default function ChecklistBuilder() {
   const t = useT();
@@ -128,7 +122,7 @@ export default function ChecklistBuilder() {
     e.preventDefault();
     setError('');
     if (!templateName || selected.length === 0) {
-      setError('Give the checklist a name and pick at least one checkpoint.');
+      setError(t('builder.needNameAndItems'));
       return;
     }
     setSaving(true);
@@ -139,7 +133,7 @@ export default function ChecklistBuilder() {
       await loadTemplates();
       // Ready for step 3 straight away.
       setAssignTemplateId(template.id);
-      setNotice(`Saved “${template.name}”. Assign it below.`);
+      setNotice(t('builder.savedNotice', { name: template.name }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -162,8 +156,8 @@ export default function ChecklistBuilder() {
       setAssignBranchId('');
       setAssignRole('');
       setNotice(res.existing
-        ? 'That checklist was already assigned this way — nothing changed.'
-        : 'Assigned. It now shows under “My checklists today” for the people it applies to.');
+        ? t('builder.alreadyAssigned')
+        : t('builder.assignedNotice'));
       await loadAssignments();
     } catch (err) {
       setAssignError(err.message);
@@ -198,9 +192,9 @@ export default function ChecklistBuilder() {
           <input placeholder={t('builder.search')} value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <div className="filter-row">
-          {STANDARDS.map((s) => (
-            <button key={s.value} className={standard === s.value ? 'active' : ''} onClick={() => setStandard(s.value)}>
-              {s.label}
+          {STANDARDS.map((code) => (
+            <button key={code} className={standard === code ? 'active' : ''} onClick={() => setStandard(code)}>
+              {t(code ? `std.${code}` : 'std.all')}
             </button>
           ))}
           <button className={criticalOnly ? 'active' : ''} onClick={() => setCriticalOnly((c) => !c)}>
@@ -240,7 +234,7 @@ export default function ChecklistBuilder() {
                   <div>
                     <div>{item.text}</div>
                     <div className="hint">
-                      <span className="pill">{item.standard}</span>{' '}
+                      <span className="pill">{t(`std.${item.standard}`)}</span>{' '}
                       {item.requires_photo && <span className="pill pill-amber">{t('builder.photoRequired')}</span>}{' '}
                       {item.is_critical && <span className="pill pill-red">{t('run.critical')}</span>}
                       {item.description && (
@@ -284,70 +278,67 @@ export default function ChecklistBuilder() {
       </div>
 
       <form onSubmit={createTemplate} className="card">
-        <h3 style={{ marginBottom: 12 }}>2. Save as a checklist ({selected.length} selected)</h3>
+        <h3 style={{ marginBottom: 12 }}>{t('builder.saveTitle', { n: selected.length })}</h3>
         <div className="field">
-          <label htmlFor="tname">Checklist name</label>
-          <input id="tname" value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="e.g. Opening Checklist" />
+          <label htmlFor="tname">{t('builder.name')}</label>
+          <input id="tname" value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder={t('builder.namePlaceholder')} />
         </div>
         <div className="field">
-          <label htmlFor="freq">Frequency</label>
+          <label htmlFor="freq">{t('builder.frequency')}</label>
           <select id="freq" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="quarterly">Quarterly</option>
+            {FREQUENCIES.map((f) => <option key={f} value={f}>{t(`freq.${f}`)}</option>)}
           </select>
         </div>
-        <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save checklist'}</button>
+        <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? t('common.saving') : t('builder.save')}</button>
       </form>
 
       <div className="card">
-        <h3 style={{ marginBottom: 12 }}>3. Assign checklists</h3>
+        <h3 style={{ marginBottom: 12 }}>{t('builder.assignTitle')}</h3>
         {notice && <div className="success-banner" role="status">{notice}</div>}
         {assignError && <div className="error-banner">{assignError}</div>}
         <form onSubmit={assign}>
           <div className="field">
-            <label htmlFor="atpl">Checklist</label>
+            <label htmlFor="atpl">{t('builder.checklist')}</label>
             <select id="atpl" value={assignTemplateId} onChange={(e) => setAssignTemplateId(e.target.value)} required>
-              <option value="" disabled>Select a checklist</option>
-              {assignableTemplates.map((tpl) => <option key={tpl.id} value={tpl.id}>{tpl.name}</option>)}
+              <option value="" disabled>{t('builder.selectChecklist')}</option>
+              {assignableTemplates.map((tpl) => <option key={tpl.id} value={tpl.id}>{reportTitle(t, tpl.kind, tpl.name)}</option>)}
             </select>
           </div>
           <div className="field">
-            <label htmlFor="abranch">Store</label>
+            <label htmlFor="abranch">{t('page.store')}</label>
             <select id="abranch" value={assignBranchId} onChange={(e) => setAssignBranchId(e.target.value)}>
-              <option value="">All stores</option>
+              <option value="">{t('page.allStores')}</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className="field">
-            <label htmlFor="arole">Role</label>
+            <label htmlFor="arole">{t('page.role')}</label>
             <select id="arole" value={assignRole} onChange={(e) => setAssignRole(e.target.value)}>
-              <option value="">Any role</option>
-              {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+              <option value="">{t('page.anyRole')}</option>
+              {ROLES.map((r) => <option key={r.value} value={r.value}>{roleName(t, r.value)}</option>)}
             </select>
           </div>
-          <button className="btn btn-secondary" type="submit" disabled={assigning}>{assigning ? 'Assigning…' : 'Assign'}</button>
+          <button className="btn btn-secondary" type="submit" disabled={assigning}>{assigning ? t('builder.assigning') : t('builder.assign')}</button>
         </form>
 
         <div className="table-scroll" style={{ marginTop: 16 }}>
         <table>
-          <thead><tr><th>Checklist</th><th>Store</th><th>Role</th><th aria-label="Actions" /></tr></thead>
+          <thead><tr><th>{t('builder.checklist')}</th><th>{t('page.store')}</th><th>{t('page.role')}</th><th aria-label={t('builder.actions')} /></tr></thead>
           <tbody>
             {assignments.map((a) => (
               <tr key={a.id}>
-                <td>{a.template_name}</td>
-                <td>{a.branch_name || 'All stores'}</td>
-                <td>{a.role ? ROLES.find((r) => r.value === a.role)?.label : 'Any role'}</td>
+                <td>{reportTitle(t, a.kind, a.template_name)}</td>
+                <td>{a.branch_name || t('page.allStores')}</td>
+                <td>{a.role ? roleName(t, a.role) : t('page.anyRole')}</td>
                 <td>
-                  <button type="button" className="btn btn-small btn-secondary" onClick={() => unassign(a.id)} aria-label={`Unassign ${a.template_name}`}>
-                    Unassign
+                  <button type="button" className="btn btn-small btn-secondary" onClick={() => unassign(a.id)} aria-label={t('builder.unassignLabel', { name: reportTitle(t, a.kind, a.template_name) })}>
+                    {t('builder.unassign')}
                   </button>
                 </td>
               </tr>
             ))}
             {assignments.length === 0 && (
-              <tr><td colSpan={4} className="hint">Nothing assigned yet.</td></tr>
+              <tr><td colSpan={4} className="hint">{t('builder.nothingAssigned')}</td></tr>
             )}
           </tbody>
         </table>

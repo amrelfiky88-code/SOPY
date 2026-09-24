@@ -6,8 +6,11 @@ import ReportLink from '../../components/ReportLink.jsx';
 import { CameraIcon } from '../../components/icons.jsx';
 import { useT } from '../../i18n/index.jsx';
 
-const isObservationItem = (item) => item.category?.includes('Consumer Behavior');
-const isTemperatureItem = (item) => item.category?.toLowerCase().includes('temperature');
+// Decided from the English category (category_en when the server has
+// translated it), so these behave the same in every language.
+const categoryKey = (item) => item.category_en || item.category || '';
+const isObservationItem = (item) => categoryKey(item).includes('Consumer Behavior');
+const isTemperatureItem = (item) => categoryKey(item).toLowerCase().includes('temperature');
 
 export default function ChecklistRun() {
   const { submissionId } = useParams();

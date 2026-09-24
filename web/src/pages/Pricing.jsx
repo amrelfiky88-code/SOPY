@@ -2,12 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { calculatePricing, PLAN_LIMITS, clampPlanCount } from '../../../shared/pricing.js';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { useT } from '../i18n/index.jsx';
+import { money } from '../i18n/pageLabels.js';
 import { api } from '../api.js';
 import QuantityField from '../components/QuantityField.jsx';
 
-const money = (n) => `$${Number(n || 0).toFixed(2)}`;
-
 export default function Pricing() {
+  const t = useT();
   const { tenant, setTenant } = useAuth();
   const navigate = useNavigate();
   const [branches, setBranches] = useState(() => clampPlanCount(tenant?.branch_count ?? 1, PLAN_LIMITS.branches));
@@ -42,14 +43,14 @@ export default function Pricing() {
       <div className="stepper">
         <div className="dot done" /><div className="dot done" /><div className="dot done" /><div className="dot" /><div className="dot" />
       </div>
-      <h2>Your plan</h2>
-      <p>Pricing tapers down as you add branches and users — pay for what you run.</p>
+      <h2>{t('pricing.title')}</h2>
+      <p>{t('pricing.intro')}</p>
 
       {error && <div className="error-banner">{error}</div>}
 
       <QuantityField
         id="branches"
-        label="Branches"
+        label={t('page.branchesLabel')}
         value={branches}
         onChange={setBranches}
         limits={PLAN_LIMITS.branches}
@@ -57,7 +58,7 @@ export default function Pricing() {
       />
       <QuantityField
         id="users"
-        label="Users"
+        label={t('page.usersLabel')}
         value={users}
         onChange={setUsers}
         limits={PLAN_LIMITS.users}
@@ -67,32 +68,29 @@ export default function Pricing() {
       <div className="card">
         <div className="summary-row">
           <span>
-            Branches
-            <span className="hint"> {pricing.branchCount} × {money(pricing.branchBlendedRate)} avg</span>
+            {t('page.branchesLabel')}
+            <span className="hint"> {t('page.avgRate', { n: pricing.branchCount, rate: money(pricing.branchBlendedRate) })}</span>
           </span>
           <span>{money(pricing.branchSubtotal)}</span>
         </div>
         <div className="summary-row">
           <span>
-            Users
-            <span className="hint"> {pricing.userCount} × {money(pricing.userBlendedRate)} avg</span>
+            {t('page.usersLabel')}
+            <span className="hint"> {t('page.avgRate', { n: pricing.userCount, rate: money(pricing.userBlendedRate) })}</span>
           </span>
           <span>{money(pricing.userSubtotal)}</span>
         </div>
         <div className="summary-row summary-total">
-          <span>Monthly total</span>
+          <span>{t('pricing.monthlyTotal')}</span>
           <span>{money(pricing.monthlyTotal)}</span>
         </div>
       </div>
 
-      <p className="hint" style={{ fontSize: 13 }}>
-        First branch is $10/mo, tapering to $7/mo at volume. First user is $9/mo, tapering to $5/mo at volume.
-      </p>
+      <p className="hint" style={{ fontSize: 13 }}>{t('pricing.rates')}</p>
 
       <button className="btn btn-primary" onClick={handleContinue} disabled={submitting}>
-        {submitting ? 'Saving…' : 'Continue to checkout'}
+        {submitting ? t('common.saving') : t('pricing.continue')}
       </button>
     </div>
   );
 }
-
