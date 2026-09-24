@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
 import {
   Section, TemperatureLogTable, OpeningClosingChecklist, RepeatableTable, FixedRowStatusTable,
@@ -95,6 +95,8 @@ export default function KitchenDailyForm() {
   const tasks = (which, n) => Array.from({ length: n }, (_, i) => L(`checklist.${which}.${i}`));
 
   const hasIncident = !!(form.notes.incidents?.trim() || form.tempDeviation.found);
+  // Saves quietly a moment after each change (see useOpsReport).
+  useEffect(() => { report.autosave(form, hasIncident); }, [form]); // eslint-disable-line react-hooks/exhaustive-deps
   const title = L('title');
 
   if (report.status === 'idle') return <ReportStart report={report} title={title} />;

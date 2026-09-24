@@ -15,6 +15,8 @@ const COMMON = [
   ['f.addStoreFirst', 'Add a store first, under Team & stores.', 'أضف فرعًا أولًا من صفحة الفريق والفروع.', "Ajoutez d'abord un établissement, dans Équipe et établissements."],
   ['f.saveProgress', 'Save progress', 'حفظ التقدم', 'Enregistrer'],
   ['f.savedTick', 'Saved ✓', 'تم الحفظ ✓', 'Enregistré ✓'],
+  ['f.autosaves', 'Changes save automatically as you go.', 'تُحفظ التغييرات تلقائيًا أثناء العمل.', 'Les modifications sont enregistrées automatiquement.'],
+  ['f.autosaved', 'All changes saved.', 'تم حفظ كل التغييرات.', 'Toutes les modifications sont enregistrées.'],
   ['f.submitSignOff', 'Submit & sign off', 'إرسال واعتماد', 'Envoyer et signer'],
   ['f.addRow', '+ Add row', '+ إضافة صف', '+ Ajouter une ligne'],
   ['f.removeRow', 'Remove row', 'حذف الصف', 'Supprimer la ligne'],

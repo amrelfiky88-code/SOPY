@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
 import {
   Section, FixedRowStatusTable, RepeatableTable, LabeledInput, LabeledSelect, LabeledTextarea,
@@ -52,6 +52,8 @@ export default function AreaManagerVisitForm() {
   };
 
   const hasIncident = Object.values(form.spotCheck).some((s) => s?.status === 'poor') || form.summary.overallRating === 'poor';
+  // Saves quietly a moment after each change (see useOpsReport).
+  useEffect(() => { report.autosave(form, hasIncident); }, [form]); // eslint-disable-line react-hooks/exhaustive-deps
   const title = L('title');
 
   if (report.status === 'idle') return <ReportStart report={report} title={title} startLabel={t('f.startVisit')} />;

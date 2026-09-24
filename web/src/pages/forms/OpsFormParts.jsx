@@ -100,6 +100,7 @@ export function ReportActions({ report, form, hasIncident, signerName, needNameH
           {t('f.submitSignOff')}
         </button>
       </div>
+      <p className="hint" style={{ marginBottom: 0 }}>{report.autosaved ? t('f.autosaved') : t('f.autosaves')}</p>
       {!signed && <p className="hint">{needNameHint}</p>}
     </>
   );

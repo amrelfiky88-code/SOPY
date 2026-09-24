@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
 import {
   Section, TemperatureLogTable, OpeningClosingChecklist, FixedRowDataTable, FixedRowStatusTable,
@@ -91,6 +91,8 @@ export default function BarDailyForm() {
   const tasks = (which, n) => Array.from({ length: n }, (_, i) => L(`checklist.${which}.${i}`));
 
   const hasIncident = !!(form.notes.staffIssues?.trim() || form.tempDeviation.found || form.tempDeviation.faultReported);
+  // Saves quietly a moment after each change (see useOpsReport).
+  useEffect(() => { report.autosave(form, hasIncident); }, [form]); // eslint-disable-line react-hooks/exhaustive-deps
   const title = L('title');
 
   if (report.status === 'idle') return <ReportStart report={report} title={title} />;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
 import { Section, FixedRowStatusTable, LabeledInput, LabeledTextarea, ReportStart, ReportSubmitted, ReportActions, useFormLabels, choiceOptions } from './OpsFormParts.jsx';
 
@@ -30,6 +30,8 @@ export default function ClosingDailyForm() {
   };
 
   const hasIncident = Object.values(form.phases).some((p) => p?.status === 'issue') || !!form.notes.issuesFound.trim();
+  // Saves quietly a moment after each change (see useOpsReport).
+  useEffect(() => { report.autosave(form, hasIncident); }, [form]); // eslint-disable-line react-hooks/exhaustive-deps
   const title = L('title');
 
   if (report.status === 'idle') return <ReportStart report={report} title={title} />;

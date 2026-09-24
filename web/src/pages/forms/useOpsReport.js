@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../api.js';
 import { FORM_LABELS } from '../../i18n/formLabels.js';
 
@@ -42,6 +42,47 @@ export function useOpsReport({ kind, onResume }) {
   const [justSaved, setJustSaved] = useState(false);
   const savedTimer = useRef(null);
   useEffect(() => () => clearTimeout(savedTimer.current), []);
+
+  // Autosave: a long report used to live only in the page until someone
+  // tapped "Save progress", so a locked phone, a reload or iOS closing the
+  // app in the background threw the whole thing away. Changes now save a
+  // couple of seconds after the last edit, and at once when the app is
+  // hidden. Saves go out one at a time so an older one can't land last.
+  const saveChain = useRef(Promise.resolve());
+  const autosaveTimer = useRef(null);
+  const pendingAutosave = useRef(null); // () => Promise, while one is waiting
+  const [autosaved, setAutosaved] = useState(false);
+
+  const queueSave = (formData, hasIncident) => {
+    const run = saveChain.current.then(() => api.patch(`/submissions/${submissionId}`, { formData: withFieldOrder(formData), hasIncident: !!hasIncident }));
+    saveChain.current = run.catch(() => {});
+    return run;
+  };
+  const flushAutosave = () => {
+    clearTimeout(autosaveTimer.current);
+    const pending = pendingAutosave.current;
+    pendingAutosave.current = null;
+    return pending ? pending() : saveChain.current;
+  };
+  const autosave = useCallback((formData, hasIncident) => {
+    if (!submissionId || status !== 'started') return;
+    clearTimeout(autosaveTimer.current);
+    setAutosaved(false);
+    pendingAutosave.current = () => queueSave(formData, hasIncident)
+      .then(() => { if (!pendingAutosave.current) setAutosaved(true); })
+      .catch(() => {});
+    autosaveTimer.current = setTimeout(flushAutosave, 2000);
+  }, [submissionId, status]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') flushAutosave(); };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', flushAutosave);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', flushAutosave);
+      flushAutosave();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     api.get('/tenants/branches')
@@ -100,7 +141,9 @@ export function useOpsReport({ kind, onResume }) {
     setError('');
     setStatus('saving');
     try {
-      await api.patch(`/submissions/${submissionId}`, { formData: withFieldOrder(formData), hasIncident: !!hasIncident });
+      clearTimeout(autosaveTimer.current);
+      pendingAutosave.current = null;
+      await queueSave(formData, hasIncident);
       setStatus('started');
       // Brief confirmation — without it a successful save looked like nothing happened.
       setJustSaved(true);
@@ -116,7 +159,9 @@ export function useOpsReport({ kind, onResume }) {
     setError('');
     setStatus('saving');
     try {
-      await api.patch(`/submissions/${submissionId}`, { formData: withFieldOrder(formData), hasIncident: !!hasIncident });
+      clearTimeout(autosaveTimer.current);
+      pendingAutosave.current = null;
+      await queueSave(formData, hasIncident);
       const { lat, lng } = await new Promise((resolve) => {
         if (!navigator.geolocation) return resolve({});
         navigator.geolocation.getCurrentPosition(
@@ -133,5 +178,5 @@ export function useOpsReport({ kind, onResume }) {
     }
   };
 
-  return { branches, branchId, setBranchId, status, error, setError, start, save, submit, hasDraft: !!draft, justSaved, submissionId };
+  return { branches, branchId, setBranchId, status, error, setError, start, save, submit, hasDraft: !!draft, justSaved, submissionId, autosave, autosaved };
 }

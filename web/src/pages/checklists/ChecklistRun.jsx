@@ -23,6 +23,9 @@ export default function ChecklistRun() {
   const [responses, setResponses] = useState({});
   const [activeCameraItem, setActiveCameraItem] = useState(null);
   const [uploadingItem, setUploadingItem] = useState(null);
+  // A photo whose upload failed (weak signal in the kitchen) is kept so it
+  // can be sent again — before, it was lost and had to be retaken.
+  const [failedPhotos, setFailedPhotos] = useState({}); // itemId -> blob
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [scorecard, setScorecard] = useState(null);
@@ -74,11 +77,17 @@ export default function ChecklistRun() {
     for (const [key, value] of Object.entries(fields)) {
       if (value !== undefined && value !== null) form.append(key, value);
     }
-    const res = await fetch(`/api/submissions/${submissionId}/responses`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${getToken()}` },
-      body: form,
-    });
+    let res;
+    try {
+      res = await fetch(`/api/submissions/${submissionId}/responses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}`, 'Accept-Language': localStorage.getItem('sopy_lang') || 'en' },
+        body: form,
+      });
+    } catch {
+      // No signal: the browser's own "Failed to fetch" meant nothing to anyone.
+      throw new Error(t('api.offline'));
+    }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error || t('run.saveFailed'));
@@ -101,7 +110,9 @@ export default function ChecklistRun() {
       await withGps((lat, lng) => postResponse({ itemId, photo: blob, gpsLat: lat, gpsLng: lng }));
       setResponse(itemId, { hasPhoto: true });
       setActiveCameraItem(null);
+      setFailedPhotos(({ [itemId]: _sent, ...rest }) => rest);
     } catch (err) {
+      setFailedPhotos((f) => ({ ...f, [itemId]: blob }));
       setError(err.message);
     } finally {
       setUploadingItem(null);
@@ -191,6 +202,15 @@ export default function ChecklistRun() {
     <div style={{ marginTop: 10 }}>
       {uploadingItem === item.id ? (
         <span className="hint">{t('run.uploadingPhoto')}</span>
+      ) : failedPhotos[item.id] && !r.hasPhoto ? (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button type="button" className="btn btn-primary btn-small" onClick={() => savePhoto(item.id, failedPhotos[item.id])}>
+            {t('run.retryUpload')}
+          </button>
+          <button type="button" className="btn btn-secondary btn-small" onClick={() => { setFailedPhotos(({ [item.id]: _drop, ...rest }) => rest); setActiveCameraItem(item.id); }}>
+            <CameraIcon size={14} /> {t('run.retakePhoto')}
+          </button>
+        </div>
       ) : activeCameraItem === item.id ? (
         <>
           <CameraCapture onCapture={(blob) => savePhoto(item.id, blob)} />

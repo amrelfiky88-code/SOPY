@@ -56,9 +56,11 @@ export default function ShareReport({ submissionId, model }) {
       form.append('fileName', model.fileName);
       linkPromise.current = fetch(`/api/submissions/${submissionId}/share`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: { Authorization: `Bearer ${getToken()}`, 'Accept-Language': localStorage.getItem('sopy_lang') || 'en' },
         body: form,
       })
+        // No signal: say so, rather than the browser's own "Failed to fetch".
+        .catch(() => { throw new Error(t('api.offline')); })
         .then(async (res) => {
           const body = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(body.error || t('share.linkFailed'));

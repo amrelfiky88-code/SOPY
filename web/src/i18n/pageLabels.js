@@ -8,6 +8,7 @@ const ROWS = [
   // --- Shared ---------------------------------------------------------
   ['page.back', 'Back', 'رجوع', 'Retour'],
   ['tab.reports', 'Reports', 'التقارير', 'Rapports'],
+  ['run.retryUpload', 'Try uploading again', 'أعد محاولة الرفع', "Réessayer l'envoi"],
   ['reports.loadMore', 'Load more reports', 'عرض المزيد من التقارير', 'Afficher plus de rapports'],
   ['page.remove', 'Remove', 'حذف', 'Supprimer'],
   ['page.keep', 'Keep', 'إبقاء', 'Garder'],

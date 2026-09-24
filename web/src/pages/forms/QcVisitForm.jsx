@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
 import {
   Section, FixedRowStatusTable, RepeatableTable, LabeledInput, LabeledSelect, LabeledTextarea,
@@ -56,6 +56,8 @@ export default function QcVisitForm() {
   };
 
   const hasIncident = Object.values(form.scores).some((s) => s?.status === 'critical_fail') || form.summary.overallRating === 'critical_fail';
+  // Saves quietly a moment after each change (see useOpsReport).
+  useEffect(() => { report.autosave(form, hasIncident); }, [form]); // eslint-disable-line react-hooks/exhaustive-deps
   const title = L('title');
 
   if (report.status === 'idle') return <ReportStart report={report} title={title} startLabel={t('f.startVisit')} />;
