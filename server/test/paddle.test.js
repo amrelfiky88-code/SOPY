@@ -93,7 +93,7 @@ test('real-mode checkout sends Paddle the exact plan and records the transaction
   assert.match(sent.url, /\/transactions$/);
   assert.equal(sent.body.custom_data.tenantId, tenantId);
   const cents = sent.body.items.reduce((s, i) => s + Number(i.price.unit_price.amount), 0);
-  assert.equal(cents, 4604, '$46.04 for 2 branches + 3 users');
+  assert.equal(cents, 4888, '$48.88 for 2 branches + 3 users');
 
   const { rows } = await pool.query("SELECT paddle_transaction_id, status FROM subscriptions WHERE tenant_id = $1", [tenantId]);
   assert.equal(rows[0].status, 'pending');
@@ -225,7 +225,7 @@ test('resuming a canceled plan removes the scheduled cancel in Paddle', async ()
   const tid = signup.body.tenant.id;
   await pool.query(
     `INSERT INTO subscriptions (tenant_id, branch_count, user_count, branch_rate, user_rate, monthly_total, status, paddle_subscription_id, current_period_end)
-     VALUES ($1, 1, 1, 10, 9, 19, 'canceled', 'sub_resume', now() + interval '10 days')`,
+     VALUES ($1, 1, 1, 10, 10, 20, 'canceled', 'sub_resume', now() + interval '10 days')`,
     [tid]
   );
   process.env.PADDLE_API_KEY = 'test_key';

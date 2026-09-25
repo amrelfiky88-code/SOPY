@@ -298,7 +298,16 @@ function SubscriptionCard({ user, tenant }) {
   const stillPaid = subscription.current_period_end && new Date(subscription.current_period_end) > new Date();
   // The tapered subtotals, as billed. count × rounded average rate drifted
   // from the total by a few cents (7 stores: 7 × $8.43 = $59.01 vs $59.00).
-  const current = calculatePricing({ branches: subscription.branch_count, users: subscription.user_count });
+  const today = calculatePricing({ branches: subscription.branch_count, users: subscription.user_count });
+  // A plan bought before a price change is still billed at the rates it
+  // was bought at; today's rates would list lines that don't add up to it.
+  const cents = (n) => Math.round(n * 100) / 100;
+  const current = Number(today.monthlyTotal) === Number(subscription.monthly_total) ? today : {
+    branchBlendedRate: Number(subscription.branch_rate),
+    userBlendedRate: Number(subscription.user_rate),
+    branchSubtotal: cents(subscription.branch_count * subscription.branch_rate),
+    userSubtotal: cents(subscription.user_count * subscription.user_rate),
+  };
 
   return (
     <div className="card">

@@ -5,17 +5,17 @@ import { calculatePricing, blendedRate, RATE_SCHEDULE } from '../../shared/prici
 test('first unit of each resource costs the base rate', () => {
   const p = calculatePricing({ branches: 1, users: 1 });
   assert.equal(p.branchSubtotal, 10);
-  assert.equal(p.userSubtotal, 9);
-  assert.equal(p.monthlyTotal, 19);
+  assert.equal(p.userSubtotal, 10);
+  assert.equal(p.monthlyTotal, 20);
 });
 
 test('rate reaches the floor exactly at floorAt volume', () => {
   const p = calculatePricing({ branches: 10, users: 20 });
   // Arithmetic mean of first..floor over floorAt terms.
   assert.equal(p.branchBlendedRate, (10 + 7) / 2);
-  assert.equal(p.userBlendedRate, (9 + 5) / 2);
+  assert.equal(p.userBlendedRate, (10 + 5) / 2);
   assert.equal(p.branchSubtotal, 85);
-  assert.equal(p.userSubtotal, 140);
+  assert.equal(p.userSubtotal, 150);
 });
 
 test('blended rate approaches but never drops below the floor as volume grows', () => {

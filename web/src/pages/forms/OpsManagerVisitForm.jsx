@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
 import {
   Section, FixedRowStatusTable, RepeatableTable, LabeledInput, LabeledSelect, LabeledTextarea,
-  ReportStart, ReportSubmitted, ReportActions, useFormLabels, choiceOptions,
+  ReportStart, ReportSubmitted, ReportActions, useFormLabels, PersonSelect, usePeople, usePrefillSelf, choiceOptions,
 } from './OpsFormParts.jsx';
 
 const KIND = 'ops_manager_visit';
@@ -55,6 +55,9 @@ export default function OpsManagerVisitForm() {
   const hasIncident = Object.values(form.standards).some((s) => s?.status === 'poor') || form.summary.overallRating === 'poor';
   // Saves quietly a moment after each change (see useOpsReport).
   useEffect(() => { report.autosave(form, hasIncident); }, [form]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Names are picked from the team, by title, instead of typed.
+  const team = usePeople();
+  usePrefillSelf({ team, match: 'operations_manager', value: form.visit.opsManagerName, onChange: (v) => patchNested('visit', 'opsManagerName', v), active: report.status === 'started' });
   const title = L('title');
 
   if (report.status === 'idle') return <ReportStart report={report} title={title} startLabel={t('f.startVisit')} />;
@@ -64,6 +67,9 @@ export default function OpsManagerVisitForm() {
 
   const field = (section, key, type) => (
     <LabeledInput label={L(`${section}.${key}`)} type={type} value={form[section][key]} onChange={(v) => patchNested(section, key, v)} />
+  );
+  const person = (section, key, match) => (
+    <PersonSelect label={L(`${section}.${key}`)} value={form[section][key]} onChange={(v) => patchNested(section, key, v)} people={team} match={match} branchId={report.branchId} />
   );
   const area = (section, key) => (
     <LabeledTextarea label={L(`${section}.${key}`)} value={form[section][key]} onChange={(v) => patchNested(section, key, v)} />
@@ -78,7 +84,7 @@ export default function OpsManagerVisitForm() {
       <Section title={L('sec.A')}>
         <div className="form-grid-2col">
           {field('visit', 'date', 'date')}
-          {field('visit', 'opsManagerName')}
+          {person('visit', 'opsManagerName', 'operations_manager')}
           {field('visit', 'timeIn', 'time')}
           {field('visit', 'timeOut', 'time')}
         </div>
@@ -120,8 +126,8 @@ export default function OpsManagerVisitForm() {
 
       <Section title={L('sec.G')}>
         <div className="form-grid-2col">
-          {field('signOff', 'opsManagerName')}
-          {field('signOff', 'storeManagerName')}
+          {person('signOff', 'opsManagerName', 'operations_manager')}
+          {person('signOff', 'storeManagerName', 'store_manager')}
         </div>
       </Section>
 

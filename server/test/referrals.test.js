@@ -110,25 +110,25 @@ test('unknown, malformed or missing codes are ignored, never blocking signup', a
 });
 
 test('credit comes off the next payment, and is only spent once that payment is made', async () => {
-  // A's plan is $19/month; give A two more paid referrals → $30 of credit.
+  // A's plan is $20/month; give A two more paid referrals → $30 of credit.
   for (const email of ['ref-c@example.com', 'ref-d@example.com']) {
     const t = await signup(email, { referralCode: A.code });
     await pay(t.token);
   }
   assert.equal((await credit(A.token)).credit.available, 3 * REFERRAL_REWARD_USD);
 
-  // A cancels and resubscribes: checkout takes off up to the whole $19.
+  // A cancels and resubscribes: checkout takes off up to the whole $20.
   await api('POST', '/api/billing/subscription/cancel', { token: A.token, body: {} });
   await endPaidPeriod(A.tenantId);
   const checkout = await api('POST', '/api/billing/checkout', { token: A.token, body: {} });
-  assert.equal(checkout.body.creditApplied, 19);
+  assert.equal(checkout.body.creditApplied, 20);
   assert.equal(checkout.body.dueToday, 0);
   assert.equal((await credit(A.token)).credit.available, 30, 'not spent until paid');
 
   await api('POST', '/api/billing/mock-complete', { token: A.token, body: {} });
   const after = (await credit(A.token)).credit;
-  assert.equal(after.used, 19);
-  assert.equal(after.available, 11, 'the rest carries over');
+  assert.equal(after.used, 20);
+  assert.equal(after.available, 10, 'the rest carries over');
 });
 
 test('only the owner can see the referral section', async () => {
@@ -159,7 +159,7 @@ test('with Paddle: credit becomes a one-time discount on the checkout, or on the
   // their next renewal straight away.
   const { rows } = await pool.query(
     `INSERT INTO subscriptions (tenant_id, branch_count, user_count, branch_rate, user_rate, monthly_total, status, paddle_subscription_id)
-     VALUES ($1, 1, 1, 10, 9, 19, 'active', 'sub_ref') RETURNING id`,
+     VALUES ($1, 1, 1, 10, 10, 20, 'active', 'sub_ref') RETURNING id`,
     [F.tenantId]
   );
   await pool.query("UPDATE subscriptions SET status = 'canceled' WHERE tenant_id = $1 AND id <> $2", [F.tenantId, rows[0].id]);
@@ -203,7 +203,7 @@ test('the new restaurant gets a welcome discount off its first payment; the refe
   const checkout = await api('POST', '/api/billing/checkout', { token: H.token, body: {} });
   assert.equal(checkout.body.creditApplied, REFERRAL_WELCOME_USD);
   assert.equal(checkout.body.creditKind, 'welcome');
-  assert.equal(checkout.body.dueToday, 19 - REFERRAL_WELCOME_USD);
+  assert.equal(checkout.body.dueToday, 20 - REFERRAL_WELCOME_USD);
 
   await api('POST', '/api/billing/mock-complete', { token: H.token, body: {} });
   const hCredit = (await credit(H.token)).credit;
@@ -232,7 +232,7 @@ test('canceling releases credit that was waiting on a renewal, so it comes off t
   const J = await signup('ref-j@example.com');
   const { rows } = await pool.query(
     `INSERT INTO subscriptions (tenant_id, branch_count, user_count, branch_rate, user_rate, monthly_total, status, paddle_subscription_id)
-     VALUES ($1, 1, 1, 10, 9, 19, 'active', 'sub_cancel') RETURNING id`,
+     VALUES ($1, 1, 1, 10, 10, 20, 'active', 'sub_cancel') RETURNING id`,
     [J.tenantId]
   );
   await pool.query(

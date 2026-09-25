@@ -169,7 +169,7 @@ taper with volume:
 
 - Branches: unit rate steps down linearly from $10 (1st branch) to a
   floor of $7, reached at 10 branches.
-- Users: unit rate steps down linearly from $9 (1st user) to a floor of
+- Users: unit rate steps down linearly from $10 (1st user) to a floor of
   $5, reached at 20 users.
 - `monthlyTotal = branches × effectiveBranchRate + users × effectiveUserRate`,
   where the effective rate is the blended (average) tapered rate at that

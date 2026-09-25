@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
 import {
   Section, FixedRowStatusTable, RepeatableTable, LabeledInput, LabeledSelect, LabeledTextarea,
-  ReportStart, ReportSubmitted, ReportActions, useFormLabels, choiceOptions,
+  ReportStart, ReportSubmitted, ReportActions, useFormLabels, PersonSelect, usePeople, usePrefillSelf, choiceOptions,
 } from './OpsFormParts.jsx';
 
 const KIND = 'area_manager_visit';
@@ -54,6 +54,9 @@ export default function AreaManagerVisitForm() {
   const hasIncident = Object.values(form.spotCheck).some((s) => s?.status === 'poor') || form.summary.overallRating === 'poor';
   // Saves quietly a moment after each change (see useOpsReport).
   useEffect(() => { report.autosave(form, hasIncident); }, [form]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Names are picked from the team, by title, instead of typed.
+  const team = usePeople();
+  usePrefillSelf({ team, match: 'area_manager', value: form.visit.areaManagerName, onChange: (v) => patchNested('visit', 'areaManagerName', v), active: report.status === 'started' });
   const title = L('title');
 
   if (report.status === 'idle') return <ReportStart report={report} title={title} startLabel={t('f.startVisit')} />;
@@ -63,6 +66,9 @@ export default function AreaManagerVisitForm() {
 
   const field = (section, key, type) => (
     <LabeledInput label={L(`${section}.${key}`)} type={type} value={form[section][key]} onChange={(v) => patchNested(section, key, v)} />
+  );
+  const person = (section, key, match) => (
+    <PersonSelect label={L(`${section}.${key}`)} value={form[section][key]} onChange={(v) => patchNested(section, key, v)} people={team} match={match} branchId={report.branchId} />
   );
   const area = (section, key) => (
     <LabeledTextarea label={L(`${section}.${key}`)} value={form[section][key]} onChange={(v) => patchNested(section, key, v)} />
@@ -77,7 +83,7 @@ export default function AreaManagerVisitForm() {
       <Section title={L('sec.A')}>
         <div className="form-grid-2col">
           {field('visit', 'date', 'date')}
-          {field('visit', 'areaManagerName')}
+          {person('visit', 'areaManagerName', 'area_manager')}
           <LabeledSelect label={L('visit.visitType')} value={form.visit.visitType} onChange={(v) => patchNested('visit', 'visitType', v)}
             options={['routine', 'follow_up', 'incident_response'].map((v) => [v, t(`f.v.${v}`)])} />
           {field('visit', 'timeIn', 'time')}
@@ -112,8 +118,8 @@ export default function AreaManagerVisitForm() {
 
       <Section title={L('sec.F')}>
         <div className="form-grid-2col">
-          {field('signOff', 'areaManagerName')}
-          {field('signOff', 'storeManagerName')}
+          {person('signOff', 'areaManagerName', 'area_manager')}
+          {person('signOff', 'storeManagerName', 'store_manager')}
         </div>
       </Section>
 

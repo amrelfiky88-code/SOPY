@@ -22,6 +22,8 @@ const COMMON = [
   ['f.removeRow', 'Remove row', 'حذف الصف', 'Supprimer la ligne'],
   ['f.na', 'N/A', 'لا ينطبق', 'N/A'],
   ['f.today', 'today', 'اليوم', "aujourd'hui"],
+  ['f.choosePerson', 'Choose a name', 'اختر الاسم', 'Choisir un nom'],
+  ['f.noOneWithTitle', 'No one on your team has this title yet, so everyone is listed.', 'لا يحمل أحد في فريقك هذا المسمى بعد، لذا يظهر الجميع.', "Personne dans votre équipe n'a encore ce titre : tout le monde est affiché."],
   ['f.equipmentUnit', 'Equipment / Unit', 'المعدة / الوحدة', 'Équipement / unité'],
   ['f.safeRange', 'Safe range', 'النطاق الآمن', 'Plage de sécurité'],
   ['f.openingTasks', 'Opening tasks', 'مهام الافتتاح', "Tâches d'ouverture"],

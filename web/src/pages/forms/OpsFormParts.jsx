@@ -1,4 +1,6 @@
-import React, { useId } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { api } from '../../api.js';
+import { useAuth } from '../../auth/AuthContext.jsx';
 import { useT } from '../../i18n/index.jsx';
 import ReportLink from '../../components/ReportLink.jsx';
 import { CheckCircleIcon } from '../../components/icons.jsx';
@@ -17,6 +19,80 @@ export function LabeledInput({ label, value, onChange, type }) {
     <div className="field">
       <label htmlFor={id}>{label}</label>
       <input id={id} value={value} onChange={(e) => onChange(e.target.value)} type={type || 'text'} />
+    </div>
+  );
+}
+
+// Who each name field on a visit report is for: the people on the team
+// with that role. SOPY has no QC role, so QC inspectors are found by job
+// title (in any of the app's languages).
+const QC_TITLE = /\bq\.?\s?c\b|quality|inspect|qualit|جود|مفتش|تفتيش/i;
+export const PERSON_MATCH = {
+  area_manager: (u) => u.role === 'area_manager',
+  operations_manager: (u) => u.role === 'operations_manager',
+  store_manager: (u) => u.role === 'store_manager',
+  qc_inspector: (u) => QC_TITLE.test(u.title || ''),
+};
+
+// Everyone on the team who isn't disabled, loaded once per form. `failed`
+// means the list couldn't be loaded, so name fields fall back to typing.
+export function usePeople() {
+  const [people, setPeople] = useState(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let live = true;
+    api.get('/tenants/users')
+      .then((d) => { if (live) setPeople(d.users.filter((u) => u.status !== 'disabled')); })
+      .catch(() => { if (live) setFailed(true); });
+    return () => { live = false; };
+  }, []);
+  return { people, failed };
+}
+
+// The people a name field offers: those with the matching title, at the
+// report's store first when there are any there. Nobody with the title
+// yet (a small business where the owner does everything) lists everyone,
+// so the report can still be filled in.
+export function peopleFor(people, match, branchId) {
+  const matched = (people || []).filter(PERSON_MATCH[match]);
+  const atStore = branchId ? matched.filter((u) => (u.branch_ids || []).includes(branchId)) : [];
+  const list = atStore.length ? atStore : matched;
+  return { list: list.length ? list : people || [], everyone: !matched.length };
+}
+
+// The person filing a visit report is usually the one visiting: once the
+// report is open, an empty visitor name starts as theirs when their title
+// fits. Only once, so clearing it isn't undone by the next autosave.
+export function usePrefillSelf({ team, match, value, onChange, active }) {
+  const { user } = useAuth();
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current || !active || !team.people) return;
+    done.current = true;
+    const me = team.people.find((u) => u.id === user?.id);
+    if (!value && me && PERSON_MATCH[match](me)) onChange(me.full_name);
+  }, [active, team.people]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+// A name chosen from the team instead of typed. The report still saves the
+// person's name as text, so saved reports and PDFs read the same as before.
+export function PersonSelect({ label, value, onChange, people: team, match, branchId }) {
+  const t = useT();
+  const id = useId();
+  if (team.failed) return <LabeledInput label={label} value={value} onChange={onChange} />;
+  const { list, everyone } = peopleFor(team.people, match, branchId);
+  const names = [...new Set(list.map((u) => u.full_name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  // A name typed before this was a dropdown (or someone since removed)
+  // stays selectable rather than silently disappearing.
+  if (value && !names.includes(value)) names.unshift(value);
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} disabled={!team.people}>
+        <option value="">{t('f.choosePerson')}</option>
+        {names.map((n) => <option key={n} value={n}>{n}</option>)}
+      </select>
+      {team.people && everyone && <div className="hint">{t('f.noOneWithTitle')}</div>}
     </div>
   );
 }

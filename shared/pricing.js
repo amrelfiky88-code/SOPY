@@ -14,7 +14,7 @@ function taperedUnitRate(index, first, floor, floorAt) {
 
 export const RATE_SCHEDULE = {
   branch: { first: 10, floor: 7, floorAt: 10 },
-  user: { first: 9, floor: 5, floorAt: 20 },
+  user: { first: 10, floor: 5, floorAt: 20 },
 };
 
 // A plan needs at least one of each — the tapered schedule returns $0.00

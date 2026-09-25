@@ -133,7 +133,7 @@ const ROWS = [
   ['pricing.title', 'Your plan', 'خطتك', 'Votre formule'],
   ['pricing.intro', 'Pricing tapers down as you add branches and users — pay for what you run.', 'ينخفض السعر كلما أضفت فروعًا ومستخدمين — ادفع مقابل ما تشغّله فقط.', 'Le prix baisse à mesure que vous ajoutez établissements et utilisateurs — payez ce que vous utilisez.'],
   ['pricing.monthlyTotal', 'Monthly total', 'الإجمالي الشهري', 'Total mensuel'],
-  ['pricing.rates', 'First branch is $10/mo, tapering to $7/mo at volume. First user is $9/mo, tapering to $5/mo at volume.', 'الفرع الأول بـ 10$ شهريًا وينخفض حتى 7$ مع زيادة العدد. المستخدم الأول بـ 9$ شهريًا وينخفض حتى 5$ مع زيادة العدد.', 'Premier établissement à 10 $/mois, jusqu\'à 7 $/mois en volume. Premier utilisateur à 9 $/mois, jusqu\'à 5 $/mois en volume.'],
+  ['pricing.rates', 'First branch is $10/mo, tapering to $7/mo at volume. First user is $10/mo, tapering to $5/mo at volume.', 'الفرع الأول بـ 10$ شهريًا وينخفض حتى 7$ مع زيادة العدد. المستخدم الأول بـ 10$ شهريًا وينخفض حتى 5$ مع زيادة العدد.', 'Premier établissement à 10 $/mois, jusqu\'à 7 $/mois en volume. Premier utilisateur à 10 $/mois, jusqu\'à 5 $/mois en volume.'],
   ['pricing.continue', 'Continue to checkout', 'المتابعة إلى الدفع', 'Passer au paiement'],
 
   // --- Checkout --------------------------------------------------------
