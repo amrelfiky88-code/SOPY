@@ -25,8 +25,8 @@ export function LabeledInput({ label, value, onChange, type }) {
 
 // Who each name field on a visit report is for: the people on the team
 // with that role. SOPY has no QC role, so QC inspectors are found by job
-// title (in any of the app's languages).
-const QC_TITLE = /\bq\.?\s?c\b|quality|inspect|qualit|جود|مفتش|تفتيش/i;
+// title: the QAQC title people pick, or an older typed one (any language).
+const QC_TITLE = /qa\s*\/?\s*qc|\bq\.?\s?c\b|quality|inspect|qualit|جود|مفتش|تفتيش/i;
 export const PERSON_MATCH = {
   area_manager: (u) => u.role === 'area_manager',
   operations_manager: (u) => u.role === 'operations_manager',

@@ -5,6 +5,7 @@ import { useI18n } from '../i18n/index.jsx';
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
 import { REFERRAL_WELCOME_USD } from '../../../shared/referrals.js';
 import { countryOptions } from '../lib/countries.js';
+import JobTitleSelect from '../components/JobTitleSelect.jsx';
 
 // The code from a referral link (?ref=… now, or saved by main.jsx when the
 // link was opened within the last 30 days).
@@ -78,7 +79,7 @@ export default function WhoAreYou() {
         </div>
         <div className="field">
           <label htmlFor="title">{t('signup.jobTitle')}</label>
-          <input id="title" placeholder={t('signup.jobTitlePlaceholder')} value={form.title} onChange={set('title')} />
+          <JobTitleSelect id="title" value={form.title} onChange={(v) => setForm((f) => ({ ...f, title: v }))} />
         </div>
         <div className="field">
           <label htmlFor="email">{t('page.email')}</label>

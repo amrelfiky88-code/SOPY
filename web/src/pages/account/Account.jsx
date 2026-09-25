@@ -9,6 +9,7 @@ import { LabeledInput } from '../forms/OpsFormParts.jsx';
 import { LANGUAGES } from '../../../../shared/languages.js';
 import { useI18n } from '../../i18n/index.jsx';
 import { money } from '../../i18n/pageLabels.js';
+import JobTitleSelect from '../../components/JobTitleSelect.jsx';
 
 const STATUS_PILL = {
   active: 'pill-green',
@@ -165,7 +166,10 @@ function ProfileCard({ user, tenant, setUser }) {
 
       <div className="form-grid-2col">
         <LabeledInput label={t('account.fullName')} value={form.fullName} onChange={(v) => set('fullName', v)} />
-        <LabeledInput label={t('account.jobTitle')} value={form.title} onChange={(v) => set('title', v)} />
+        <div className="field">
+          <label htmlFor="profile-title">{t('account.jobTitle')}</label>
+          <JobTitleSelect id="profile-title" value={form.title} onChange={(v) => set('title', v)} />
+        </div>
         <LabeledInput label={t('account.phone')} type="tel" value={form.phone} onChange={(v) => set('phone', v)} />
       </div>
 
