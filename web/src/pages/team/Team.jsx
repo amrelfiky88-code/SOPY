@@ -7,7 +7,7 @@ import { canAssignRole, canManageUser } from '../../../../shared/roles.js';
 import { StorefrontIcon } from '../../components/icons.jsx';
 import InviteLink from '../../components/InviteLink.jsx';
 import CityField from '../../components/CityField.jsx';
-import JobTitleSelect, { withRole, titleForRole } from '../../components/JobTitleSelect.jsx';
+import JobTitleSelect, { withRole, titleForRole, jobTitleLabel } from '../../components/JobTitleSelect.jsx';
 
 export default function Team() {
   const t = useT();
@@ -173,10 +173,10 @@ export default function Team() {
 
           <div className="card">
             <div className="table-scroll">
-              <table>
+              <table className="team-table">
                 <thead>
                   <tr>
-                    <th>{t('page.name')}</th><th>{t('page.email')}</th><th>{t('page.role')}</th>
+                    <th>{t('page.name')}</th><th>{t('page.email')}</th><th>{t('page.role')}</th><th>{t('account.jobTitle')}</th>
                     <th>{t('page.stores')}</th><th>{t('page.status')}</th>
                   </tr>
                 </thead>
@@ -186,16 +186,21 @@ export default function Team() {
                     const editable = !isMe && canManageUser(me?.role, u.role);
                     return (
                       <tr key={u.id}>
-                        <td>{u.full_name}{isMe ? ` ${t('page.you')}` : ''}</td>
-                        <td>{u.email}</td>
-                        <td>
+                        <td className="team-name">{u.full_name}{isMe ? ` ${t('page.you')}` : ''}</td>
+                        <td className="team-email">{u.email}</td>
+                        <td data-label={t('page.role')}>
                           {editable ? (
                             <select value={u.role} onChange={(e) => updateUser(u.id, { role: e.target.value })} aria-label={t('team.roleFor', { name: u.full_name })}>
                               {assignableRoles.map((r) => <option key={r.value} value={r.value}>{roleName(t, r.value)}</option>)}
                             </select>
                           ) : roleName(t, u.role)}
                         </td>
-                        <td style={{ minWidth: 150 }}>
+                        <td data-label={t('account.jobTitle')}>
+                          {editable ? (
+                            <JobTitleSelect value={u.title} onChange={(v) => updateUser(u.id, { title: v })} ariaLabel={t('team.titleFor', { name: u.full_name })} />
+                          ) : jobTitleLabel(t, u.title)}
+                        </td>
+                        <td data-label={t('page.stores')} style={{ minWidth: 150 }}>
                           {editingStores === u.id ? (
                             <div>
                               {branches.map((b) => (
@@ -231,7 +236,7 @@ export default function Team() {
                             </div>
                           )}
                         </td>
-                        <td>
+                        <td data-label={t('page.status')}>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                             <span className={`pill ${u.status === 'disabled' ? 'pill-red' : u.status === 'active' ? 'pill-green' : ''}`}>{t(`userStatus.${u.status}`)}</span>
                             {editable && u.status !== 'disabled' && (

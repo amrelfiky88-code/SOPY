@@ -196,3 +196,15 @@ test("the city list follows the business's country", async () => {
   assert.deepEqual(none.body.cities, [], '"Other" has no list; the box still takes a typed city');
   assert.equal((await api('GET', '/api/tenants/cities')).status, 401);
 });
+
+// A manager can change someone's job title after the invite (e.g. an
+// employee who becomes the QAQC person); before, only the person could.
+test("a manager can change a team member's job title", async () => {
+  const set = await api('PATCH', `/api/tenants/users/${A.emp.userId}`, { token: A.token, body: { title: 'QAQC' } });
+  assert.equal(set.status, 200, JSON.stringify(set.body));
+  assert.equal(set.body.user.title, 'QAQC');
+  assert.equal((await api('PATCH', `/api/tenants/users/${A.emp.userId}`, { token: A.token, body: { title: 'x'.repeat(121) } })).status, 400);
+  assert.equal((await api('PATCH', `/api/tenants/users/${A.area.userId}`, { token: A.emp.token, body: { title: 'Business Owner' } })).status, 403);
+  const cleared = await api('PATCH', `/api/tenants/users/${A.emp.userId}`, { token: A.token, body: { title: '' } });
+  assert.equal(cleared.body.user.title, null);
+});

@@ -282,3 +282,26 @@ test('the library lists standards in the Builder filter order', async () => {
   assert.equal(order[0], 'HACCP');
   assert.ok(order.indexOf('C_STORE') > order.indexOf('SOP'), order.join(','));
 });
+
+// Regression: any assignment id was accepted when starting a run, so a
+// short checklist could be submitted against a long one's assignment and
+// show it "Done". The run must match the assignment's checklist and store.
+test('a run only counts toward a live assignment of the same checklist and store', async () => {
+  const assigned = await api('POST', '/api/checklists/assignments', { token: O.token, body: { templateId, branchId: storeA } });
+  const assignmentId = assigned.body.assignment.id;
+  const startWith = (body) => api('POST', '/api/submissions', { token: E1.token, body: { assignmentId, ...body } });
+
+  assert.equal((await startWith({ templateId: observationTemplateId, branchId: storeA })).status, 404, 'another checklist');
+  assert.equal((await startWith({ templateId, branchId: storeB })).status, 404, 'another store');
+  assert.equal((await startWith({ templateId, branchId: storeA })).status, 201);
+
+  await api('DELETE', `/api/checklists/assignments/${assignmentId}`, { token: O.token });
+  assert.equal((await api('POST', '/api/submissions', { token: E2.token, body: { assignmentId, templateId, branchId: storeA } })).status, 404, 'a removed assignment');
+});
+
+// Shared phones: nothing from the API may sit in the browser's cache for
+// the next account signed in.
+test('API responses are never cached by the browser', async () => {
+  const res = await fetch(`${baseUrl}/api/tenants/branches`, { headers: { Authorization: `Bearer ${O.token}` } });
+  assert.equal(res.headers.get('cache-control'), 'no-store');
+});

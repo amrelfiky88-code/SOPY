@@ -59,10 +59,16 @@ submissionsRouter.post('/', requireAuth, async (req, res) => {
   );
   if (!owned[0].template_ok || !owned[0].branch_ok) return res.status(404).json({ error: 'Checklist or store not found' });
 
+  // The run counts toward its assignment ("Done" on My checklists today),
+  // so it must be a live assignment of this same checklist, at this store
+  // when it names one. Any assignment id used to be accepted, so a short
+  // checklist could be submitted as a long one's and show it done.
   if (assignmentId) {
     const { rows: ok } = await query(
-      'SELECT 1 FROM checklist_assignments WHERE id = $1 AND tenant_id = $2',
-      [assignmentId, req.auth.tenantId]
+      `SELECT 1 FROM checklist_assignments
+       WHERE id = $1 AND tenant_id = $2 AND active AND template_id = $3
+         AND (branch_id IS NULL OR branch_id = $4)`,
+      [assignmentId, req.auth.tenantId, templateId, branchId]
     );
     if (!ok[0]) return res.status(404).json({ error: 'Assignment not found' });
   }

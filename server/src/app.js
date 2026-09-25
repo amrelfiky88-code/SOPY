@@ -57,6 +57,10 @@ export function createApp() {
   app.use(express.json({ limit: '1mb' }));
   // Error messages go out in the language the app is shown in.
   app.use('/api', translateErrorResponses);
+  // Nothing the API returns belongs in the browser's cache: the same
+  // address answers differently for each account, and phones are shared
+  // between shifts, so a cached reply could reach the next person to sign in.
+  app.use('/api', (req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   // Photos are only served through signed, expiring links (see uploads.js).
   app.use('/uploads', requireSignedUpload, express.static(path.resolve('uploads')));
 

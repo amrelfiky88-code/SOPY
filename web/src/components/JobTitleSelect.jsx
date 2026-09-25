@@ -21,12 +21,15 @@ export function withRole(form, role) {
   return { ...form, role, title: follows ? titleForRole(role) : form.title };
 }
 
-export default function JobTitleSelect({ id, value, onChange }) {
+// A saved title as people read it: translated when it's one of the list.
+export const jobTitleLabel = (t, value) => (JOB_TITLES.includes(value) ? t(`jobTitle.${value}`) : value || '');
+
+export default function JobTitleSelect({ id, value, onChange, ariaLabel }) {
   const t = useT();
   // A title typed before this was a dropdown stays selectable.
   const legacy = value && !JOB_TITLES.includes(value) ? value : null;
   return (
-    <select id={id} value={value || ''} onChange={(e) => onChange(e.target.value)}>
+    <select id={id} value={value || ''} onChange={(e) => onChange(e.target.value)} aria-label={ariaLabel}>
       <option value="">{t('jobTitle.choose')}</option>
       {JOB_TITLES.map((v) => <option key={v} value={v}>{t(`jobTitle.${v}`)}</option>)}
       {legacy && <option value={legacy}>{legacy}</option>}

@@ -84,10 +84,6 @@ tenantsRouter.get('/current', requireAuth, async (req, res) => {
 });
 
 // --- Branches ---
-// Removing a branch is a soft delete (is_active = false) so past checklist
-// submissions keep their store. Every list must therefore filter on it —
-// this one didn't, so a "removed" store stayed in every picker while the
-// dashboard's active-store count (which did filter) disagreed with it.
 // The cities of the business's country, for the store City box: biggest
 // first, as [english, arabic?]. From GeoNames (see scripts/build-cities.js);
 // loaded on first use. "Other" or an unknown country gives an empty list,
@@ -99,10 +95,13 @@ tenantsRouter.get('/cities', requireAuth, async (req, res) => {
   if (code && !citiesByCountry) {
     citiesByCountry = JSON.parse(await fs.readFile(new URL('../../data/cities.json', import.meta.url), 'utf8'));
   }
-  res.set('Cache-Control', 'private, max-age=86400');
   res.json({ country: rows[0]?.country || null, cities: (code && citiesByCountry[code]) || [] });
 });
 
+// Removing a branch is a soft delete (is_active = false) so past checklist
+// submissions keep their store. Every list must therefore filter on it —
+// this one didn't, so a "removed" store stayed in every picker while the
+// dashboard's active-store count (which did filter) disagreed with it.
 // works_here marks the stores the signed-in person belongs to, so report
 // forms can default to their own store rather than the business's first.
 tenantsRouter.get('/branches', requireAuth, async (req, res) => {
@@ -302,7 +301,10 @@ tenantsRouter.post('/users/:id/reset-link', requireAuth, requireRole('business_o
 const PUBLIC_USER_COLUMNS = 'id, full_name, title, email, phone, role, status, language';
 
 tenantsRouter.patch('/users/:id', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
-  const { role, status, branchIds } = req.body;
+  const { role, status, branchIds, title } = req.body;
+  if (title !== undefined && (typeof title !== 'string' || title.trim().length > 120)) {
+    return res.status(400).json({ error: 'That text is too long' });
+  }
 
   // Resolve the target inside this tenant *first*. Everything below —
   // including the branch-assignment rewrite — only runs once we know the
@@ -331,6 +333,9 @@ tenantsRouter.patch('/users/:id', requireAuth, requireRole('business_owner', 'op
     }
     fields.push(`role = $${i++}`); values.push(role);
   }
+  // The job title (QC visit reports find inspectors by it); before, only
+  // the person could change their own after the invite.
+  if (title !== undefined) { fields.push(`title = $${i++}`); values.push(title.trim() || null); }
   if (status !== undefined) {
     if (!EDITABLE_STATUSES.includes(status)) return res.status(400).json({ error: 'Unknown status' });
     let next = status;

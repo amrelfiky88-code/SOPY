@@ -99,6 +99,7 @@ const ROWS = [
   ['signup.title', 'Who are you?', 'من أنت؟', 'Qui êtes-vous ?'],
   ['signup.intro', 'Tell us a bit about you and your restaurant so we can set things up.', 'أخبرنا قليلًا عنك وعن مطعمك لنُجهّز كل شيء.', 'Parlez-nous un peu de vous et de votre restaurant pour que nous puissions tout préparer.'],
   ['signup.referral', "You were invited by another restaurant on SOPY — welcome! You'll get ${amount} off your first payment.", 'دعاك مطعم آخر على SOPY — أهلًا بك! ستحصل على خصم {amount}$ من دفعتك الأولى.', 'Vous avez été invité par un autre restaurant sur SOPY — bienvenue ! Vous aurez {amount} $ de remise sur votre premier paiement.'],
+  ['team.titleFor', 'Job title for {name}', 'المسمى الوظيفي لـ {name}', 'Fonction de {name}'],
   ['jobTitle.choose', 'Choose your title', 'اختر المسمى الوظيفي', 'Choisissez votre fonction'],
   ['jobTitle.Business Owner', 'Business Owner', 'مالك المنشأة', 'Propriétaire'],
   ['jobTitle.Operations Manager', 'Operations Manager', 'مدير العمليات', "Directeur d'exploitation"],

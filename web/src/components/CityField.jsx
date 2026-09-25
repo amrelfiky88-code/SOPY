@@ -1,12 +1,17 @@
 import React, { useEffect, useId, useMemo, useState } from 'react';
-import { api } from '../api.js';
+import { api, getToken } from '../api.js';
 import { useI18n } from '../i18n/index.jsx';
 
-// The business's country doesn't change while the app is open, so its
-// city list is fetched once and shared by every City box.
+// A business's country doesn't change while it's signed in, so its city
+// list is fetched once and shared by every City box. Kept per session:
+// after signing out, another business on the same phone kept seeing the
+// first one's cities.
 let citiesRequest = null;
+let citiesFor = null;
 function loadCities() {
-  if (!citiesRequest) {
+  const session = getToken();
+  if (!citiesRequest || citiesFor !== session) {
+    citiesFor = session;
     citiesRequest = api.get('/tenants/cities').catch((err) => {
       citiesRequest = null; // try again next time rather than caching a failure
       throw err;

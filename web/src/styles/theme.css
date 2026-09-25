@@ -1027,3 +1027,29 @@ a.share-target { text-decoration: none; }
   gap: 10px;
 }
 .signed-out-bar .auth-brand { margin-bottom: 0; }
+
+/* Team & stores users list: a table on wider screens, one card per person
+   on a phone. As a table it was ~950px wide at 375px, with the role and
+   title pickers scrolled out of view and buttons wrapping to four lines. */
+@media (max-width: 600px) {
+  .table-scroll .team-table { min-width: 0; }
+  .team-table thead { display: none; }
+  .team-table, .team-table tbody, .team-table tr, .team-table td { display: block; width: 100%; }
+  .team-table tbody tr { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .team-table tbody tr:hover { background: none; }
+  .team-table td { border-bottom: none; padding: 4px 0; min-width: 0 !important; }
+  .team-table td.team-name { font-weight: 700; font-size: 16px; }
+  .team-table td.team-email { color: var(--ink-soft); font-size: 14px; overflow-wrap: anywhere; padding-top: 0; }
+  .team-table td[data-label] {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+  }
+  .team-table td[data-label]::before {
+    content: attr(data-label);
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .team-table td select { width: 100%; }
+}
