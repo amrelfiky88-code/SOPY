@@ -249,3 +249,10 @@ test('correcting a mis-tapped critical failure clears the incident flag', async 
   await respond(E1.token, sub, { itemId: critical.id, valueText: 'note only' }, { photo: false });
   assert.equal(await incident(), false, 'a note-only save leaves it alone');
 });
+
+test("a daily report can't be assigned as a checklist (it has no checkpoints to run)", async () => {
+  const kitchen = (await api('POST', '/api/checklists/templates', { token: O.token, body: { name: 'Kitchen', kind: 'kitchen_daily', itemIds: [] } })).body.template.id;
+  const res = await api('POST', '/api/checklists/assignments', { token: O.token, body: { templateId: kitchen } });
+  assert.equal(res.status, 400);
+  assert.equal((await api('POST', '/api/checklists/assignments', { token: O.token, body: { templateId } })).status, 201);
+});

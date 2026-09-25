@@ -210,6 +210,7 @@ checklistsRouter.post('/assignments', requireAuth, requireRole('business_owner',
   const { rows: owned } = await query(
     `SELECT
        EXISTS (SELECT 1 FROM checklist_templates WHERE id = $1 AND tenant_id = $4) AS template_ok,
+       EXISTS (SELECT 1 FROM checklist_templates WHERE id = $1 AND tenant_id = $4 AND kind = 'custom') AS assignable,
        ($2::uuid IS NULL OR EXISTS (SELECT 1 FROM branches WHERE id = $2 AND tenant_id = $4 AND is_active)) AS branch_ok,
        ($3::uuid IS NULL OR EXISTS (SELECT 1 FROM users WHERE id = $3 AND tenant_id = $4)) AS user_ok`,
     [templateId, branchId || null, userId || null, req.auth.tenantId]
@@ -217,6 +218,9 @@ checklistsRouter.post('/assignments', requireAuth, requireRole('business_owner',
   if (!owned[0].template_ok || !owned[0].branch_ok || !owned[0].user_ok) {
     return res.status(404).json({ error: 'Checklist, store or user not found' });
   }
+  // The daily and visit reports have no checkpoints; assigned as a
+  // checklist they opened an empty run nobody could ever submit.
+  if (!owned[0].assignable) return res.status(400).json({ error: 'Only checklists built in the Checklist Builder can be assigned' });
   // The same checklist assigned the same way twice showed up twice on
   // everyone's dashboard (a double tap on Assign was enough). Hand back the
   // existing assignment instead.

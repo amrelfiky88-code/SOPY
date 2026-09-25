@@ -83,6 +83,8 @@ const MESSAGES = [
   ['Branch name is required', 'اسم الفرع مطلوب', 'Le nom de l\'établissement est obligatoire'],
   ['Branch and user counts must be numbers', 'يجب أن يكون عدد الفروع والمستخدمين أرقامًا', "Le nombre d'établissements et d'utilisateurs doit être un nombre"],
   ['Assignment not found', 'التكليف غير موجود', 'Attribution introuvable'],
+  ['Only checklists built in the Checklist Builder can be assigned', 'يمكن تكليف قوائم الفحص المُنشأة في منشئ قوائم الفحص فقط', 'Seules les check-lists créées dans le créateur de check-lists peuvent être attribuées'],
+  ['File too large', 'الملف كبير جدًا', 'Fichier trop volumineux'],
   ['Account disabled', 'الحساب معطّل', 'Compte désactivé'],
   ['A PDF file is required', 'مطلوب ملف PDF', 'Un fichier PDF est requis'],
   ['Only PDF files can be shared', 'يمكن مشاركة ملفات PDF فقط', 'Seuls les fichiers PDF peuvent être partagés'],
