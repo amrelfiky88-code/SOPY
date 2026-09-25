@@ -33,6 +33,13 @@ export default function MyChecklistsToday() {
   const start = async (assignment) => {
     if (starting) return;
     setError('');
+    // "Continue" goes straight back to the run underway. Asking the server
+    // to start one at the first store in the list opened a second, empty
+    // run when the first had been started at another store.
+    if (assignment.open_submission_id) {
+      navigate(`/app/checklists/run/${assignment.open_submission_id}`);
+      return;
+    }
     const choices = storeChoices(assignment);
     const branchId = assignment.branch_id || chosenStore[assignment.id] || choices[0]?.id;
     if (!branchId) { setError(t('dashboard.noStore')); return; }

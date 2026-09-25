@@ -277,6 +277,9 @@ function SubscriptionCard({ user, tenant }) {
   }
 
   const renewal = formatDate(subscription.current_period_end);
+  // The tapered subtotals, as billed. count × rounded average rate drifted
+  // from the total by a few cents (7 stores: 7 × $8.43 = $59.01 vs $59.00).
+  const current = calculatePricing({ branches: subscription.branch_count, users: subscription.user_count });
 
   return (
     <div className="card">
@@ -343,16 +346,16 @@ function SubscriptionCard({ user, tenant }) {
           <div className="summary-row">
             <span>
               {t('account.branches')}
-              <span className="hint"> {subscription.branch_count} × {money(subscription.branch_rate)}</span>
+              <span className="hint"> {t('page.avgRate', { n: subscription.branch_count, rate: money(current.branchBlendedRate) })}</span>
             </span>
-            <span>{money(Number(subscription.branch_count) * Number(subscription.branch_rate))}</span>
+            <span>{money(current.branchSubtotal)}</span>
           </div>
           <div className="summary-row">
             <span>
               {t('account.users')}
-              <span className="hint"> {subscription.user_count} × {money(subscription.user_rate)}</span>
+              <span className="hint"> {t('page.avgRate', { n: subscription.user_count, rate: money(current.userBlendedRate) })}</span>
             </span>
-            <span>{money(Number(subscription.user_count) * Number(subscription.user_rate))}</span>
+            <span>{money(current.userSubtotal)}</span>
           </div>
           <div className="summary-row summary-total">
             <span>{t('account.billedMonthly')}</span>

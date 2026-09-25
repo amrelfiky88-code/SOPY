@@ -236,3 +236,16 @@ test('names and details have sensible length limits', async () => {
   assert.equal((await api('PATCH', '/api/auth/me', { token: E1.token, body: { phone: '1'.repeat(60) } })).status, 400);
   assert.equal((await api('PATCH', '/api/auth/me', { token: E1.token, body: { title: 'Line cook' } })).status, 200);
 });
+
+test('correcting a mis-tapped critical failure clears the incident flag', async () => {
+  const critical = (await api('GET', '/api/checklists/library?critical=true', { token: O.token })).body.items[0];
+  const tpl = (await api('POST', '/api/checklists/templates', { token: O.token, body: { name: 'Critical one', itemIds: [critical.id] } })).body.template.id;
+  const sub = await start(E1.token, tpl);
+  const incident = async () => (await pool.query('SELECT has_incident FROM checklist_submissions WHERE id = $1', [sub])).rows[0].has_incident;
+  await respond(E1.token, sub, { itemId: critical.id, isCompliant: 'false' });
+  assert.equal(await incident(), true, 'a critical failure flags the run');
+  await respond(E1.token, sub, { itemId: critical.id, isCompliant: 'true' }, { photo: false });
+  assert.equal(await incident(), false, 'corrected, it is no longer an incident');
+  await respond(E1.token, sub, { itemId: critical.id, valueText: 'note only' }, { photo: false });
+  assert.equal(await incident(), false, 'a note-only save leaves it alone');
+});

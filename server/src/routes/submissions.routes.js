@@ -218,11 +218,22 @@ submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), as
   // source QC documents — e.g. fridge temps, fire extinguishers, mystery
   // shop) auto-escalates: the submission is flagged as an incident the
   // moment it happens, not only if someone remembers to tick the box.
-  if (compliant === false) {
-    const { rows: itemRows } = await query('SELECT is_critical FROM checklist_items WHERE id = $1', [itemId]);
-    if (itemRows[0]?.is_critical) {
-      await query('UPDATE checklist_submissions SET has_incident = true WHERE id = $1', [req.params.id]);
-    }
+  // The flag follows the current answers: a mis-tapped "Not compliant"
+  // corrected to "Compliant" used to leave the run marked as an incident
+  // for good, while its own scorecard showed no critical failures.
+  if (isCompliant !== undefined) {
+    await query(
+      `UPDATE checklist_submissions SET has_incident = EXISTS (
+         SELECT 1 FROM checklist_template_items ti
+         JOIN checklist_items ci ON ci.id = ti.item_id AND ci.is_critical
+         JOIN LATERAL (
+           SELECT is_compliant FROM checklist_submission_responses
+           WHERE submission_id = $1 AND item_id = ci.id ORDER BY created_at DESC LIMIT 1
+         ) r ON r.is_compliant = false
+         WHERE ti.template_id = $2)
+       WHERE id = $1`,
+      [req.params.id, submission.template_id]
+    );
   }
 
   res.status(201).json({ response: signPhotos(rows)[0] });

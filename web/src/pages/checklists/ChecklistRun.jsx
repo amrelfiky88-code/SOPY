@@ -342,9 +342,12 @@ function Scorecard({ scorecard, submissionId, onDone }) {
             </div>
             <div className="hint">{t('report.checkpointsCompliant', { n: scorecard.totalCompliant, total: scorecard.totalScored })}</div>
           </div>
-          <span className={`pill ${RAG_PILL_CLASS[scorecard.ragStatus]}`} style={{ fontSize: 14, padding: '6px 14px' }}>
-            {t(`report.rag.${scorecard.ragStatus}`)}
-          </span>
+          {/* Nothing yes/no to score (observation points only): no Red badge. */}
+          {scorecard.totalScored > 0 && (
+            <span className={`pill ${RAG_PILL_CLASS[scorecard.ragStatus]}`} style={{ fontSize: 14, padding: '6px 14px' }}>
+              {t(`report.rag.${scorecard.ragStatus}`)}
+            </span>
+          )}
         </div>
         {scorecard.criticalFails > 0 && (
           <div className="error-banner">
@@ -362,7 +365,7 @@ function Scorecard({ scorecard, submissionId, onDone }) {
               {scorecard.sections.map((s) => (
                 <tr key={s.category}>
                   <td>{s.category}</td>
-                  <td>{s.compliant} / {s.total} ({s.percentage}%)</td>
+                  <td>{s.total ? `${s.compliant} / ${s.total} (${s.percentage}%)` : '—'}</td>
                   <td>{s.criticalFails || '—'}</td>
                 </tr>
               ))}
