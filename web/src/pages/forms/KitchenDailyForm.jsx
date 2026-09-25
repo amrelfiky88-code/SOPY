@@ -3,6 +3,7 @@ import { useOpsReport } from './useOpsReport.js';
 import {
   Section, TemperatureLogTable, OpeningClosingChecklist, RepeatableTable, FixedRowStatusTable,
   LabeledInput, LabeledSelect, LabeledTextarea, ReportStart, ReportSubmitted, ReportActions, useFormLabels, choiceOptions,
+  PersonSelect, usePeople,
 } from './OpsFormParts.jsx';
 
 const KIND = 'kitchen_daily';
@@ -97,6 +98,8 @@ export default function KitchenDailyForm() {
   const hasIncident = !!(form.notes.incidents?.trim() || form.tempDeviation.found);
   // Saves quietly a moment after each change (see useOpsReport).
   useEffect(() => { report.autosave(form, hasIncident); }, [form]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Sign-off names are picked from the team instead of typed.
+  const team = usePeople();
   const title = L('title');
 
   if (report.status === 'idle') return <ReportStart report={report} title={title} />;
@@ -194,8 +197,8 @@ export default function KitchenDailyForm() {
 
       <Section title={L('sec.I')}>
         <div className="form-grid-2col">
-          <LabeledInput label={L('signOff.supervisorName')} value={form.signOff.supervisorName} onChange={(v) => patchNested('signOff', 'supervisorName', v)} />
-          <LabeledInput label={L('signOff.managerName')} value={form.signOff.managerName} onChange={(v) => patchNested('signOff', 'managerName', v)} />
+          <PersonSelect label={L('signOff.supervisorName')} value={form.signOff.supervisorName} onChange={(v) => patchNested('signOff', 'supervisorName', v)} people={team} match="store_team" branchId={report.branchId} />
+          <PersonSelect label={L('signOff.managerName')} value={form.signOff.managerName} onChange={(v) => patchNested('signOff', 'managerName', v)} people={team} match="operations_manager" branchId={report.branchId} />
         </div>
       </Section>
 

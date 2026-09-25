@@ -3,6 +3,7 @@ import { useOpsReport } from './useOpsReport.js';
 import {
   Section, TemperatureLogTable, OpeningClosingChecklist, FixedRowDataTable, FixedRowStatusTable,
   LabeledInput, LabeledSelect, LabeledTextarea, ReportStart, ReportSubmitted, ReportActions, useFormLabels, choiceOptions,
+  PersonSelect, usePeople,
 } from './OpsFormParts.jsx';
 
 const KIND = 'bar_daily';
@@ -93,6 +94,8 @@ export default function BarDailyForm() {
   const hasIncident = !!(form.notes.staffIssues?.trim() || form.tempDeviation.found || form.tempDeviation.faultReported);
   // Saves quietly a moment after each change (see useOpsReport).
   useEffect(() => { report.autosave(form, hasIncident); }, [form]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Sign-off names are picked from the team instead of typed.
+  const team = usePeople();
   const title = L('title');
 
   if (report.status === 'idle') return <ReportStart report={report} title={title} />;
@@ -200,8 +203,8 @@ export default function BarDailyForm() {
 
       <Section title={L('sec.I')}>
         <div className="form-grid-2col">
-          <LabeledInput label={L('signOff.barManagerName')} value={form.signOff.barManagerName} onChange={(v) => patchNested('signOff', 'barManagerName', v)} />
-          <LabeledInput label={L('signOff.opsManagerName')} value={form.signOff.opsManagerName} onChange={(v) => patchNested('signOff', 'opsManagerName', v)} />
+          <PersonSelect label={L('signOff.barManagerName')} value={form.signOff.barManagerName} onChange={(v) => patchNested('signOff', 'barManagerName', v)} people={team} match="store_team" branchId={report.branchId} />
+          <PersonSelect label={L('signOff.opsManagerName')} value={form.signOff.opsManagerName} onChange={(v) => patchNested('signOff', 'opsManagerName', v)} people={team} match="operations_manager" branchId={report.branchId} />
         </div>
       </Section>
 

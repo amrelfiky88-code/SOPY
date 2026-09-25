@@ -166,3 +166,17 @@ test('an invite can carry a job title', async () => {
   const { users } = (await api('GET', '/api/tenants/users', { token: B.token })).body;
   assert.equal(users.find((u) => u.email === 'qaqc-b@example.com').title, 'QAQC');
 });
+
+// Staff fill in the daily reports and pick names from the team, but the
+// full staff list (emails, phones) stays with managers.
+test('staff can list their colleagues\' names, and nothing more', async () => {
+  const res = await api('GET', '/api/tenants/people', { token: A.emp.token });
+  assert.equal(res.status, 200);
+  const names = res.body.people.map((p) => p.full_name);
+  assert.ok(names.includes('ops-a@example.com') && names.includes('Owner'));
+  assert.ok(!names.includes('emp-b@example.com'), "another business's staff never show up");
+  for (const p of res.body.people) {
+    assert.deepEqual(Object.keys(p).sort(), ['branch_ids', 'full_name', 'id', 'role', 'title']);
+  }
+  assert.equal((await api('GET', '/api/tenants/users', { token: A.emp.token })).status, 403);
+});

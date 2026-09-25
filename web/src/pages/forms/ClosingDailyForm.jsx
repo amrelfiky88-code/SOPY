@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useOpsReport } from './useOpsReport.js';
-import { Section, FixedRowStatusTable, LabeledInput, LabeledTextarea, ReportStart, ReportSubmitted, ReportActions, useFormLabels, choiceOptions } from './OpsFormParts.jsx';
+import { Section, FixedRowStatusTable, LabeledInput, LabeledTextarea, ReportStart, ReportSubmitted, ReportActions, useFormLabels, choiceOptions, PersonSelect, usePeople } from './OpsFormParts.jsx';
 
 const KIND = 'closing_daily';
 
@@ -32,6 +32,8 @@ export default function ClosingDailyForm() {
   const hasIncident = Object.values(form.phases).some((p) => p?.status === 'issue') || !!form.notes.issuesFound.trim();
   // Saves quietly a moment after each change (see useOpsReport).
   useEffect(() => { report.autosave(form, hasIncident); }, [form]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Sign-off names are picked from the team instead of typed.
+  const team = usePeople();
   const title = L('title');
 
   if (report.status === 'idle') return <ReportStart report={report} title={title} />;
@@ -80,7 +82,7 @@ export default function ClosingDailyForm() {
       </Section>
 
       <Section title={L('sec.E')}>
-        {field('signOff', 'closerName')}
+        <PersonSelect label={L('signOff.closerName')} value={form.signOff.closerName} onChange={(v) => patchNested('signOff', 'closerName', v)} people={team} match="store_team" branchId={report.branchId} />
       </Section>
 
       <ReportActions report={report} form={form} hasIncident={hasIncident} signerName={form.signOff.closerName} needNameHint={L('needName')} />

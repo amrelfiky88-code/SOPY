@@ -147,6 +147,23 @@ tenantsRouter.delete('/branches/:id', requireAuth, requireRole('business_owner',
 });
 
 // --- Users / invites ---
+// Names for the report forms' "choose a name" fields, open to everyone in
+// the business, staff included, since staff fill in the daily reports.
+// Just who and where: no email, phone or account status.
+tenantsRouter.get('/people', requireAuth, async (req, res) => {
+  const { rows } = await query(
+    `SELECT u.id, u.full_name, u.role, u.title,
+            COALESCE(array_agg(ub.branch_id) FILTER (WHERE ub.branch_id IS NOT NULL), '{}') AS branch_ids
+     FROM users u
+     LEFT JOIN user_branches ub ON ub.user_id = u.id
+     WHERE u.tenant_id = $1 AND u.status != 'disabled'
+     GROUP BY u.id
+     ORDER BY u.full_name`,
+    [req.auth.tenantId]
+  );
+  res.json({ people: rows });
+});
+
 // Everyone's email, phone and role: for the people who manage the team.
 // (Any signed-in employee used to be able to read the whole staff list.)
 tenantsRouter.get('/users', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {

@@ -34,15 +34,16 @@ export const PERSON_MATCH = {
   qc_inspector: (u) => QC_TITLE.test(u.title || ''),
 };
 
-// Everyone on the team who isn't disabled, loaded once per form. `failed`
+// Everyone on the team who isn't disabled (names, roles, titles and
+// stores only, so staff filling a daily report can load it), once per form. `failed`
 // means the list couldn't be loaded, so name fields fall back to typing.
 export function usePeople() {
   const [people, setPeople] = useState(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let live = true;
-    api.get('/tenants/users')
-      .then((d) => { if (live) setPeople(d.users.filter((u) => u.status !== 'disabled')); })
+    api.get('/tenants/people')
+      .then((d) => { if (live) setPeople(d.people); })
       .catch(() => { if (live) setFailed(true); });
     return () => { live = false; };
   }, []);
@@ -54,6 +55,12 @@ export function usePeople() {
 // yet (a small business where the owner does everything) lists everyone,
 // so the report can still be filled in.
 export function peopleFor(people, match, branchId) {
+  // Daily-report sign-offs (opener, closer, shift lead): whoever works at
+  // the report's store, plus people not tied to one store, who cover them all.
+  if (match === 'store_team') {
+    const list = (people || []).filter((u) => !branchId || !u.branch_ids?.length || u.branch_ids.includes(branchId));
+    return { list, everyone: false };
+  }
   const matched = (people || []).filter(PERSON_MATCH[match]);
   const atStore = branchId ? matched.filter((u) => (u.branch_ids || []).includes(branchId)) : [];
   const list = atStore.length ? atStore : matched;
