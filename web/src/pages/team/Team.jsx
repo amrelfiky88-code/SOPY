@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { useT } from '../../i18n/index.jsx';
-import { ACCESS_LEVELS, ROLES, roleName, accessName } from '../onboarding/roles.js';
+import { ROLES, roleName } from '../onboarding/roles.js';
 import { canAssignRole, canManageUser } from '../../../../shared/roles.js';
 import { StorefrontIcon } from '../../components/icons.jsx';
 import InviteLink from '../../components/InviteLink.jsx';
@@ -103,7 +103,7 @@ export default function Team() {
   const updateUser = async (id, patch) => {
     setError('');
     const previous = users;
-    setUsers((u) => u.map((x) => (x.id === id ? { ...x, ...(patch.accessLevel ? { access_level: patch.accessLevel } : patch) } : x)));
+    setUsers((u) => u.map((x) => (x.id === id ? { ...x, ...patch } : x)));
     try {
       const { user } = await api.patch(`/tenants/users/${id}`, patch);
       // Take the server's version: re-enabling someone who never accepted
@@ -177,7 +177,7 @@ export default function Team() {
                 <thead>
                   <tr>
                     <th>{t('page.name')}</th><th>{t('page.email')}</th><th>{t('page.role')}</th>
-                    <th>{t('page.stores')}</th><th>{t('page.access')}</th><th>{t('page.status')}</th>
+                    <th>{t('page.stores')}</th><th>{t('page.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -230,13 +230,6 @@ export default function Team() {
                               )}
                             </div>
                           )}
-                        </td>
-                        <td>
-                          {editable ? (
-                            <select value={u.access_level} onChange={(e) => updateUser(u.id, { accessLevel: e.target.value })} aria-label={t('team.accessFor', { name: u.full_name })}>
-                              {ACCESS_LEVELS.map((a) => <option key={a.value} value={a.value}>{accessName(t, a.value)}</option>)}
-                            </select>
-                          ) : accessName(t, u.access_level)}
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>

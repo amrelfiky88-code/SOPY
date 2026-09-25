@@ -16,8 +16,6 @@ export const ROLE_RANK = {
   business_owner: 5,
 };
 
-export const ACCESS_LEVEL_VALUES = ['admin', 'manager', 'standard'];
-
 // Statuses a manager may set by hand. 'invited' is only ever set by the
 // invite flow and cleared by accepting it.
 export const EDITABLE_STATUSES = ['active', 'disabled'];

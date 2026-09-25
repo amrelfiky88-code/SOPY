@@ -5,9 +5,10 @@ import { useAuth } from '../../auth/AuthContext.jsx';
 import StepRoles from './StepRoles.jsx';
 import StepStores from './StepStores.jsx';
 import StepInvites from './StepInvites.jsx';
-import StepAccessLevels from './StepAccessLevels.jsx';
 
-const STEPS = ['roles', 'stores', 'invites', 'access'];
+// Permissions come from each person's role, chosen when they're invited,
+// so there's no separate access-level step.
+const STEPS = ['roles', 'stores', 'invites'];
 
 export default function OnboardingWizard() {
   const [step, setStep] = useState(0);
@@ -44,8 +45,7 @@ export default function OnboardingWizard() {
 
       {step === 0 && <StepRoles onNext={next} />}
       {step === 1 && <StepStores onNext={next} onBack={back} />}
-      {step === 2 && <StepInvites onNext={next} onBack={back} />}
-      {step === 3 && <StepAccessLevels onNext={finish} onBack={back} finishing={finishing} />}
+      {step === 2 && <StepInvites onNext={finish} onBack={back} finishing={finishing} />}
     </div>
   );
 }

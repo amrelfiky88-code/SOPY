@@ -5,7 +5,7 @@ import { useT } from '../../i18n/index.jsx';
 import { ROLES, roleName } from './roles.js';
 import InviteLink from '../../components/InviteLink.jsx';
 
-export default function StepInvites({ onNext, onBack }) {
+export default function StepInvites({ onNext, onBack, finishing }) {
   const t = useT();
   const { tenant } = useAuth();
   const [users, setUsers] = useState([]);
@@ -100,7 +100,9 @@ export default function StepInvites({ onNext, onBack }) {
 
       <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
         <button className="btn btn-secondary" onClick={onBack}>{t('page.back')}</button>
-        <button className="btn btn-primary" onClick={onNext}>{t('common.continue')}</button>
+        <button className="btn btn-primary" onClick={onNext} disabled={finishing}>
+          {finishing ? t('onb.finishing') : t('onb.finish')}
+        </button>
       </div>
     </div>
   );

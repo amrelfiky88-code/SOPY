@@ -62,8 +62,8 @@ authRouter.post('/signup', async (req, res) => {
       const tenant = tenantRes.rows[0];
 
       const userRes = await client.query(
-        `INSERT INTO users (tenant_id, full_name, title, email, phone, password_hash, role, access_level, language)
-         VALUES ($1, $2, $3, $4, $5, $6, 'business_owner', 'admin', $7) RETURNING *`,
+        `INSERT INTO users (tenant_id, full_name, title, email, phone, password_hash, role, language)
+         VALUES ($1, $2, $3, $4, $5, $6, 'business_owner', $7) RETURNING *`,
         [tenant.id, name, str(title) || null, cleanEmail, str(phone) || null, passwordHash, uiLanguage(req.body.language)]
       );
       // Signed up through a referral link: a welcome discount off the
@@ -236,7 +236,6 @@ function publicUser(u) {
     phone: u.phone,
     role: u.role,
     language: u.language || DEFAULT_LANGUAGE,
-    accessLevel: u.access_level,
     status: u.status,
   };
 }

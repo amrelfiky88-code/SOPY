@@ -89,11 +89,9 @@ test('an area manager cannot invite someone to a role at or above their own', as
 
 // --- Input validation (these used to 500) ----------------------------
 
-test('an unknown role, access level or status is a 400, not a server error', async () => {
+test('an unknown role or status is a 400, not a server error', async () => {
   const badRole = await api('PATCH', `/api/tenants/users/${A.emp.userId}`, { token: A.token, body: { role: 'superuser' } });
   assert.equal(badRole.status, 400);
-  const badAccess = await api('PATCH', `/api/tenants/users/${A.emp.userId}`, { token: A.token, body: { accessLevel: 'root' } });
-  assert.equal(badAccess.status, 400);
   const badStatus = await api('PATCH', `/api/tenants/users/${A.emp.userId}`, { token: A.token, body: { status: 'invited' } });
   assert.equal(badStatus.status, 400, "'invited' is only set by the invite flow");
   const badInvite = await api('POST', '/api/tenants/users/invite', { token: A.token, body: { fullName: 'Z', email: 'z@example.com', role: 'superuser' } });
@@ -103,9 +101,10 @@ test('an unknown role, access level or status is a 400, not a server error', asy
 // --- Data exposure --------------------------------------------------
 
 test('editing a user never returns their password hash or invite token', async () => {
-  const res = await api('PATCH', `/api/tenants/users/${A.emp.userId}`, { token: A.token, body: { accessLevel: 'manager' } });
+  const res = await api('PATCH', `/api/tenants/users/${A.emp.userId}`, { token: A.token, body: { role: 'store_manager' } });
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.equal(res.body.user.access_level, 'manager');
+  assert.equal(res.body.user.role, 'store_manager');
+  assert.equal(res.body.user.access_level, undefined, 'access levels are gone; roles decide');
   assert.equal(res.body.user.password_hash, undefined);
   assert.equal(res.body.user.invite_token, undefined);
 });

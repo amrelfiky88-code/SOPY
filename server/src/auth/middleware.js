@@ -10,7 +10,7 @@ export async function requireAuth(req, res, next) {
   try {
     const payload = verifyToken(token);
     const { rows } = await query(
-      'SELECT id, tenant_id, role, access_level, status, tokens_valid_after FROM users WHERE id = $1',
+      'SELECT id, tenant_id, role, status, tokens_valid_after FROM users WHERE id = $1',
       [payload.userId]
     );
     const user = rows[0];
@@ -26,7 +26,6 @@ export async function requireAuth(req, res, next) {
       userId: user.id,
       tenantId: user.tenant_id,
       role: user.role,
-      accessLevel: user.access_level,
     };
     next();
   } catch (err) {

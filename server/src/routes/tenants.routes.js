@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { query, withTransaction } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
-import { isValidRole, canAssignRole, canManageUser, ACCESS_LEVEL_VALUES, EDITABLE_STATUSES } from '../auth/roles.js';
+import { isValidRole, canAssignRole, canManageUser, EDITABLE_STATUSES } from '../auth/roles.js';
 import { PLAN_LIMITS, clampPlanCount } from '../../../shared/pricing.js';
 
 export const tenantsRouter = Router();
@@ -151,7 +151,7 @@ tenantsRouter.delete('/branches/:id', requireAuth, requireRole('business_owner',
 // (Any signed-in employee used to be able to read the whole staff list.)
 tenantsRouter.get('/users', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
   const { rows } = await query(
-    `SELECT u.id, u.full_name, u.title, u.email, u.phone, u.role, u.access_level, u.status,
+    `SELECT u.id, u.full_name, u.title, u.email, u.phone, u.role, u.status,
             COALESCE(array_agg(ub.branch_id) FILTER (WHERE ub.branch_id IS NOT NULL), '{}') AS branch_ids
      FROM users u
      LEFT JOIN user_branches ub ON ub.user_id = u.id
@@ -178,7 +178,7 @@ async function validBranchIds(branchIds, tenantId) {
 }
 
 tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
-  const { fullName, email, role, accessLevel, branchIds } = req.body;
+  const { fullName, email, role, branchIds } = req.body;
   if (typeof fullName !== 'string' || typeof email !== 'string' || !fullName.trim() || !email.trim() || !role) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
@@ -188,9 +188,6 @@ tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', '
   if (!isValidRole(role)) return res.status(400).json({ error: 'Unknown role' });
   if (!canAssignRole(req.auth.role, role)) {
     return res.status(403).json({ error: "You can only invite people to roles below your own" });
-  }
-  if (accessLevel !== undefined && !ACCESS_LEVEL_VALUES.includes(accessLevel)) {
-    return res.status(400).json({ error: 'Unknown access level' });
   }
   const branches = await validBranchIds(branchIds ?? [], req.auth.tenantId);
   if (branches === undefined) return res.status(400).json({ error: 'One or more stores were not found' });
@@ -210,9 +207,9 @@ tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', '
   try {
     user = await withTransaction(async (client) => {
       const { rows } = await client.query(
-        `INSERT INTO users (tenant_id, full_name, email, role, access_level, status, invite_token, invite_expires_at, password_hash)
-         VALUES ($1, $2, $3, $4, $5, 'invited', $6, now() + interval '${INVITE_DAYS} days', $7) RETURNING *`,
-        [req.auth.tenantId, fullName.trim(), cleanEmail, role, accessLevel || 'standard', inviteToken, placeholderHash]
+        `INSERT INTO users (tenant_id, full_name, email, role, status, invite_token, invite_expires_at, password_hash)
+         VALUES ($1, $2, $3, $4, 'invited', $5, now() + interval '${INVITE_DAYS} days', $6) RETURNING *`,
+        [req.auth.tenantId, fullName.trim(), cleanEmail, role, inviteToken, placeholderHash]
       );
       if (branches.length) {
         const values = branches.map((_, idx) => `($1, $${idx + 2})`).join(', ');
@@ -264,10 +261,10 @@ tenantsRouter.post('/users/:id/reset-link', requireAuth, requireRole('business_o
 });
 
 // Columns safe to send to the browser — never password_hash or invite_token.
-const PUBLIC_USER_COLUMNS = 'id, full_name, title, email, phone, role, access_level, status, language';
+const PUBLIC_USER_COLUMNS = 'id, full_name, title, email, phone, role, status, language';
 
 tenantsRouter.patch('/users/:id', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
-  const { role, accessLevel, status, branchIds } = req.body;
+  const { role, status, branchIds } = req.body;
 
   // Resolve the target inside this tenant *first*. Everything below —
   // including the branch-assignment rewrite — only runs once we know the
@@ -280,7 +277,7 @@ tenantsRouter.patch('/users/:id', requireAuth, requireRole('business_owner', 'op
   if (!target) return res.status(404).json({ error: 'User not found' });
 
   if (target.id === req.auth.userId) {
-    return res.status(403).json({ error: "You can't change your own role, access or status" });
+    return res.status(403).json({ error: "You can't change your own role or status" });
   }
   if (!canManageUser(req.auth.role, target.role)) {
     return res.status(403).json({ error: 'You can only manage people below your own role' });
@@ -295,10 +292,6 @@ tenantsRouter.patch('/users/:id', requireAuth, requireRole('business_owner', 'op
       return res.status(403).json({ error: 'You can only assign roles below your own' });
     }
     fields.push(`role = $${i++}`); values.push(role);
-  }
-  if (accessLevel !== undefined) {
-    if (!ACCESS_LEVEL_VALUES.includes(accessLevel)) return res.status(400).json({ error: 'Unknown access level' });
-    fields.push(`access_level = $${i++}`); values.push(accessLevel);
   }
   if (status !== undefined) {
     if (!EDITABLE_STATUSES.includes(status)) return res.status(400).json({ error: 'Unknown status' });
