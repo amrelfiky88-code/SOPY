@@ -62,6 +62,7 @@ const ROWS = [
   ['landing.login', 'Log in', 'تسجيل الدخول', 'Se connecter'],
   ['landing.kicker', 'For restaurants and cafés', 'للمطاعم والمقاهي', 'Pour les restaurants et cafés'],
   ['landing.headline', 'SOPY: Restaurant Perfect Operating Procedure System', 'SOPY: نظام إجراءات التشغيل المثالية للمطاعم', "SOPY : le système de procédures d'exploitation parfaites pour restaurants"],
+  ['landing.tagline', 'Your SOP manual, on every shift.', 'دليل إجراءات التشغيل معك في كل وردية.', 'Votre manuel de procédures, à chaque service.'],
   ['landing.pitch1', 'Paper SOP binders get lost, skipped, and never checked twice.', 'ملفات إجراءات التشغيل الورقية تضيع وتُهمل ولا تُراجع مرتين.', "Les classeurs de procédures papier se perdent, sont sautés et jamais revérifiés."],
   ['landing.pitch2', 'SOPY puts every checklist, log, and sign-off on the device your team already carries.', 'يضع SOPY كل قائمة فحص وسجل واعتماد على الجهاز الذي يحمله فريقك أصلًا.', 'SOPY met chaque check-list, registre et signature sur le téléphone que votre équipe a déjà en poche.'],
   ['landing.pitch3', 'You see compliance in real time — not after an inspection finds the gap.', 'ترى مستوى الالتزام لحظيًا — لا بعد أن يكتشف التفتيش الثغرة.', "Vous voyez la conformité en temps réel — pas après qu'une inspection a trouvé la faille."],

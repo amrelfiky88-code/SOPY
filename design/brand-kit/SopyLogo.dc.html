@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,700&family=IBM+Plex+Sans+Arabic:wght@700&display=swap">
+</helmet>
+<div style="display:inline-flex;align-items:center;gap:.32em;font-size:{{sizePx}};line-height:1;direction:{{dir}};vertical-align:middle">
+  <sc-if value="{{showMark}}" hint-placeholder-val="{{true}}">
+    <div style="width:1em;height:1em;border-radius:.22em;background:{{tile}};display:flex;flex-direction:column;justify-content:center;gap:.075em;padding:0 .22em;box-sizing:border-box;flex-shrink:0;direction:ltr">
+      <div style="height:.095em;border-radius:.05em;background:{{fg}}"></div>
+      <div style="height:.095em;border-radius:.05em;background:{{fg}}"></div>
+      <div style="display:flex;align-items:center;gap:.07em">
+        <div style="width:.26em;height:.095em;border-radius:.05em;background:{{fg}}"></div>
+        <div style="width:.17em;height:.17em;border-radius:50%;background:{{dot}}"></div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{showWord}}" hint-placeholder-val="{{true}}">
+    <span style="font-family:{{wordFont}};font-weight:700;font-size:{{wordSize}};letter-spacing:{{ls}};color:{{word}};white-space:nowrap">{{wordText}}</span>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:360,&quot;height&quot;:140},&quot;size&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:64,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:12,&quot;max&quot;:300},&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;lockup&quot;,&quot;options&quot;:[&quot;lockup&quot;,&quot;mark&quot;,&quot;wordmark&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;primary&quot;,&quot;options&quot;:[&quot;primary&quot;,&quot;reverse&quot;,&quot;ink&quot;,&quot;white&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;accentDot&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;script&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;latin&quot;,&quot;options&quot;:[&quot;latin&quot;,&quot;arabic&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const layout = p.layout ?? 'lockup';
+    const themes = {
+      primary: { tile: '#1c3d2e', fg: '#f4efe6', word: '#1c3d2e' },
+      reverse: { tile: '#f4efe6', fg: '#1c3d2e', word: '#f4efe6' },
+      ink: { tile: '#1c231f', fg: '#ffffff', word: '#1c231f' },
+      white: { tile: '#ffffff', fg: '#1c3d2e', word: '#ffffff' }
+    };
+    const t = themes[p.theme ?? 'primary'] || themes.primary;
+    const arabic = p.script === 'arabic';
+    const showMark = layout !== 'wordmark';
+    return {
+      sizePx: (p.size ?? 64) + 'px',
+      dir: arabic ? 'rtl' : 'ltr',
+      tile: t.tile, fg: t.fg, word: t.word,
+      dot: p.accentDot ? '#e0a458' : t.fg,
+      showMark,
+      showWord: layout !== 'mark',
+      wordText: arabic ? 'سوبي' : 'SOPY',
+      wordFont: arabic ? "'IBM Plex Sans Arabic', sans-serif" : "'Source Serif 4', Georgia, serif",
+      wordSize: arabic ? '.84em' : '.92em',
+      ls: arabic ? '0' : '.015em'
+    };
+  }
+}
+</script>
+</body>
+</html>

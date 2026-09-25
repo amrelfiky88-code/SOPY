@@ -6,6 +6,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
 import { REFERRAL_WELCOME_USD } from '../../../shared/referrals.js';
 import { countryOptions } from '../../../shared/countries.js';
 import JobTitleSelect from '../components/JobTitleSelect.jsx';
+import Logo from '../components/Logo.jsx';
 
 // The code from a referral link (?ref=… now, or saved by main.jsx when the
 // link was opened within the last 30 days).
@@ -56,7 +57,7 @@ export default function WhoAreYou() {
       {/* The progress bar used to share this row with the language picker
           and collapsed to nothing; there was also no way back home. */}
       <div className="signed-out-bar">
-        <Link to="/" className="auth-brand">SOPY</Link>
+        <Link to="/" className="auth-brand"><Logo size={28} /></Link>
         <LanguageSwitcher />
       </div>
       <div className="stepper">

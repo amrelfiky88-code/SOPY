@@ -312,6 +312,7 @@ export default function ChecklistRun() {
                     <input
                       id={`reading-${item.id}`}
                       type="number"
+                      className="mono"
                       inputMode="decimal"
                       value={r.valueText || ''}
                       onChange={(e) => editText(item.id, e.target.value)}

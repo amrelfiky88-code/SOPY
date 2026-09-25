@@ -4,6 +4,7 @@ import { api, setToken } from '../api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useI18n } from '../i18n/index.jsx';
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
+import Logo from '../components/Logo.jsx';
 
 export default function AcceptInvite() {
   const { t, lang } = useI18n();
@@ -50,7 +51,7 @@ export default function AcceptInvite() {
   return (
     <div className="screen-narrow">
       <div className="signed-out-bar">
-        <span className="auth-brand">SOPY</span>
+        <span className="auth-brand"><Logo size={28} /></span>
         <LanguageSwitcher />
       </div>
       {!token || deadLink ? (

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>body{margin:0;background:#e8e2d5;color:#1c231f}a{color:#1c3d2e}a:hover{color:#12271d}</style>
+</helmet>
+<div style="font-family:'IBM Plex Sans',Helvetica,sans-serif;padding:64px;display:flex;flex-direction:column;gap:72px">
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:760px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#4a534d">SOPY · Social media kit</span>
+    <h1 style="margin:0;font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:44px;letter-spacing:-.01em">Profile pictures and covers</h1>
+    <p style="margin:0;color:#4a534d">Each artboard is at the platform's recommended size. The PNGs are exported at 2× so they stay sharp after the platforms recompress them.</p>
+  </div>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-weight:600;font-size:20px">Profile picture · Facebook, Instagram, TikTok, LinkedIn</div>
+    <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div id="profile-forest" style="width:1080px;height:1080px;background:#1c3d2e;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative">
+          <dc-import name="SopyLogo" size="1200" layout="mark" theme="primary" accent-dot="{{ accentDot }}" hint-size="1200px,1200px"></dc-import>
+        </div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:#4a534d">sopy-profile-forest.png · 1080 × 1080 (exported 2160) · primary</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div id="profile-paper" style="width:1080px;height:1080px;background:#f4efe6;display:flex;align-items:center;justify-content:center;overflow:hidden">
+          <dc-import name="SopyLogo" size="720" layout="mark" theme="primary" accent-dot="{{ accentDot }}" hint-size="720px,720px"></dc-import>
+        </div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:#4a534d">sopy-profile-paper.png · 1080 × 1080 (exported 2160) · alternate</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;max-width:360px">
+        <div style="font-weight:600">Circle-crop check</div>
+        <div style="display:flex;gap:16px;align-items:center">
+          <div style="width:160px;height:160px;border-radius:50%;overflow:hidden;background:#1c3d2e;display:flex;align-items:center;justify-content:center"><dc-import name="SopyLogo" size="178" layout="mark" theme="primary" accent-dot="{{ accentDot }}" hint-size="178px,178px"></dc-import></div>
+          <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:#1c3d2e;display:flex;align-items:center;justify-content:center"><dc-import name="SopyLogo" size="44" layout="mark" theme="primary" hint-size="44px,44px"></dc-import></div>
+        </div>
+        <p style="margin:0;font-size:14px;color:#4a534d">Instagram, TikTok and LinkedIn personal crop to a circle. LinkedIn company pages and Facebook pages may show it square. The mark sits inside the circle on all of them.</p>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-weight:600;font-size:20px">Facebook page cover</div>
+    <div id="cover-facebook" style="width:851px;height:315px;background:#1c3d2e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding-bottom:28px;box-sizing:border-box">
+      <dc-import name="SopyLogo" size="64" theme="reverse" accent-dot="{{ accentDot }}" hint-size="190px,64px"></dc-import>
+      <span style="font-family:'Source Serif 4',Georgia,serif;font-size:24px;color:#f4efe6">Your SOP manual, on every shift.</span>
+    </div>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:#4a534d">sopy-cover-facebook.png · 851 × 315 (exported 1702 × 630) · centered, since mobile crops the sides</span>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-weight:600;font-size:20px">LinkedIn company page cover</div>
+    <div id="cover-linkedin-company" style="width:1128px;height:191px;background:#f4efe6;display:flex;align-items:center;justify-content:flex-end;gap:32px;padding:0 72px;box-sizing:border-box">
+      <span style="font-family:'Source Serif 4',Georgia,serif;font-size:24px;color:#1c231f">Your SOP manual, on every shift.</span>
+      <div style="width:1px;height:48px;background:#d9d2c3"></div>
+      <dc-import name="SopyLogo" size="44" theme="primary" accent-dot="{{ accentDot }}" hint-size="130px,44px"></dc-import>
+    </div>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:#4a534d">sopy-cover-linkedin-company.png · 1128 × 191 (exported 2256 × 382) · right-aligned, clear of the logo overlap at bottom left</span>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-weight:600;font-size:20px">LinkedIn personal banner</div>
+    <div id="cover-linkedin-personal" style="width:1584px;height:396px;background:#1c3d2e;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:20px;padding:0 120px 40px;box-sizing:border-box">
+      <dc-import name="SopyLogo" size="72" theme="reverse" accent-dot="{{ accentDot }}" hint-size="212px,72px"></dc-import>
+      <span style="font-family:'Source Serif 4',Georgia,serif;font-size:28px;color:#f4efe6">Your SOP manual, on every shift.</span>
+    </div>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:14px;color:#4a534d">sopy-cover-linkedin-personal.png · 1584 × 396 (exported 3168 × 792) · right side, clear of the profile photo</span>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentDot&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Logo&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return { accentDot: this.props.accentDot ?? false };
+  }
+}
+</script>
+</body>
+</html>

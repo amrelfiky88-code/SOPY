@@ -1,5 +1,5 @@
 // Bump on any change to this file's caching rules.
-const CACHE_NAME = 'sopy-cache-v2';
+const CACHE_NAME = 'sopy-cache-v3'; // v3: new brand icons
 const APP_SHELL = ['/', '/manifest.json', '/icons/icon.svg', '/icons/icon-192.png'];
 
 self.addEventListener('install', (event) => {

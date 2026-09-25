@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useT } from '../i18n/index.jsx';
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
 import { ShieldIcon, GraduationCapIcon, CopyIcon, DoorOpenIcon, TrendingUpIcon, LayersIcon } from '../components/icons.jsx';
+import Logo from '../components/Logo.jsx';
 
 // Wording lives in i18n/pageLabels.js as landing.why1…why6.
 const WHY_SOPS = [
@@ -19,7 +20,7 @@ export default function Landing() {
   return (
     <div>
       <div className="top-bar">
-        <span className="brand">SOPY</span>
+        <span className="brand"><Logo size={28} /></span>
         <div className="top-bar-actions">
           <LanguageSwitcher />
           <Link to="/login" className="btn btn-secondary btn-small">{t('landing.login')}</Link>
@@ -30,9 +31,13 @@ export default function Landing() {
         <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--green)' }}>
           {t('landing.kicker')}
         </p>
-        <h1 style={{ fontSize: 36, maxWidth: 580 }}>
+        <h1 style={{ fontSize: 36, lineHeight: 1.15, maxWidth: 580 }}>
           {t('landing.headline')}
         </h1>
+        {/* The brand line from the guidelines' cover. */}
+        <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-serif)', fontSize: 22, lineHeight: 1.3, color: 'var(--ink)', maxWidth: 580 }}>
+          {t('landing.tagline')}
+        </p>
 
         <div className="card" style={{ marginTop: 24 }}>
           <p style={{ margin: '0 0 10px' }}>{t('landing.pitch1')}</p>

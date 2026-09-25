@@ -28,6 +28,7 @@ import AcceptInvite from './pages/AcceptInvite.jsx';
 import ReportsList from './pages/reports/ReportsList.jsx';
 import ReportView from './pages/reports/ReportView.jsx';
 import SetupInProgress from './pages/onboarding/SetupInProgress.jsx';
+import Logo from './components/Logo.jsx';
 
 function RequireAuth({ children }) {
   const { user, loading, offline, refresh } = useAuth();
@@ -61,7 +62,7 @@ function OfflineScreen({ onRetry }) {
   };
   return (
     <div className="screen-narrow">
-      <span className="auth-brand">SOPY</span>
+      <span className="auth-brand"><Logo size={28} /></span>
       <div className="card">
         <h2>{t('offline.title')}</h2>
         <p>{t('offline.body')}</p>

@@ -92,6 +92,10 @@ Don't edit seed SQL (or anything with em dashes/Arabic/French) via PowerShell `-
 
 ## Mobile UI conventions
 
+**Brand** (`design/brand-kit/`, exported from the Claude Design project "SOPY project branding"; open `SOPY Brand Guidelines.dc.html`). Forest #1C3D2E and Paper #F4EFE6 carry the brand. Amber and Red are only for compliance status; amber text on its tint is `--amber-text` #8A4A12. Type: Source Serif 4 for headings, scores and big numbers; IBM Plex Sans for UI; IBM Plex Sans Arabic for Arabic (it follows each Latin face in the font stacks, so Arabic picks it up automatically); IBM Plex Mono (`.mono`) for SOP codes, readings and timestamps. Fonts load from Google Fonts in `index.html`. The logo is `components/Logo.jsx` (Checkpoint mark and wordmark, "سوبي" on Arabic pages; minimum 28px for the lockup). The app icons in `web/public/icons` come from the kit, so bump `CACHE_NAME` in `sw.js` when they change. Status thresholds (Green ≥95%, Amber 85–94%, Red <85% or any critical fail) match `computeScorecard`.
+
+In right-to-left text, wrap each part of a line that mixes Latin names with Arabic dates or words in `<bdi>`, or the parts reorder.
+
 Styling is a single hand-written `web/src/styles/theme.css` with CSS custom properties — no framework. Under 768px the sidebar becomes an off-canvas drawer and a fixed bottom tab bar appears; `.main` and `.sticky-action-bar` are offset to clear it. Wrap every `<table>` in `.table-scroll` (the page has `overflow-x: hidden`, so an unwrapped wide table gets clipped silently). Two-column form layouts use `.form-grid-2col`, not inline grid styles, so they can collapse on mobile. Icons come from `web/src/components/icons.jsx`, drawn only from line/rect/circle/polygon primitives.
 
 A `<label>` wrapping a checkbox binds to the *first* labelable element inside it — a nested `<button>` steals the click. Use explicit `htmlFor`/`id` when a label contains buttons (see `ChecklistBuilder.jsx`).

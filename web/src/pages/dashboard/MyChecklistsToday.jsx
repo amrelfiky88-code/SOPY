@@ -81,7 +81,7 @@ export default function MyChecklistsToday() {
           <div className="checklist-row" key={a.id}>
             <div style={{ minWidth: 0 }}>
               <strong>{reportTitle(t, a.kind, a.template_name)}</strong>
-              <div className="hint">{a.branch_name || t('common.allStores')} · {t(`kpi.${a.frequency}`)}</div>
+              <div className="hint"><bdi>{a.branch_name || t('common.allStores')}</bdi> · {t(`kpi.${a.frequency}`)}</div>
               {pickStore && (
                 <select
                   aria-label={t('common.store')}

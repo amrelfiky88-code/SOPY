@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useT } from '../i18n/index.jsx';
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
+import Logo from '../components/Logo.jsx';
 
 export default function Login() {
   const t = useT();
@@ -42,7 +43,7 @@ export default function Login() {
   return (
     <div className="screen-narrow">
       <div className="signed-out-bar">
-        <Link to="/" className="auth-brand">SOPY</Link>
+        <Link to="/" className="auth-brand"><Logo size={28} /></Link>
         <LanguageSwitcher />
       </div>
       <h2>{t('login.title')}</h2>

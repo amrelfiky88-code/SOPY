@@ -50,7 +50,7 @@ export default {
   'dashboard.welcome': 'مرحبًا بعودتك',
   'dashboard.welcomeNamed': 'مرحبًا بعودتك، {name}',
   'dashboard.assigned': 'المهام المسندة إليك',
-  'dashboard.submitted24h': 'أرسلت خلال ٢٤ ساعة',
+  'dashboard.submitted24h': 'أرسلت خلال 24 ساعة',
   'dashboard.activeStores': 'الفروع النشطة',
   'dashboard.teamMembers': 'أعضاء الفريق',
   'dashboard.myChecklists': 'قوائم الفحص اليوم',

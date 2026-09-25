@@ -13,8 +13,18 @@
   --red-tint: #f7e4e1;
   --radius: 8px;
   --radius-sm: 5px;
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  /* Brand type (design/brand-kit): Source Serif 4 for headings, scores and big
+     numbers; IBM Plex for everything else, in Latin, Arabic and mono, so
+     English, French and Arabic screens look like one product. Loaded from
+     Google Fonts in index.html; the system fonts after them cover offline. */
+  /* Plex Sans Arabic follows each Latin face, so Arabic text (headings too)
+     is set in it automatically; its files load only when Arabic is on the page. */
+  --font: "IBM Plex Sans", "IBM Plex Sans Arabic", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: "Source Serif 4", "IBM Plex Sans Arabic", Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-arabic: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Amber text on the amber tint (the kit's status colour for numbers and words). */
+  --amber-text: #8a4a12;
   --max-width: 720px;
   --shadow-sm: 0 1px 2px rgba(28, 35, 31, 0.06);
   --shadow-card: 0 1px 3px rgba(28, 35, 31, 0.07), 0 1px 1px rgba(28, 35, 31, 0.05);
@@ -70,7 +80,7 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-size: 16px;
-  line-height: 1.45;
+  line-height: 1.5; /* Body 16/24 */
 }
 
 h1, h2, h3 {
@@ -81,8 +91,9 @@ h1, h2, h3 {
   letter-spacing: -0.01em;
 }
 
-h1 { font-size: 30px; }
-h2 { font-size: 22px; }
+/* Type scale from the brand kit: H1 30/36, H2 22/28. */
+h1 { font-size: 30px; line-height: 36px; }
+h2 { font-size: 22px; line-height: 28px; }
 h3 { font-size: 18px; }
 
 p { margin: 0 0 12px; color: var(--ink-soft); }
@@ -304,7 +315,7 @@ input[type="time"]::-webkit-date-and-time-value { text-align: start; }
   color: var(--ink-soft);
 }
 .pill-green { background: var(--green-tint); color: var(--green); }
-.pill-amber { background: var(--amber-tint); color: var(--amber); }
+.pill-amber { background: var(--amber-tint); color: var(--amber-text); }
 .pill-red { background: var(--red-tint); color: var(--red); }
 
 .stepper {
@@ -331,7 +342,10 @@ tbody tr:hover { background: var(--paper); }
 
 .layout {
   display: flex;
-  min-height: 100%;
+  /* The viewport, not 100%: #root only has a min-height, so a percentage
+     here resolved to nothing and the sidebar stopped short of the bottom. */
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 .sidebar {
   width: 226px;
@@ -755,7 +769,7 @@ tbody tr:hover { background: var(--paper); }
 }
 
 .invite-link-url {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   background: var(--paper);
   border: 1px solid var(--line);
@@ -1011,15 +1025,21 @@ a.share-target { text-decoration: none; }
 .language-switcher {
   width: auto;
   min-width: 0;
+  min-height: 40px;
   padding: 6px 10px;
   font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--paper-white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
 }
 .signed-out-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 24px;
 }
 .top-bar-actions {
   display: flex;
@@ -1053,3 +1073,24 @@ a.share-target { text-decoration: none; }
   }
   .team-table td select { width: 100%; }
 }
+
+/* The SOPY logo (components/Logo.jsx), built to the brand kit's
+   construction: tile radius 22%, bars 9.5% thick with 7.5% gaps, dot 17%.
+   In Arabic the mark sits on the reading-start side, which the page's
+   direction does on its own; the mark itself never mirrors. */
+.sopy-logo { display: inline-flex; align-items: center; line-height: 1; vertical-align: middle; }
+a.sopy-logo, a:has(> .sopy-logo) { text-decoration: none; }
+.sopy-logo-mark {
+  width: 1em; height: 1em; border-radius: .22em;
+  display: flex; flex-direction: column; justify-content: center; gap: .075em;
+  padding: 0 .22em; box-sizing: border-box; flex-shrink: 0; direction: ltr;
+}
+.sopy-logo-word { font-family: var(--font-serif); font-weight: 700; font-size: .92em; letter-spacing: .015em; white-space: nowrap; }
+.sopy-logo-word-ar { font-family: var(--font-arabic); font-size: .84em; letter-spacing: 0; }
+
+/* SOP codes, readings and timestamps. */
+.mono, .field input.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Its parts are <bdi>-isolated, so the line follows the page direction
+   (plaintext would see no strong letter and fall back to left-to-right). */
+.report-list-text > .report-list-meta { unicode-bidi: normal; text-align: start; }

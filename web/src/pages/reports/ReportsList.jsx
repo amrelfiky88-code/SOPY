@@ -55,8 +55,9 @@ export default function ReportsList() {
               <span className="report-list-icon"><FileTextIcon size={22} /></span>
               <span className="report-list-text">
                 <strong>{reportTitle(t, s.kind, s.template_name)}</strong>
-                <span className="hint">
-                  {s.branch_name} · {formatDateTime(s.submitted_at || s.started_at, lang)} · {s.submitted_by_name}
+                <span className="hint report-list-meta">
+                  {/* Each part isolated: a Latin store name beside an Arabic date scrambled the date. */}
+                  <bdi>{s.branch_name}</bdi> · <bdi>{formatDateTime(s.submitted_at || s.started_at, lang)}</bdi> · <bdi>{s.submitted_by_name}</bdi>
                 </span>
               </span>
               {s.has_incident && <span className="pill pill-red">{t('reports.incident')}</span>}

@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext.jsx';
 import { useT } from '../i18n/index.jsx';
 import FeedbackButton from './FeedbackButton.jsx';
 import SetupInProgress from '../pages/onboarding/SetupInProgress.jsx';
+import Logo from './Logo.jsx';
 import {
   MenuIcon,
   FileTextIcon,
@@ -87,13 +88,13 @@ export default function AppLayout() {
         >
           <MenuIcon size={22} strokeWidth="2" />
         </button>
-        <span className="brand">SOPY</span>
+        <span className="brand"><Logo size={28} theme="reverse" /></span>
       </div>
 
       <div className={`sidebar-backdrop ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} />
 
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <span className="brand">SOPY</span>
+        <span className="brand"><Logo size={28} theme="reverse" /></span>
         <nav>
           <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}><GridIcon size={18} /> {t('nav.dashboard')}</NavLink>
           {seesKpi && <NavLink to="/app/kpi" className={({ isActive }) => (isActive ? 'active' : '')}><BarChartIcon size={18} /> {t('nav.kpi')}</NavLink>}
@@ -102,7 +103,8 @@ export default function AppLayout() {
           <NavLink to="/app/forms/opening" className={({ isActive }) => (isActive ? 'active' : '')}><DoorOpenIcon size={18} /> {t('nav.opening')}</NavLink>
           <NavLink to="/app/forms/closing" className={({ isActive }) => (isActive ? 'active' : '')}><DoorClosedIcon size={18} /> {t('nav.closing')}</NavLink>
           <NavLink to="/app/reports" className={({ isActive }) => (isActive ? 'active' : '')}><FileTextIcon size={18} /> {t('nav.reports')}</NavLink>
-          <div className="sidebar-divider" />
+          {/* Staff have no manager links; one divider, not two around nothing. */}
+          {canManage && <div className="sidebar-divider" />}
           {canManage && <NavLink to="/app/checklists" className={({ isActive }) => (isActive ? 'active' : '')}><ClipboardCheckIcon size={18} /> {t('nav.builder')}</NavLink>}
           {canManage && <NavLink to="/app/team" className={({ isActive }) => (isActive ? 'active' : '')}><StorefrontIcon size={18} /> {t('nav.team')}</NavLink>}
           {canManage && <NavLink to="/app/forms/qc-visit" className={({ isActive }) => (isActive ? 'active' : '')}><SearchIcon size={18} /> {t('nav.qcVisit')}</NavLink>}

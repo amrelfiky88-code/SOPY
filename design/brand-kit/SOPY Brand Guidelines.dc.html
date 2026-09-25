@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>body{margin:0;background:#f4efe6;color:#1c231f;-webkit-font-smoothing:antialiased}a{color:#1c3d2e}a:hover{color:#12271d}</style>
+</helmet>
+<div style="font-family:'IBM Plex Sans',-apple-system,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#1c231f;background:#f4efe6">
+
+  <header data-screen-label="00 Cover" style="background:#1c3d2e;color:#f4efe6;padding:clamp(32px,6vw,72px) clamp(20px,5vw,64px) clamp(40px,6vw,64px)">
+    <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(80px,14vw,180px)">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#cfe0d5">
+        <span>Brand guidelines</span><span>v1.0 · September 2026</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:32px">
+        <div id="logo-reverse" style="display:inline-flex;align-self:flex-start"><dc-import name="SopyLogo" size="112" theme="reverse" accent-dot="{{ accentDot }}" hint-size="330px,112px"></dc-import></div>
+        <p style="margin:0;font-family:'Source Serif 4',Georgia,serif;font-size:clamp(28px,4vw,48px);line-height:1.12;max-width:760px;text-wrap:pretty;letter-spacing:-.01em">Your SOP manual, on every shift.</p>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px 28px;font-size:14px;color:#cfe0d5">
+        <a href="#brand" style="color:#f4efe6">01 Brand</a><a href="#logo" style="color:#f4efe6">02 Logo</a><a href="#color" style="color:#f4efe6">03 Color</a><a href="#type" style="color:#f4efe6">04 Type</a><a href="#status" style="color:#f4efe6">05 Status</a><a href="#voice" style="color:#f4efe6">06 Voice</a><a href="#apps" style="color:#f4efe6">07 Applications</a>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width:1180px;margin:0 auto;padding:0 clamp(20px,5vw,64px)">
+
+    <section id="brand" data-screen-label="01 Brand" style="padding:88px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:32px 48px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#4a534d">01 — Brand</div>
+      <div style="grid-column:span 2;min-width:0;display:flex;flex-direction:column;gap:40px">
+        <h2 style="margin:0;font-family:'Source Serif 4',Georgia,serif;font-weight:600;font-size:clamp(30px,3.6vw,44px);line-height:1.12;letter-spacing:-.01em;text-wrap:pretty">SOPY replaces the paper SOP binder with checklists that run on a phone, collect photo evidence and score every shift.</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;border-top:1px solid #d9d2c3;padding-top:28px">
+          <div><div style="font-weight:600;margin-bottom:6px">For</div><p style="margin:0;color:#4a534d;font-size:15px">Owners, area managers and shift crews at restaurants and cafés.</p></div>
+          <div><div style="font-weight:600;margin-bottom:6px">Promise</div><p style="margin:0;color:#4a534d;font-size:15px">Every store runs to the same standard, and you can prove it.</p></div>
+          <div><div style="font-weight:600;margin-bottom:6px">Character</div><p style="margin:0;color:#4a534d;font-size:15px">Steady, exact, on the crew's side. A good kitchen manager, not an auditor.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="logo" data-screen-label="02 Logo" style="padding:88px 0;border-top:1px solid #d9d2c3;display:flex;flex-direction:column;gap:48px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px 48px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#4a534d">02 — Logo</div>
+        <div style="grid-column:span 2;min-width:0">
+                    <h2 style="margin:0 0 12px;font-family:'Source Serif 4',Georgia,serif;font-weight:600;font-size:clamp(30px,3.6vw,44px);line-height:1.12;letter-spacing:-.01em">The Checkpoint mark</h2>
+          <p style="margin:0;color:#4a534d;max-width:620px;text-wrap:pretty">A procedure reduced to three lines. The last step ends in a dot, the moment a checkpoint is confirmed. The wordmark is set in Source Serif 4 Bold, keeping the serif voice the product already uses.</p>
+        </div>
+      </div>
+
+      <div style="background:#ffffff;border:1px solid #d9d2c3;border-radius:8px;min-height:340px;display:flex;align-items:center;justify-content:center;padding:48px 24px">
+        <div id="logo-primary" style="display:inline-flex;padding:20px"><dc-import name="SopyLogo" size="140" theme="primary" accent-dot="{{ accentDot }}" hint-size="410px,140px"></dc-import></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="background:#f4efe6;border:1px solid #d9d2c3;border-radius:8px;height:180px;display:flex;align-items:center;justify-content:center"><dc-import name="SopyLogo" size="56" theme="primary" accent-dot="{{ accentDot }}" hint-size="165px,56px"></dc-import></div>
+          <div style="font-size:14px"><strong style="font-weight:600">Primary</strong> <span style="color:#4a534d">· Forest on Paper or white</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="background:#1c3d2e;border-radius:8px;height:180px;display:flex;align-items:center;justify-content:center"><dc-import name="SopyLogo" size="56" theme="reverse" accent-dot="{{ accentDot }}" hint-size="165px,56px"></dc-import></div>
+          <div style="font-size:14px"><strong style="font-weight:600">Reverse</strong> <span style="color:#4a534d">· Paper on Forest</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="background:#ffffff;border:1px solid #d9d2c3;border-radius:8px;height:180px;display:flex;align-items:center;justify-content:center"><dc-import name="SopyLogo" size="56" theme="ink" accent-dot="{{ false }}" hint-size="165px,56px"></dc-import></div>
+          <div style="font-size:14px"><strong style="font-weight:600">One colour</strong> <span style="color:#4a534d">· Ink, for print and fax-grade forms</span></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="background:#ffffff;border:1px solid #d9d2c3;border-radius:8px;height:180px;display:flex;align-items:center;justify-content:center;gap:40px">
+            <dc-import name="SopyLogo" size="72" layout="mark" theme="primary" accent-dot="{{ accentDot }}" hint-size="72px,72px"></dc-import>
+            <dc-import name="SopyLogo" size="56" layout="wordmark" theme="primary" hint-size="120px,56px"></dc-import>
+          </div>
+          <div style="font-size:14px"><strong style="font-weight:600">Mark and wordmark</strong> <span style="color:#4a534d">· Mark alone for icons and avatars. Wordmark alone only where the mark already appears.</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="background:#ffffff;border:1px solid #d9d2c3;border-radius:8px;height:180px;display:flex;align-items:center;justify-content:center">
+            <dc-import name="SopyLogo" size="56" script="arabic" theme="primary" accent-dot="{{ accentDot }}" hint-size="150px,56px"></dc-import>
+          </div>
+          <div style="font-size:14px"><strong style="font-weight:600">Arabic lockup</strong> <span style="color:#4a534d">· سوبي in IBM Plex Sans Arabic Bold. Mark sits on the reading-start side.</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="background:#ffffff;border:1px solid #d9d2c3;border-radius:8px;height:180px;display:flex;align-items:center;justify-content:center">
+            <div style="border:1px dashed #b5651d;padding:24px;position:relative">
+              <div style="outline:1px solid #d9d2c3"><dc-import name="SopyLogo" size="48" theme="primary" accent-dot="{{ accentDot }}" hint-size="141px,48px"></dc-import></div>
+            </div>
+          </div>
+          <div style="font-size:14px"><strong style="font-weight:600">Clear space</strong> <span style="color:#4a534d">· Half the mark's height on every side.</span></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px 48px;border-top:1px solid #d9d2c3;padding-top:32px">
+        <div>
+          <div style="font-weight:600;margin-bottom:14px">Minimum size</div>
+          <div style="display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:8px"><dc-import name="SopyLogo" size="28" theme="primary" accent-dot="{{ accentDot }}" hint-size="83px,28px"></dc-import><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">Lockup · 28px / 10mm</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px"><dc-import name="SopyLogo" size="16" layout="mark" theme="primary" accent-dot="{{ false }}" hint-size="16px,16px"></dc-import><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">Mark · 16px / 5mm</span></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:6px">Construction</div>
+          <p style="margin:0;color:#4a534d;font-size:15px;text-wrap:pretty">Tile corner radius is 22% of the tile. Bars are 9.5% thick with 7.5% gaps. The dot is 17% of the tile. The wordmark cap height matches the height of the three bars.</p>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="font-weight:600">Don't</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="background:#ffffff;border:1px solid #d9d2c3;border-radius:8px;height:130px;display:flex;align-items:center;justify-content:center;overflow:hidden"><div style="transform:scaleX(1.45)"><dc-import name="SopyLogo" size="36" theme="primary" accent-dot="{{ accentDot }}" hint-size="106px,36px"></dc-import></div></div>
+            <span style="font-size:14px;color:#a13a2f;font-weight:600">Stretch or squash it</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="background:#ffffff;border:1px solid #d9d2c3;border-radius:8px;height:130px;display:flex;align-items:center;justify-content:center"><div style="transform:rotate(-12deg)"><dc-import name="SopyLogo" size="36" theme="primary" accent-dot="{{ accentDot }}" hint-size="106px,36px"></dc-import></div></div>
+            <span style="font-size:14px;color:#a13a2f;font-weight:600">Rotate it</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="background:#b5651d;border-radius:8px;height:130px;display:flex;align-items:center;justify-content:center"><dc-import name="SopyLogo" size="36" theme="primary" accent-dot="{{ accentDot }}" hint-size="106px,36px"></dc-import></div>
+            <span style="font-size:14px;color:#a13a2f;font-weight:600">Place it on status colours</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="background:#ffffff;border:1px solid #d9d2c3;border-radius:8px;height:130px;display:flex;align-items:center;justify-content:center"><div style="filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))"><dc-import name="SopyLogo" size="36" theme="primary" accent-dot="{{ accentDot }}" hint-size="106px,36px"></dc-import></div></div>
+            <span style="font-size:14px;color:#a13a2f;font-weight:600">Add shadows or effects</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="color" data-screen-label="03 Color" style="padding:88px 0;border-top:1px solid #d9d2c3;display:flex;flex-direction:column;gap:40px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px 48px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#4a534d">03 — Color</div>
+        <div style="grid-column:span 2;min-width:0">
+          <h2 style="margin:0 0 12px;font-family:'Source Serif 4',Georgia,serif;font-weight:600;font-size:clamp(30px,3.6vw,44px);line-height:1.12;letter-spacing:-.01em">Forest and Paper</h2>
+          <p style="margin:0;color:#4a534d;max-width:620px;text-wrap:pretty">Two colours carry the brand. Amber and Red are reserved for compliance status, so they always mean something when they appear.</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+        <div style="border-radius:8px;overflow:hidden;border:1px solid #d9d2c3;background:#fff"><div style="height:150px;background:#1c3d2e"></div><div style="padding:14px 16px"><div style="font-weight:600">Forest</div><div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#4a534d">#1C3D2E</div><div style="font-size:13px;color:#4a534d;margin-top:4px">Logo, primary actions, navigation</div></div></div>
+        <div style="border-radius:8px;overflow:hidden;border:1px solid #d9d2c3;background:#fff"><div style="height:150px;background:#f4efe6;border-bottom:1px solid #d9d2c3"></div><div style="padding:14px 16px"><div style="font-weight:600">Paper</div><div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#4a534d">#F4EFE6</div><div style="font-size:13px;color:#4a534d;margin-top:4px">Page background, reversed type</div></div></div>
+        <div style="border-radius:8px;overflow:hidden;border:1px solid #d9d2c3;background:#fff"><div style="height:150px;background:#1c231f"></div><div style="padding:14px 16px"><div style="font-weight:600">Ink</div><div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#4a534d">#1C231F</div><div style="font-size:13px;color:#4a534d;margin-top:4px">Body text, one-colour logo</div></div></div>
+        <div style="border-radius:8px;overflow:hidden;border:1px solid #d9d2c3;background:#fff"><div style="height:150px;background:#e0a458"></div><div style="padding:14px 16px"><div style="font-weight:600">Signal</div><div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#4a534d">#E0A458</div><div style="font-size:13px;color:#4a534d;margin-top:4px">Optional checkpoint dot, marketing only</div></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px">
+        <div style="display:flex;gap:10px;align-items:center"><div style="width:40px;height:40px;border-radius:5px;background:#12271d;flex-shrink:0"></div><div style="font-size:13px"><div style="font-weight:600">Forest Deep</div><div style="font-family:'IBM Plex Mono',monospace;color:#4a534d">#12271D</div></div></div>
+        <div style="display:flex;gap:10px;align-items:center"><div style="width:40px;height:40px;border-radius:5px;background:#e7ede9;border:1px solid #d9d2c3;flex-shrink:0"></div><div style="font-size:13px"><div style="font-weight:600">Forest Tint</div><div style="font-family:'IBM Plex Mono',monospace;color:#4a534d">#E7EDE9</div></div></div>
+        <div style="display:flex;gap:10px;align-items:center"><div style="width:40px;height:40px;border-radius:5px;background:#4a534d;flex-shrink:0"></div><div style="font-size:13px"><div style="font-weight:600">Ink Soft</div><div style="font-family:'IBM Plex Mono',monospace;color:#4a534d">#4A534D</div></div></div>
+        <div style="display:flex;gap:10px;align-items:center"><div style="width:40px;height:40px;border-radius:5px;background:#d9d2c3;flex-shrink:0"></div><div style="font-size:13px"><div style="font-weight:600">Line</div><div style="font-family:'IBM Plex Mono',monospace;color:#4a534d">#D9D2C3</div></div></div>
+        <div style="display:flex;gap:10px;align-items:center"><div style="width:40px;height:40px;border-radius:5px;background:#ffffff;border:1px solid #d9d2c3;flex-shrink:0"></div><div style="font-size:13px"><div style="font-weight:600">White</div><div style="font-family:'IBM Plex Mono',monospace;color:#4a534d">#FFFFFF</div></div></div>
+      </div>
+      <div>
+        <div style="font-weight:600;margin-bottom:10px">Proportion</div>
+        <div style="display:flex;height:56px;border-radius:8px;overflow:hidden;border:1px solid #d9d2c3">
+          <div style="flex:60;background:#f4efe6;display:flex;align-items:center;padding:0 14px;font-size:13px;color:#4a534d">Paper 60</div>
+          <div style="flex:25;background:#1c3d2e;display:flex;align-items:center;padding:0 14px;font-size:13px;color:#f4efe6">Forest 25</div>
+          <div style="flex:10;background:#1c231f;display:flex;align-items:center;padding:0 10px;font-size:13px;color:#f4efe6">Ink 10</div>
+          <div style="flex:3;background:#b5651d"></div><div style="flex:2;background:#a13a2f"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="type" data-screen-label="04 Type" style="padding:88px 0;border-top:1px solid #d9d2c3;display:flex;flex-direction:column;gap:40px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px 48px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#4a534d">04 — Typography</div>
+        <div style="grid-column:span 2;min-width:0">
+          <h2 style="margin:0 0 12px;font-family:'Source Serif 4',Georgia,serif;font-weight:600;font-size:clamp(30px,3.6vw,44px);line-height:1.12;letter-spacing:-.01em">A serif for headings, Plex for everything else</h2>
+          <p style="margin:0;color:#4a534d;max-width:620px;text-wrap:pretty">Source Serif 4 gives headings and scores their editorial weight. IBM Plex covers Latin, Arabic and mono from one family, so English, French and Arabic screens look like the same product.</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+        <div style="background:#fff;border:1px solid #d9d2c3;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px">
+          <div style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:72px;line-height:1">Aa</div>
+          <div><div style="font-weight:600">Source Serif 4</div><div style="font-size:14px;color:#4a534d">Headings, scores, big numbers · 600–700</div></div>
+        </div>
+        <div style="background:#fff;border:1px solid #d9d2c3;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px">
+          <div style="font-family:'IBM Plex Sans',sans-serif;font-weight:500;font-size:72px;line-height:1">Aa</div>
+          <div><div style="font-weight:600">IBM Plex Sans</div><div style="font-size:14px;color:#4a534d">UI, body, labels · 400–700</div></div>
+        </div>
+        <div style="background:#fff;border:1px solid #d9d2c3;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px">
+          <div dir="rtl" style="font-family:'IBM Plex Sans Arabic',sans-serif;font-weight:600;font-size:64px;line-height:1.1;text-align:start">أب</div>
+          <div><div style="font-weight:600">IBM Plex Sans Arabic</div><div style="font-size:14px;color:#4a534d">All Arabic text, headings included</div></div>
+        </div>
+        <div style="background:#fff;border:1px solid #d9d2c3;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:52px;line-height:1.35">QC-D</div>
+          <div><div style="font-weight:600">IBM Plex Mono</div><div style="font-size:14px;color:#4a534d">SOP codes, readings, timestamps</div></div>
+        </div>
+      </div>
+      <div style="background:#fff;border:1px solid #d9d2c3;border-radius:8px;padding:8px 24px">
+        <div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:baseline;padding:18px 0;border-bottom:1px solid #d9d2c3"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">Display 44/48</span><span style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:44px;line-height:1.1">97% compliant</span></div>
+        <div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:baseline;padding:18px 0;border-bottom:1px solid #d9d2c3"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">H1 30/36</span><span style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:30px;line-height:1.2">Daily QC Checklist</span></div>
+        <div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:baseline;padding:18px 0;border-bottom:1px solid #d9d2c3"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">H2 22/28</span><span style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:22px;line-height:1.25">Temperature monitoring</span></div>
+        <div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:baseline;padding:18px 0;border-bottom:1px solid #d9d2c3"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">Body 16/24</span><span style="font-size:16px">Check the walk-in chiller and log the reading with a photo.</span></div>
+        <div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:baseline;padding:18px 0;border-bottom:1px solid #d9d2c3"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">Label 12 caps</span><span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#4a534d">Opening checklist</span></div>
+        <div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:baseline;padding:18px 0"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">Mono 13</span><span style="font-family:'IBM Plex Mono',monospace;font-size:13px">SOP-04 · 3.2 °C · 07:42</span></div>
+      </div>
+    </section>
+
+    <section id="status" data-screen-label="05 Status" style="padding:88px 0;border-top:1px solid #d9d2c3;display:flex;flex-direction:column;gap:40px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px 48px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#4a534d">05 — Status system</div>
+        <div style="grid-column:span 2;min-width:0">
+          <h2 style="margin:0 0 12px;font-family:'Source Serif 4',Georgia,serif;font-weight:600;font-size:clamp(30px,3.6vw,44px);line-height:1.12;letter-spacing:-.01em">Green, Amber, Red</h2>
+          <p style="margin:0;color:#4a534d;max-width:620px;text-wrap:pretty">The same thresholds the scorecard uses. Always pair the colour with its word, so status still reads in print and for colour-blind staff.</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">
+        <div style="background:#e7ede9;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:14px">
+          <span style="align-self:flex-start;padding:3px 10px;border-radius:100px;font-size:12px;font-weight:600;background:#1c3d2e;color:#fff">Green</span>
+          <div style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:36px;color:#1c3d2e">≥ 95%</div>
+          <div style="font-size:14px;color:#1c3d2e">Compliant. No critical items failed.</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#1c3d2e">#1C3D2E on #E7EDE9</div>
+        </div>
+        <div style="background:#f7e9da;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:14px">
+          <span style="align-self:flex-start;padding:3px 10px;border-radius:100px;font-size:12px;font-weight:600;background:#b5651d;color:#fff">Amber</span>
+          <div style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:36px;color:#8a4a12">85–94%</div>
+          <div style="font-size:14px;color:#8a4a12">Needs attention at the next shift.</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8a4a12">#B5651D on #F7E9DA</div>
+        </div>
+        <div style="background:#f7e4e1;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:14px">
+          <span style="align-self:flex-start;padding:3px 10px;border-radius:100px;font-size:12px;font-weight:600;background:#a13a2f;color:#fff">Red</span>
+          <div style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:36px;color:#a13a2f">&lt; 85%</div>
+          <div style="font-size:14px;color:#a13a2f">Or any critical fail. Raised as an incident.</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#a13a2f">#A13A2F on #F7E4E1</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="voice" data-screen-label="06 Voice" style="padding:88px 0;border-top:1px solid #d9d2c3;display:flex;flex-direction:column;gap:40px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px 48px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#4a534d">06 — Voice</div>
+        <div style="grid-column:span 2;min-width:0">
+          <h2 style="margin:0 0 12px;font-family:'Source Serif 4',Georgia,serif;font-weight:600;font-size:clamp(30px,3.6vw,44px);line-height:1.12;letter-spacing:-.01em">Say what happened, then what to do</h2>
+          <p style="margin:0;color:#4a534d;max-width:620px;text-wrap:pretty">People read SOPY mid-shift, often with wet hands. Keep it short, specific and calm.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;border-top:1px solid #d9d2c3">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px 32px;padding:24px 0;border-bottom:1px solid #d9d2c3">
+          <div style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:20px">Specific over vague</div>
+          <div style="display:flex;gap:10px"><span style="font-size:12px;font-weight:700;color:#1c3d2e;padding-top:3px">DO</span><span>Fridge 2 is at 7 °C. Safe range is 1–4 °C.</span></div>
+          <div style="display:flex;gap:10px"><span style="font-size:12px;font-weight:700;color:#a13a2f;padding-top:3px">DON'T</span><span style="color:#4a534d">Something looks off with a fridge.</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px 32px;padding:24px 0;border-bottom:1px solid #d9d2c3">
+          <div style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:20px">Calm under pressure</div>
+          <div style="display:flex;gap:10px"><span style="font-size:12px;font-weight:700;color:#1c3d2e;padding-top:3px">DO</span><span>Critical item failed. Your manager has been notified.</span></div>
+          <div style="display:flex;gap:10px"><span style="font-size:12px;font-weight:700;color:#a13a2f;padding-top:3px">DON'T</span><span style="color:#4a534d">URGENT!! Compliance failure detected!</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px 32px;padding:24px 0;border-bottom:1px solid #d9d2c3">
+          <div style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:20px">Credit the crew</div>
+          <div style="display:flex;gap:10px"><span style="font-size:12px;font-weight:700;color:#1c3d2e;padding-top:3px">DO</span><span>Opening checklist done. 42 of 42 checkpoints.</span></div>
+          <div style="display:flex;gap:10px"><span style="font-size:12px;font-weight:700;color:#a13a2f;padding-top:3px">DON'T</span><span style="color:#4a534d">Submission 8841 processed successfully.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="apps" data-screen-label="07 Applications" style="padding:88px 0 120px;border-top:1px solid #d9d2c3;display:flex;flex-direction:column;gap:40px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px 48px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#4a534d">07 — Applications</div>
+        <div style="grid-column:span 2;min-width:0">
+          <h2 style="margin:0 0 12px;font-family:'Source Serif 4',Georgia,serif;font-weight:600;font-size:clamp(30px,3.6vw,44px);line-height:1.12;letter-spacing:-.01em">In the product</h2>
+          <p style="margin:0;color:#4a534d;max-width:620px;text-wrap:pretty">Drop-in files for web/public/icons are in the brand/ folder of this project, named to match manifest.json and index.html.</p>
+        </div>
+      </div>
+      <div style="background:#fff;border:1px solid #d9d2c3;border-radius:8px;padding:32px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:32px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><dc-import name="SopyLogo" size="160" layout="mark" theme="primary" accent-dot="{{ accentDot }}" hint-size="160px,160px"></dc-import><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">512 · PWA</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><dc-import name="SopyLogo" size="96" layout="mark" theme="primary" accent-dot="{{ accentDot }}" hint-size="96px,96px"></dc-import><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">192</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><dc-import name="SopyLogo" size="60" layout="mark" theme="primary" accent-dot="{{ accentDot }}" hint-size="60px,60px"></dc-import><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">180 · iOS</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><dc-import name="SopyLogo" size="32" layout="mark" theme="primary" accent-dot="{{ false }}" hint-size="32px,32px"></dc-import><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">32</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><dc-import name="SopyLogo" size="16" layout="mark" theme="primary" accent-dot="{{ false }}" hint-size="16px,16px"></dc-import><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">16 · favicon</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+        <div style="border-radius:8px;overflow:hidden;border:1px solid #d9d2c3;display:flex;min-height:300px;background:#f4efe6">
+          <div style="width:180px;flex-shrink:0;background:#1c3d2e;padding:20px 12px;display:flex;flex-direction:column;gap:4px">
+            <div style="padding:0 8px 18px"><dc-import name="SopyLogo" size="26" theme="reverse" accent-dot="{{ accentDot }}" hint-size="77px,26px"></dc-import></div>
+            <div style="padding:9px 10px;border-radius:5px;background:rgba(255,255,255,.1);color:#fff;font-size:14px;font-weight:500">Dashboard</div>
+            <div style="padding:9px 10px;color:#cfe0d5;font-size:14px">Checklists</div>
+            <div style="padding:9px 10px;color:#cfe0d5;font-size:14px">Reports</div>
+            <div style="padding:9px 10px;color:#cfe0d5;font-size:14px">Team &amp; stores</div>
+          </div>
+          <div style="flex:1;min-width:0;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:22px">Good morning, Lina</div>
+            <div style="background:#fff;border:1px solid #d9d2c3;border-radius:8px;padding:14px">
+              <div style="font-size:13px;color:#4a534d">Today's score</div>
+              <div style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:28px">97%</div>
+            </div>
+          </div>
+        </div>
+        <div style="border-radius:8px;border:1px solid #d9d2c3;background:#fff;padding:24px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+            <dc-import name="SopyLogo" size="24" theme="primary" accent-dot="{{ accentDot }}" hint-size="71px,24px"></dc-import>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#4a534d">QC-D-001</span>
+          </div>
+          <div style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:22px">Daily QC report · Café Luma, Downtown</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border:1px solid #d9d2c3;border-radius:5px;padding:14px 16px">
+            <span style="font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:34px">97%</span>
+            <span style="padding:3px 10px;border-radius:100px;font-size:12px;font-weight:600;background:#e7ede9;color:#1c3d2e">Green</span>
+          </div>
+          <div style="font-size:14px;color:#4a534d">101 of 104 checkpoints compliant · 0 critical fails</div>
+        </div>
+      </div>
+      <div style="background:#fff;border:1px solid #d9d2c3;border-radius:8px;padding:8px 24px">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:16px;padding:14px 0;border-bottom:1px solid #d9d2c3;font-family:'IBM Plex Mono',monospace;font-size:13px"><span>icon.svg</span><span style="color:#4a534d">Favicon, any size</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:16px;padding:14px 0;border-bottom:1px solid #d9d2c3;font-family:'IBM Plex Mono',monospace;font-size:13px"><span>icon-192.png · icon-512.png</span><span style="color:#4a534d">PWA install, rounded tile</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:16px;padding:14px 0;border-bottom:1px solid #d9d2c3;font-family:'IBM Plex Mono',monospace;font-size:13px"><span>icon-maskable-512.png</span><span style="color:#4a534d">Android, full bleed, mark inside safe zone</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:16px;padding:14px 0;border-bottom:1px solid #d9d2c3;font-family:'IBM Plex Mono',monospace;font-size:13px"><span>apple-touch-icon.png</span><span style="color:#4a534d">iOS home screen, 180px full bleed</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:16px;padding:14px 0;font-family:'IBM Plex Mono',monospace;font-size:13px"><span>sopy-logo-primary.png · sopy-logo-reverse.png</span><span style="color:#4a534d">Lockups for decks, docs and email</span></div>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentDot&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Logo&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return { accentDot: this.props.accentDot ?? false };
+  }
+}
+</script>
+</body>
+</html>

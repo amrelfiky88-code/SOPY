@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { useT } from '../../i18n/index.jsx';
 import { ClipboardEmptyIcon } from '../../components/icons.jsx';
+import Logo from '../../components/Logo.jsx';
 
 // Staff who accept an invite before the owner has finished setting the
 // business up. They used to be pushed into the owner's setup wizard,
@@ -11,7 +12,7 @@ export default function SetupInProgress() {
   const t = useT();
   return (
     <div className="screen-narrow">
-      <span className="auth-brand">SOPY</span>
+      <span className="auth-brand"><Logo size={28} /></span>
       <div className="card empty-state">
         <ClipboardEmptyIcon size={32} />
         <h2 style={{ margin: 0 }}>{t('setup.title')}</h2>
