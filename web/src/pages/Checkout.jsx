@@ -2,12 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
-import { useT } from '../i18n/index.jsx';
+import { useI18n } from '../i18n/index.jsx';
 import { money } from '../i18n/pageLabels.js';
 import { CheckCircleIcon, ShieldIcon } from '../components/icons.jsx';
 
 export default function Checkout() {
-  const t = useT();
+  const { t, lang } = useI18n();
   const { user, tenant, setTenant } = useAuth();
   const navigate = useNavigate();
   const [pricing, setPricing] = useState(null);
@@ -15,6 +15,8 @@ export default function Checkout() {
   const [credit, setCredit] = useState({ applied: 0, dueToday: null });
   const [mock, setMock] = useState(false);
   const [alreadyActive, setAlreadyActive] = useState(false);
+  // Canceled but still paid up: the plan can be kept instead of bought again.
+  const [resumable, setResumable] = useState(null);
   const [transactionId, setTransactionId] = useState(null);
   const [error, setError] = useState('');
   // preparing → the order is being priced; ready → waiting on the customer;
@@ -44,6 +46,7 @@ export default function Checkout() {
       setCredit({ applied: Number(data.creditApplied || 0), kind: data.creditKind, dueToday: data.dueToday ?? data.pricing?.monthlyTotal });
       setMock(!!data.mock);
       setAlreadyActive(!!data.alreadyActive);
+      setResumable(data.canResume ? data.subscription : null);
       setTransactionId(data.transactionId || null);
       setStatus('ready');
     } catch (err) {
@@ -119,6 +122,18 @@ export default function Checkout() {
     }
   };
 
+  const handleResume = async () => {
+    setStatus('processing');
+    setError('');
+    try {
+      await api.post('/billing/subscription/resume', {});
+      await finish();
+    } catch (err) {
+      setError(err.message);
+      await loadOrder();
+    }
+  };
+
   if (!canPay) {
     return (
       <div className="screen-narrow">
@@ -145,6 +160,23 @@ export default function Checkout() {
   // billing, not the signup funnel — no signup stepper, and "back to the
   // app" rather than "continue to setup".
   const setUp = tenant?.onboarding_step === 'complete';
+
+  if (resumable) {
+    const until = new Date(resumable.current_period_end).toLocaleDateString(lang, { day: 'numeric', month: 'long', year: 'numeric' });
+    return (
+      <div className="screen-narrow">
+        <Link to="/app/account" className="auth-brand" style={{ fontSize: 15, marginBottom: 12 }}>{t('checkout.backToAccount')}</Link>
+        <h2>{t('checkout.title')}</h2>
+        {error && <div className="error-banner">{error}</div>}
+        <div className="card">
+          <p style={{ margin: 0 }}>{t('checkout.canResume', { date: until, amount: money(resumable.monthly_total) })}</p>
+        </div>
+        <button className="btn btn-primary" onClick={handleResume} disabled={status === 'processing'}>
+          {status === 'processing' ? t('common.saving') : t('account.resume')}
+        </button>
+      </div>
+    );
+  }
 
   if (alreadyActive) {
     return (
@@ -214,7 +246,7 @@ export default function Checkout() {
             <>
               <div className="summary-row">
                 <span>{creditLabel}</span>
-                <span className="referral-plus">−{money(credit.applied)}</span>
+                <span className="referral-plus">{money(credit.applied, '−')}</span>
               </div>
               <div className="summary-row summary-total">
                 <span>{t('checkout.dueToday')}</span>

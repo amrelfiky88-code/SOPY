@@ -33,8 +33,8 @@ export async function completeSetup(api, token) {
 // Thin JSON fetch helper so test bodies read like the actual API contract
 // (method, path, body, bearer token) instead of raw fetch boilerplate.
 export function makeClient(baseUrl) {
-  return async function request(method, path, { body, token } = {}) {
-    const headers = {};
+  return async function request(method, path, { body, token, headers: extra } = {}) {
+    const headers = { ...extra };
     if (token) headers.Authorization = `Bearer ${token}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
 

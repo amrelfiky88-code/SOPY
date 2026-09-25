@@ -31,6 +31,11 @@ async function pay(token) {
   return checkout.body;
 }
 
+// Canceled and the paid month has run out, so paying again is a new checkout
+// (before that, checkout offers to resume the plan instead).
+const endPaidPeriod = (tenantId) =>
+  pool.query("UPDATE subscriptions SET current_period_end = now() - interval '1 day' WHERE tenant_id = $1 AND status = 'canceled'", [tenantId]);
+
 const credit = async (token) => (await api('GET', '/api/referrals', { token })).body;
 
 before(async () => {
@@ -88,6 +93,7 @@ test('signing up with the link is remembered, but pays nothing until the busines
   // Paying again later (cancel + resubscribe) is not a new referral.
   await completeSetup(api, B.token);
   await api('POST', '/api/billing/subscription/cancel', { token: B.token, body: {} });
+  await endPaidPeriod(B.tenantId);
   await pay(B.token);
   assert.equal((await credit(A.token)).credit.available, REFERRAL_REWARD_USD, 'rewarded once');
 });
@@ -113,6 +119,7 @@ test('credit comes off the next payment, and is only spent once that payment is 
 
   // A cancels and resubscribes: checkout takes off up to the whole $19.
   await api('POST', '/api/billing/subscription/cancel', { token: A.token, body: {} });
+  await endPaidPeriod(A.tenantId);
   const checkout = await api('POST', '/api/billing/checkout', { token: A.token, body: {} });
   assert.equal(checkout.body.creditApplied, 19);
   assert.equal(checkout.body.dueToday, 0);
@@ -207,6 +214,7 @@ test('the new restaurant gets a welcome discount off its first payment; the refe
   // Resubscribing later: no second welcome discount.
   await completeSetup(api, H.token);
   await api('POST', '/api/billing/subscription/cancel', { token: H.token, body: {} });
+  await endPaidPeriod(H.tenantId);
   const again = await api('POST', '/api/billing/checkout', { token: H.token, body: {} });
   assert.equal(again.body.creditApplied, 0);
 });

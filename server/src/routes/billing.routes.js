@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { query } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
 import { calculatePricing, clampPlanCount, PLAN_LIMITS } from '../../../shared/pricing.js';
-import { createCheckoutTransaction, updateSubscriptionQuantities, cancelSubscription, createCreditDiscount } from '../paddle/client.js';
+import { createCheckoutTransaction, updateSubscriptionQuantities, cancelSubscription, resumeSubscription, createCreditDiscount } from '../paddle/client.js';
 import { creditForPayment, availableCreditKind, spendCreditOnCheckout, grantReferralReward, renewalPaid, releaseScheduledCredit } from '../credits.js';
 import { verifyPaddleSignature } from '../paddle/webhook.js';
 
@@ -31,6 +31,19 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
       alreadyActive: true,
       subscription: active,
       pricing: calculatePricing({ branches: active.branch_count, users: active.user_count }),
+      mock: !process.env.PADDLE_API_KEY,
+    });
+  }
+
+  // Canceled, but the month is paid and still running: that plan can simply
+  // be kept (POST /subscription/resume). A new checkout here charged a second
+  // month on top of it, and its pending row hid the paid plan on Account.
+  const resumable = await resumableSubscription(req.auth.tenantId);
+  if (resumable) {
+    return res.json({
+      canResume: true,
+      subscription: resumable,
+      pricing: calculatePricing({ branches: resumable.branch_count, users: resumable.user_count }),
       mock: !process.env.PADDLE_API_KEY,
     });
   }
@@ -135,6 +148,15 @@ async function paymentConfirmed(tenantId, subscription) {
   await grantReferralReward(tenantId);
 }
 
+// The newest canceled plan whose paid period hasn't ended yet, if any.
+async function resumableSubscription(tenantId) {
+  const { rows } = await query(
+    "SELECT * FROM subscriptions WHERE tenant_id = $1 AND status = 'canceled' AND current_period_end > now() ORDER BY created_at DESC LIMIT 1",
+    [tenantId]
+  );
+  return rows[0] || null;
+}
+
 function mockTransaction(pricing) {
   return { id: `mock_txn_${Date.now()}`, pricing };
 }
@@ -157,9 +179,17 @@ billingRouter.post('/mock-complete', requireAuth, requireRole('business_owner'),
   res.json({ subscription: rows[0] });
 });
 
+// The subscription that describes the business's plan: a live one first,
+// then a canceled one whose paid period is still running, and only then
+// the newest row (an unpaid checkout, or a plan that has ended). Plain
+// "newest row" let an abandoned checkout hide a plan that was still paid.
 billingRouter.get('/subscription', requireAuth, async (req, res) => {
   const { rows } = await query(
-    'SELECT * FROM subscriptions WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 1',
+    `SELECT * FROM subscriptions WHERE tenant_id = $1
+     ORDER BY (status IN ('active', 'past_due')) DESC,
+              (status = 'canceled' AND current_period_end > now()) DESC NULLS LAST,
+              created_at DESC
+     LIMIT 1`,
     [req.auth.tenantId]
   );
   res.json({ subscription: rows[0] || null });
@@ -224,6 +254,39 @@ billingRouter.post('/subscription/cancel', requireAuth, requireRole('business_ow
   await query("UPDATE subscriptions SET status = 'canceled', updated_at = now() WHERE id = $1", [sub.id]);
   await releaseScheduledCredit(req.auth.tenantId);
   res.status(204).end();
+});
+
+// Changing your mind after canceling. Until the paid period ends the plan
+// is still running, so this takes the cancel back rather than sending the
+// owner through checkout, which charged a whole new month on top of the
+// one already paid for. Once the period is over there's nothing left to
+// resume and a new checkout is the way back.
+billingRouter.post('/subscription/resume', requireAuth, requireRole('business_owner'), async (req, res) => {
+  const { rows: live } = await query(
+    "SELECT 1 FROM subscriptions WHERE tenant_id = $1 AND status IN ('active', 'past_due')",
+    [req.auth.tenantId]
+  );
+  if (live[0]) return res.status(409).json({ error: 'There is no canceled plan to resume' });
+  const sub = await resumableSubscription(req.auth.tenantId);
+  if (!sub) return res.status(409).json({ error: 'Your plan has ended — subscribe again to continue' });
+
+  if (sub.paddle_subscription_id && process.env.PADDLE_API_KEY) {
+    try {
+      await resumeSubscription(sub.paddle_subscription_id);
+    } catch {
+      // Canceled outright in Paddle (not just scheduled): it can't come back.
+      return res.status(409).json({ error: 'Your plan has ended — subscribe again to continue' });
+    }
+  }
+  const { rows: updated } = await query(
+    "UPDATE subscriptions SET status = 'active', updated_at = now() WHERE id = $1 RETURNING *",
+    [sub.id]
+  );
+  // A checkout opened after the cancel is no longer needed. Dropping it also
+  // means paying it later can't start a second plan (the webhook fallback
+  // only activates a checkout when nothing else is live).
+  await query("DELETE FROM subscriptions WHERE tenant_id = $1 AND status = 'pending'", [req.auth.tenantId]);
+  res.json({ subscription: updated[0] });
 });
 
 // Paddle webhook — mounted with express.raw() in index.js so we have the

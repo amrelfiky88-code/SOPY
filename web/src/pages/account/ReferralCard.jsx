@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { useI18n } from '../../i18n/index.jsx';
+import { money } from '../../i18n/pageLabels.js';
 import { formatDateTime } from '../../lib/reportModel.js';
 import { WhatsAppIcon, MailIcon, LinkIcon, ShareIcon } from '../../components/icons.jsx';
-
-const money = (n) => `$${Number(n || 0).toFixed(2)}`;
 
 // "Refer a restaurant": the owner's personal link, share buttons, and the
 // credit it has earned. Credit is earned when a referred business makes its
@@ -99,7 +98,7 @@ export default function ReferralCard() {
           {data.rewards.map((r) => (
             <div className="summary-row" key={r.id}>
               <span>{r.referred_restaurant || t('referral.aRestaurant')} <span className="hint">· {formatDateTime(r.created_at, lang)}</span></span>
-              <span className="referral-plus">+{money(r.amount)}</span>
+              <span className="referral-plus">{money(r.amount, '+')}</span>
             </div>
           ))}
           {data.credit.used > 0 && <p className="hint" style={{ marginBottom: 0 }}>{t('referral.usedSoFar', { amount: money(data.credit.used) })}</p>}

@@ -7,6 +7,9 @@
 const ROWS = [
   // --- Shared ---------------------------------------------------------
   ['page.back', 'Back', 'رجوع', 'Retour'],
+  ['checkout.canResume', 'Your plan is canceled but paid until {date}. Keep it and nothing is charged today; it then renews at {amount} a month.', 'خطتك ملغاة لكنها مدفوعة حتى {date}. احتفظ بها دون أي رسوم اليوم، ثم تتجدد بـ {amount} شهريًا.', "Votre formule est résiliée mais payée jusqu'au {date}. Conservez-la sans frais aujourd'hui ; elle se renouvellera ensuite à {amount} par mois."],
+  ['account.resume', 'Keep my plan', 'الاحتفاظ بخطتي', 'Conserver ma formule'],
+  ['account.resumeNote', 'No charge today — your plan carries on and renews on {date}.', 'بلا رسوم اليوم — تستمر خطتك وتتجدد في {date}.', "Aucun frais aujourd'hui — votre formule continue et se renouvelle le {date}."],
   ['tab.reports', 'Reports', 'التقارير', 'Rapports'],
   ['dashboard.welcomeFirst', 'Welcome to SOPY, {name}', 'أهلًا بك في SOPY، {name}', 'Bienvenue sur SOPY, {name}'],
   ['dashboard.buildFirst', 'Build your first checklist', 'أنشئ أول قائمة فحص', 'Créer votre première check-list'],
@@ -142,7 +145,7 @@ const ROWS = [
   ['checkout.alreadyActive', "{restaurant} already has an active subscription at {amount} a month. You won't be charged again here.", 'لدى {restaurant} اشتراك نشط بالفعل بقيمة {amount} شهريًا. لن يتم خصم أي مبلغ آخر هنا.', "{restaurant} a déjà un abonnement actif à {amount} par mois. Vous ne serez pas débité à nouveau ici."],
   ['checkout.backToApp', 'Back to the app', 'العودة إلى التطبيق', "Retour à l'application"],
   ['checkout.continueSetup', 'Continue to setup', 'المتابعة إلى الإعداد', 'Continuer la configuration'],
-  ['checkout.backToAccount', '← Profile & billing', '← الملف الشخصي والفواتير', '← Profil et facturation'],
+  ['checkout.backToAccount', '← Profile & billing', '→ الملف الشخصي والفواتير', '← Profil et facturation'],
   ['checkout.intro', 'Review your plan, then pay to activate {restaurant}.', 'راجع خطتك، ثم ادفع لتفعيل {restaurant}.', 'Vérifiez votre formule, puis payez pour activer {restaurant}.'],
   ['checkout.adjustPlan', 'Adjust your branch and user counts, then come back to checkout.', 'عدّل عدد الفروع والمستخدمين، ثم عُد إلى الدفع.', 'Ajustez le nombre d\'établissements et d\'utilisateurs, puis revenez au paiement.'],
   ['checkout.changePlan', 'Change plan', 'تغيير الخطة', 'Changer de formule'],
@@ -170,11 +173,12 @@ const ROWS = [
   ['onb.roles.title', 'Roles in SOPY', 'الأدوار في SOPY', 'Les rôles dans SOPY'],
   ['onb.roles.intro', "Every person you add gets one of these roles. You'll assign them when you invite your team next.", 'كل شخص تضيفه يحصل على أحد هذه الأدوار. ستحددها عند دعوة فريقك في الخطوة التالية.', "Chaque personne que vous ajoutez reçoit l'un de ces rôles. Vous les attribuerez en invitant votre équipe à l'étape suivante."],
   ['onb.stores.title', 'Set up your stores', 'أعدّ فروعك', 'Configurez vos établissements'],
-  ['onb.stores.intro', 'Your plan covers {n} stores. Add them below.', 'تغطي خطتك {n} فروع. أضفها أدناه.', 'Votre formule couvre {n} établissements. Ajoutez-les ci-dessous.'],
+  // 'Stores on your plan: 1' reads right for any count, unlike 'covers 1 stores' (and Arabic's dual form for 2).
+  ['onb.stores.intro', 'Stores on your plan: {n}. Add them below.', 'عدد الفروع في خطتك: {n}. أضفها أدناه.', 'Établissements inclus dans votre formule : {n}. Ajoutez-les ci-dessous.'],
   ['onb.stores.placeholder', 'e.g. Downtown', 'مثال: وسط البلد', 'ex. Centre-ville'],
   ['onb.stores.needOne', 'Add at least one branch to continue.', 'أضف فرعًا واحدًا على الأقل للمتابعة.', 'Ajoutez au moins un établissement pour continuer.'],
   ['onb.invites.title', 'Invite your team', 'ادعُ فريقك', 'Invitez votre équipe'],
-  ['onb.invites.intro', "Your plan covers {n} users (you're already one of them).", 'تغطي خطتك {n} مستخدمين (وأنت أحدهم بالفعل).', 'Votre formule couvre {n} utilisateurs (vous en faites déjà partie).'],
+  ['onb.invites.intro', "Users on your plan: {n} (you're already one of them).", 'عدد المستخدمين في خطتك: {n} (وأنت أحدهم بالفعل).', 'Utilisateurs inclus dans votre formule : {n} (vous en faites déjà partie).'],
   ['onb.invites.assignBranches', 'Assign to branches', 'التعيين في الفروع', 'Affecter aux établissements'],
   ['onb.invites.addBranchFirst', 'Add a branch first to assign one.', 'أضف فرعًا أولًا لتتمكن من التعيين.', "Ajoutez d'abord un établissement pour pouvoir l'affecter."],
   ['onb.invites.send', 'Send invite', 'إرسال الدعوة', "Envoyer l'invitation"],
@@ -265,5 +269,7 @@ function build() {
 
 export const PAGE_LABELS = build();
 
-// Money as the app shows it everywhere: $12.50.
-export const money = (n) => `$${Number(n || 0).toFixed(2)}`;
+// Money as the app shows it everywhere: $12.50, or −$10.00 with a sign.
+// Wrapped in a left-to-right isolate so Arabic text doesn't turn it into
+// "12.50$" or put the minus on the wrong side.
+export const money = (n, sign = '') => `⁦${sign}$${Number(n || 0).toFixed(2)}⁩`;

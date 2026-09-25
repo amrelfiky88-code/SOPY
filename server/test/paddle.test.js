@@ -140,6 +140,8 @@ test('a cancel scheduled for period end stays "canceled" instead of flipping bac
 test('events about an old subscription never touch a newer one', async () => {
   // The business resubscribes: a new pending checkout row appears.
   await completeSetupIfNeeded();
+  // (after its paid period is over — before that, checkout offers to resume)
+  await pool.query("UPDATE subscriptions SET current_period_end = now() - interval '1 day' WHERE paddle_subscription_id = 'sub_old'");
   const checkout = await api('POST', '/api/billing/checkout', { token, body: {} });
   assert.equal(checkout.status, 200, JSON.stringify(checkout.body));
   const newTxn = checkout.body.transactionId;
@@ -214,4 +216,25 @@ test('reopening checkout while a payment is confirming keeps the same transactio
   const { rows } = await pool.query("SELECT count(*)::int AS n FROM subscriptions WHERE tenant_id = $1 AND status = 'active'", [tid]);
   assert.equal(rows[0].n, 1, 'the paying customer is active, not stuck pending');
   delete process.env.PADDLE_API_KEY;
+});
+
+test('resuming a canceled plan removes the scheduled cancel in Paddle', async () => {
+  const signup = await api('POST', '/api/auth/signup', {
+    body: { fullName: 'Back', email: 'paddle-resume@example.com', password: 'OwnerPass123', restaurantName: 'Resume Cafe', country: 'Egypt', branchCount: 1, userCount: 1 },
+  });
+  const tid = signup.body.tenant.id;
+  await pool.query(
+    `INSERT INTO subscriptions (tenant_id, branch_count, user_count, branch_rate, user_rate, monthly_total, status, paddle_subscription_id, current_period_end)
+     VALUES ($1, 1, 1, 10, 9, 19, 'canceled', 'sub_resume', now() + interval '10 days')`,
+    [tid]
+  );
+  process.env.PADDLE_API_KEY = 'test_key';
+  const res = await api('POST', '/api/billing/subscription/resume', { token: signup.body.token, body: {} });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+
+  const sent = sentToPaddle.at(-1);
+  assert.match(sent.url, /\/subscriptions\/sub_resume$/);
+  assert.equal(sent.method, 'PATCH');
+  assert.deepEqual(sent.body, { scheduled_change: null });
+  assert.equal(res.body.subscription.status, 'active');
 });

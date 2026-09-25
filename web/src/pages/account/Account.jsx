@@ -8,8 +8,7 @@ import ReferralCard from './ReferralCard.jsx';
 import { LabeledInput } from '../forms/OpsFormParts.jsx';
 import { LANGUAGES } from '../../../../shared/languages.js';
 import { useI18n } from '../../i18n/index.jsx';
-
-const money = (n) => `$${Number(n || 0).toFixed(2)}`;
+import { money } from '../../i18n/pageLabels.js';
 
 const STATUS_PILL = {
   active: 'pill-green',
@@ -25,8 +24,9 @@ const STATUS_LABEL = {
   canceled: 'account.statusCanceled',
 };
 
-const formatDate = (value) =>
-  value ? new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+// In the app's language, not the phone's: an Arabic page said "Oct 25, 2026".
+const formatDate = (value, lang) =>
+  value ? new Date(value).toLocaleDateString(lang || undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 
 export default function Account() {
   const { user, tenant, setUser } = useAuth();
@@ -195,7 +195,7 @@ function ProfileCard({ user, tenant, setUser }) {
 }
 
 function SubscriptionCard({ user, tenant }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const isOwner = user?.role === 'business_owner';
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -260,6 +260,21 @@ function SubscriptionCard({ user, tenant }) {
     }
   };
 
+  const resume = async () => {
+    setError('');
+    setSaving(true);
+    try {
+      await api.post('/billing/subscription/resume', {});
+      await load();
+    } catch (err) {
+      setError(err.message);
+      // The period ran out meanwhile: show the checkout route instead.
+      if (err.status === 409) await load();
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return <div className="card"><p style={{ margin: 0 }}>{t('account.loadingPlan')}</p></div>;
 
   if (!subscription) {
@@ -279,7 +294,8 @@ function SubscriptionCard({ user, tenant }) {
     );
   }
 
-  const renewal = formatDate(subscription.current_period_end);
+  const renewal = formatDate(subscription.current_period_end, lang);
+  const stillPaid = subscription.current_period_end && new Date(subscription.current_period_end) > new Date();
   // The tapered subtotals, as billed. count × rounded average rate drifted
   // from the total by a few cents (7 stores: 7 × $8.43 = $59.01 vs $59.00).
   const current = calculatePricing({ branches: subscription.branch_count, users: subscription.user_count });
@@ -404,7 +420,17 @@ function SubscriptionCard({ user, tenant }) {
               )}
             </div>
           )}
-          {isOwner && subscription.status === 'canceled' && (
+          {/* Still inside the paid period: take the cancel back. Going through
+              checkout here charged a new month on top of the paid one. */}
+          {isOwner && subscription.status === 'canceled' && stillPaid && (
+            <>
+              <button className="btn btn-primary" style={{ marginTop: 4, width: '100%' }} onClick={resume} disabled={saving}>
+                {saving ? t('common.saving') : t('account.resume')}
+              </button>
+              <p className="hint">{t('account.resumeNote', { date: renewal })}</p>
+            </>
+          )}
+          {isOwner && subscription.status === 'canceled' && !stillPaid && (
             <Link to="/checkout" className="btn btn-primary" style={{ marginTop: 4, width: '100%' }}>
               {t('account.resubscribe')}
             </Link>

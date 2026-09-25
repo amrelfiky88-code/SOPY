@@ -115,3 +115,9 @@ export async function updateSubscriptionQuantities({ subscriptionId, pricing }) 
 export async function cancelSubscription(subscriptionId) {
   return paddleRequest(`/subscriptions/${subscriptionId}/cancel`, { method: 'POST', body: { effective_from: 'next_billing_period' } });
 }
+
+// Undoes a cancel that was scheduled for the end of the billing period.
+// Paddle removes a scheduled change when it's set to null.
+export async function resumeSubscription(subscriptionId) {
+  return paddleRequest(`/subscriptions/${subscriptionId}`, { method: 'PATCH', body: { scheduled_change: null } });
+}

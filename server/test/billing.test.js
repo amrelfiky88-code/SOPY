@@ -150,8 +150,11 @@ test('subscribing again after cancelling keeps the business out of the wizard', 
   assert.equal(repriced.body.tenant.onboarding_step, 'complete');
   assert.equal(repriced.body.tenant.branch_count, 2);
 
+  // The paid month has run out, so it's a new checkout rather than a resume.
+  await pool.query("UPDATE subscriptions SET current_period_end = now() - interval '1 day' WHERE tenant_id = $1", [other.body.tenant.id]);
   const checkout = await api('POST', '/api/billing/checkout', { token: t, body: {} });
   assert.equal(checkout.status, 200);
+  assert.ok(checkout.body.transactionId);
   const done = await api('POST', '/api/billing/mock-complete', { token: t, body: {} });
   assert.equal(done.status, 200);
   assert.equal(done.body.subscription.status, 'active');
@@ -184,4 +187,40 @@ test('an unpaid signup cannot skip checkout', async () => {
   // The normal forward steps still work.
   const toPricing = await api('PATCH', '/api/tenants/current', { token: t, body: { onboardingStep: 'pricing' } });
   assert.equal(toPricing.body.tenant.onboarding_step, 'pricing');
+});
+
+// Regression: after canceling, "Subscribe again" went through checkout and
+// charged a whole new month while the paid one still had weeks to run.
+test('changing your mind before the paid period ends resumes the plan without a new charge', async () => {
+  const other = await api('POST', '/api/auth/signup', {
+    body: { fullName: 'Undo', email: 'undo-cancel@example.com', password: 'SopyDemo123', restaurantName: 'Undo Cafe', country: 'Egypt', branchCount: 1, userCount: 2 },
+  });
+  const t = other.body.token;
+  const tid = other.body.tenant.id;
+  await completeSetup(api, t);
+  assert.equal((await api('POST', '/api/billing/subscription/cancel', { token: t, body: {} })).status, 204);
+
+  // Opening checkout offers to keep the plan and starts no new payment...
+  const checkout = await api('POST', '/api/billing/checkout', { token: t, body: {} });
+  assert.equal(checkout.body.canResume, true);
+  assert.equal(checkout.body.transactionId, undefined);
+  // ...and a stray unpaid checkout doesn't hide the paid plan on Account.
+  await pool.query(
+    "INSERT INTO subscriptions (tenant_id, branch_count, user_count, branch_rate, user_rate, monthly_total, status) VALUES ($1, 1, 2, 10, 9, 28, 'pending')",
+    [tid]
+  );
+  assert.equal((await api('GET', '/api/billing/subscription', { token: t })).body.subscription.status, 'canceled');
+
+  const resumed = await api('POST', '/api/billing/subscription/resume', { token: t, body: {} });
+  assert.equal(resumed.status, 200, JSON.stringify(resumed.body));
+  assert.equal(resumed.body.subscription.status, 'active');
+  const { rows } = await pool.query('SELECT status FROM subscriptions WHERE tenant_id = $1', [tid]);
+  assert.deepEqual(rows.map((r) => r.status), ['active'], 'no second subscription was started');
+
+  // Nothing to resume while it's active; once the period is over, it's checkout.
+  assert.equal((await api('POST', '/api/billing/subscription/resume', { token: t, body: {} })).status, 409);
+  await pool.query("UPDATE subscriptions SET status = 'canceled', current_period_end = now() - interval '1 day' WHERE tenant_id = $1", [tid]);
+  const late = await api('POST', '/api/billing/subscription/resume', { token: t, body: {}, headers: { 'Accept-Language': 'fr' } });
+  assert.equal(late.status, 409);
+  assert.match(late.body.error, /abonnez-vous/);
 });

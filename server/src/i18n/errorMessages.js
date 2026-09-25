@@ -59,6 +59,8 @@ const MESSAGES = [
   ['Enable this person before sending them a link', 'فعّل هذا الشخص قبل إرسال رابط إليه', 'Réactivez cette personne avant de lui envoyer un lien'],
   ['This link has expired. Ask your manager for a new one.', 'انتهت صلاحية هذا الرابط. اطلب رابطًا جديدًا من مديرك.', 'Ce lien a expiré. Demandez-en un nouveau à votre manager.'],
   ['No checkout in progress', 'لا توجد عملية دفع جارية', 'Aucun paiement en cours'],
+  ['There is no canceled plan to resume', 'لا توجد خطة ملغاة لاستئنافها', "Aucune formule résiliée à reprendre"],
+  ['Your plan has ended — subscribe again to continue', 'انتهت خطتك — اشترك مرة أخرى للمتابعة', 'Votre formule est terminée — abonnez-vous à nouveau pour continuer'],
   ['New password must be at least 8 characters', 'يجب أن تتكون كلمة المرور الجديدة من 8 أحرف على الأقل', 'Le nouveau mot de passe doit contenir au moins 8 caractères'],
   ['Name cannot be empty', 'لا يمكن ترك الاسم فارغًا', 'Le nom ne peut pas être vide'],
   ['Missing authorization token', 'يُرجى تسجيل الدخول', 'Veuillez vous connecter'],

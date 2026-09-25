@@ -11,7 +11,8 @@ const PILL = { good: 'pill-green', warn: 'pill-amber', bad: 'pill-red', muted: '
 // PDF is drawn from the same blocks rendered here.
 export default function ReportView() {
   const { submissionId } = useParams();
-  const { t, lang } = useI18n();
+  const { t, lang, dir } = useI18n();
+  const back = dir === 'rtl' ? '→' : '←'; // points toward the start of the line
   const [report, setReport] = useState(null);
   const [error, setError] = useState('');
 
@@ -28,7 +29,7 @@ export default function ReportView() {
   if (error) {
     return (
       <div>
-        <Link to="/app/reports" className="back-link">← {t('reports.title')}</Link>
+        <Link to="/app/reports" className="back-link">{back} {t('reports.title')}</Link>
         <div className="error-banner">{error}</div>
       </div>
     );
@@ -39,7 +40,7 @@ export default function ReportView() {
 
   return (
     <div className="report-view">
-      <Link to="/app/reports" className="back-link">← {t('reports.title')}</Link>
+      <Link to="/app/reports" className="back-link">{back} {t('reports.title')}</Link>
 
       {submitted ? (
         <ShareReport submissionId={submissionId} model={model} />
