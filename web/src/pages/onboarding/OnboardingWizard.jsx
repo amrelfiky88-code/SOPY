@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
+import { useT } from '../../i18n/index.jsx';
 import StepRoles from './StepRoles.jsx';
 import StepStores from './StepStores.jsx';
 import StepInvites from './StepInvites.jsx';
@@ -15,6 +16,8 @@ export default function OnboardingWizard() {
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { state } = useLocation();
+  const t = useT();
   const { setTenant } = useAuth();
 
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -28,7 +31,7 @@ export default function OnboardingWizard() {
       // AppLayout redirects based on tenant.onboarding_step from context,
       // so it must be updated here or it'll bounce back to this wizard.
       setTenant(tenant);
-      navigate('/app/dashboard');
+      navigate('/app/dashboard', { state: { firstVisit: true } });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -42,6 +45,7 @@ export default function OnboardingWizard() {
         {STEPS.map((s, i) => <div key={s} className={`dot ${i <= step ? 'done' : ''}`} />)}
       </div>
       {error && <div className="error-banner">{error}</div>}
+      {state?.paid && step === 0 && <div className="success-banner" role="status">{t('onb.paid')}</div>}
 
       {step === 0 && <StepRoles onNext={next} />}
       {step === 1 && <StepStores onNext={next} onBack={back} />}

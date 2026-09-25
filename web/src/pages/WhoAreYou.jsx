@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useI18n } from '../i18n/index.jsx';
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
@@ -55,11 +55,14 @@ export default function WhoAreYou() {
 
   return (
     <div className="screen-narrow">
+      {/* The progress bar used to share this row with the language picker
+          and collapsed to nothing; there was also no way back home. */}
       <div className="signed-out-bar">
-        <div className="stepper" style={{ marginBottom: 0 }}>
-          <div className="dot done" /><div className="dot" /><div className="dot" /><div className="dot" /><div className="dot" />
-        </div>
+        <Link to="/" className="auth-brand">SOPY</Link>
         <LanguageSwitcher />
+      </div>
+      <div className="stepper">
+        <div className="dot done" /><div className="dot" /><div className="dot" /><div className="dot" /><div className="dot" />
       </div>
       <h2>{t('signup.title')}</h2>
       <p>{t('signup.intro')}</p>
@@ -117,6 +120,7 @@ export default function WhoAreYou() {
           {submitting ? t('signup.submitting') : t('common.continue')}
         </button>
       </form>
+      <p style={{ marginTop: 16 }}>{t('signup.haveAccount')} <Link to="/login">{t('login.submit')}</Link></p>
     </div>
   );
 }

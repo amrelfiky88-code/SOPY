@@ -222,7 +222,10 @@ function SubscriptionCard({ user, tenant }) {
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const preview = useMemo(() => calculatePricing({ branches, users }), [branches, users]);
+  const preview = useMemo(() => calculatePricing({
+    branches: clampPlanCount(branches, PLAN_LIMITS.branches) ?? PLAN_LIMITS.branches.min,
+    users: clampPlanCount(users, PLAN_LIMITS.users) ?? PLAN_LIMITS.users.min,
+  }), [branches, users]);
   const currentTotal = Number(subscription?.monthly_total || 0);
   const difference = preview.monthlyTotal - currentTotal;
 

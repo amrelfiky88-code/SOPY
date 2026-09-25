@@ -16,7 +16,12 @@ export default function Pricing() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const pricing = useMemo(() => calculatePricing({ branches, users }), [branches, users]);
+  // An emptied box mid-edit is priced at the minimum — the plan that will
+  // actually be saved — rather than as if it were free.
+  const pricing = useMemo(() => calculatePricing({
+    branches: clampPlanCount(branches, PLAN_LIMITS.branches) ?? PLAN_LIMITS.branches.min,
+    users: clampPlanCount(users, PLAN_LIMITS.users) ?? PLAN_LIMITS.users.min,
+  }), [branches, users]);
 
   const handleContinue = async () => {
     setError('');

@@ -8,6 +8,8 @@ const ROWS = [
   // --- Shared ---------------------------------------------------------
   ['page.back', 'Back', 'رجوع', 'Retour'],
   ['tab.reports', 'Reports', 'التقارير', 'Rapports'],
+  ['dashboard.welcomeFirst', 'Welcome to SOPY, {name}', 'أهلًا بك في SOPY، {name}', 'Bienvenue sur SOPY, {name}'],
+  ['dashboard.buildFirst', 'Build your first checklist', 'أنشئ أول قائمة فحص', 'Créer votre première check-list'],
   ['run.retryUpload', 'Try uploading again', 'أعد محاولة الرفع', "Réessayer l'envoi"],
   ['reports.loadMore', 'Load more reports', 'عرض المزيد من التقارير', 'Afficher plus de rapports'],
   ['page.remove', 'Remove', 'حذف', 'Supprimer'],
@@ -34,7 +36,7 @@ const ROWS = [
   ['page.usersLabel', 'Users', 'المستخدمون', 'Utilisateurs'],
   ['page.numBranches', 'Number of branches', 'عدد الفروع', 'Nombre d\'établissements'],
   ['page.numUsers', 'Number of users', 'عدد المستخدمين', "Nombre d'utilisateurs"],
-  ['page.avgRate', '{n} × {rate} avg', '{n} × {rate} في المتوسط', '{n} × {rate} en moyenne'],
+  ['page.avgRate', '{n} × about {rate}', '{n} × نحو {rate}', '{n} × env. {rate}'],
   ['page.languageLabel', 'Language', 'اللغة', 'Langue'],
   ['qty.fewer', 'One fewer — {label}', 'إنقاص واحد — {label}', 'Un de moins — {label}'],
   ['qty.more', 'One more — {label}', 'زيادة واحد — {label}', 'Un de plus — {label}'],
@@ -87,6 +89,7 @@ const ROWS = [
   ['signup.intro', 'Tell us a bit about you and your restaurant so we can set things up.', 'أخبرنا قليلًا عنك وعن مطعمك لنُجهّز كل شيء.', 'Parlez-nous un peu de vous et de votre restaurant pour que nous puissions tout préparer.'],
   ['signup.referral', "You were invited by another restaurant on SOPY — welcome! You'll get ${amount} off your first payment.", 'دعاك مطعم آخر على SOPY — أهلًا بك! ستحصل على خصم {amount}$ من دفعتك الأولى.', 'Vous avez été invité par un autre restaurant sur SOPY — bienvenue ! Vous aurez {amount} $ de remise sur votre premier paiement.'],
   ['signup.jobTitle', 'Title', 'المسمى الوظيفي', 'Fonction'],
+  ['signup.haveAccount', 'Already have an account?', 'لديك حساب بالفعل؟', 'Vous avez déjà un compte ?'],
   ['signup.jobTitlePlaceholder', 'e.g. Owner, Operations Manager', 'مثال: المالك، مدير العمليات', "ex. Propriétaire, directeur d'exploitation"],
   ['signup.password', 'Create a password', 'أنشئ كلمة مرور', 'Créez un mot de passe'],
   ['signup.passwordHint', 'At least 8 characters.', '8 أحرف على الأقل.', 'Au moins 8 caractères.'],
@@ -157,6 +160,7 @@ const ROWS = [
   ['checkout.cardsUnavailable', 'Card payments are not available right now. Please contact support.', 'الدفع بالبطاقة غير متاح حاليًا. يُرجى التواصل مع الدعم.', 'Le paiement par carte est indisponible pour le moment. Contactez le support.'],
 
   // --- Onboarding wizard -----------------------------------------------
+  ['onb.paid', 'Payment received — your subscription is active. Now let’s set up your team.', 'تم استلام الدفع — اشتراكك نشط الآن. لنُعدّ فريقك.', 'Paiement reçu — votre abonnement est actif. Configurons maintenant votre équipe.'],
   ['onb.roles.title', 'Roles in SOPY', 'الأدوار في SOPY', 'Les rôles dans SOPY'],
   ['onb.roles.intro', "Every person you add gets one of these roles. You'll assign them when you invite your team next.", 'كل شخص تضيفه يحصل على أحد هذه الأدوار. ستحددها عند دعوة فريقك في الخطوة التالية.', "Chaque personne que vous ajoutez reçoit l'un de ces rôles. Vous les attribuerez en invitant votre équipe à l'étape suivante."],
   ['onb.stores.title', 'Set up your stores', 'أعدّ فروعك', 'Configurez vos établissements'],

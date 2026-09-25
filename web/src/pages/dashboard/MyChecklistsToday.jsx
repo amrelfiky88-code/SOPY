@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../api.js';
 import { PlayIcon, ClipboardEmptyIcon, CheckCircleIcon } from '../../components/icons.jsx';
 import { useT } from '../../i18n/index.jsx';
+import { useAuth } from '../../auth/AuthContext.jsx';
 import { reportTitle } from '../../i18n/formLabels.js';
 
 export default function MyChecklistsToday() {
@@ -14,6 +15,8 @@ export default function MyChecklistsToday() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const t = useT();
+  const { user } = useAuth();
+  const canBuild = ['business_owner', 'operations_manager', 'area_manager'].includes(user?.role);
 
   useEffect(() => {
     api.get('/checklists/my-assignments')
@@ -65,6 +68,10 @@ export default function MyChecklistsToday() {
         <div className="empty-state">
           <ClipboardEmptyIcon size={32} />
           <span>{t('dashboard.nothingAssigned')}</span>
+          {/* A new business has nothing yet: point managers at the first step. */}
+          {canBuild && (
+            <Link className="btn btn-primary btn-small" to="/app/checklists">{t('dashboard.buildFirst')}</Link>
+          )}
         </div>
       )}
       {assignments.map((a) => {

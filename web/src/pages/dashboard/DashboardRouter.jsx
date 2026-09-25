@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { api } from '../../api.js';
 import MyChecklistsToday from './MyChecklistsToday.jsx';
@@ -11,6 +11,8 @@ export default function DashboardRouter() {
   const { user, tenant } = useAuth();
   const t = useT();
   const [summary, setSummary] = useState(null);
+  // Straight from finishing setup: not "Welcome back".
+  const firstVisit = !!useLocation().state?.firstVisit;
 
   useEffect(() => {
     api.get('/dashboard/summary').then(setSummary).catch(() => {}); // tiles are optional
@@ -20,7 +22,7 @@ export default function DashboardRouter() {
 
   return (
     <div>
-      <h2>{tenant ? t('dashboard.welcomeNamed', { name: tenant.restaurant_name }) : t('dashboard.welcome')}</h2>
+      <h2>{tenant ? t(firstVisit ? 'dashboard.welcomeFirst' : 'dashboard.welcomeNamed', { name: tenant.restaurant_name }) : t('dashboard.welcome')}</h2>
 
       {summary && (
         <div className="kpi-grid">

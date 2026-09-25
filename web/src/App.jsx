@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
 import { useT } from './i18n/index.jsx';
@@ -86,8 +86,19 @@ function NotFoundRedirect() {
   return <Navigate to={user ? '/app/dashboard' : '/'} replace />;
 }
 
+// A new page starts at the top. The router keeps the scroll position
+// between pages, so e.g. "Get Started" at the bottom of the landing page
+// opened the sign-up form already scrolled to its end.
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
 export default function App() {
   return (
+    <>
+    <ScrollToTop />
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
@@ -122,5 +133,6 @@ export default function App() {
           page; send them to their dashboard instead. */}
       <Route path="*" element={<NotFoundRedirect />} />
     </Routes>
+    </>
   );
 }

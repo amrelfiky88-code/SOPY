@@ -35,8 +35,8 @@ export default function Landing() {
         </h1>
 
         <div className="card" style={{ marginTop: 24 }}>
-          <p style={{ margin: 0 }}>{t('landing.pitch1')}</p>
-          <p style={{ margin: 0 }}>{t('landing.pitch2')}</p>
+          <p style={{ margin: '0 0 10px' }}>{t('landing.pitch1')}</p>
+          <p style={{ margin: '0 0 10px' }}>{t('landing.pitch2')}</p>
           <p style={{ margin: 0 }}>{t('landing.pitch3')}</p>
         </div>
 
@@ -50,10 +50,14 @@ export default function Landing() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginTop: 8 }}>
           {WHY_SOPS.map((item, i) => (
             <div className="card" key={i} style={{ marginBottom: 0 }}>
-              <div className={`icon-circle icon-circle-${item.tone}`} style={{ marginBottom: 12 }}>
-                <item.icon size={18} />
+              {/* Icon beside the title, so a title that wraps lines up with
+                  itself instead of running back under the icon. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className={`icon-circle icon-circle-${item.tone}`} style={{ flexShrink: 0 }}>
+                  <item.icon size={18} />
+                </div>
+                <strong>{t(`landing.why${i + 1}.title`)}</strong>
               </div>
-              <strong>{t(`landing.why${i + 1}.title`)}</strong>
               <p style={{ margin: '6px 0 0' }}>{t(`landing.why${i + 1}.body`)}</p>
             </div>
           ))}

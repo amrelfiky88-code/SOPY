@@ -61,7 +61,8 @@ export default function Checkout() {
     setTenant(updated);
     // An owner who already finished setup can land here from a bookmark —
     // send them to the app rather than back through the wizard.
-    navigate(updated?.onboarding_step === 'complete' ? '/app/dashboard' : '/onboarding');
+    // Say the payment worked — it used to jump straight on with no word.
+    navigate(updated?.onboarding_step === 'complete' ? '/app/dashboard' : '/onboarding', { state: { paid: true } });
   }, [navigate, setTenant]);
 
   // Paddle confirms payment out-of-band via webhook, so after the overlay

@@ -25,15 +25,29 @@
 
 * { box-sizing: border-box; }
 
-html, body, #root {
+html {
   height: 100%;
 }
+body, #root {
+  min-height: 100%;
+}
 
-html, body {
-  /* Safety net: clip rather than let one overflowing element (an
-     unwrapped table, a fixed-width inline grid) drag the whole page
-     into horizontal scroll and cut off the nav on narrow screens. */
+/* Safety net: clip rather than let one overflowing element (an unwrapped
+   table, a fixed-width inline grid) drag the whole page into horizontal
+   scroll and cut off the nav on narrow screens.
+   The page itself must stay the thing that scrolls. With overflow-x:
+   hidden on both html and body (and body at a fixed 100% height), body
+   became its own scroll box: moving to another page kept the old scroll
+   position (sign-up opened at the bottom of the form), window.scrollTo
+   did nothing, and iOS's tap-the-status-bar-to-scroll-up stopped working.
+   html's overflow goes to the viewport; clip on body hides overflow
+   without making body scrollable. */
+html {
   overflow-x: hidden;
+  width: 100%;
+}
+body {
+  overflow-x: clip;
   width: 100%;
 }
 
