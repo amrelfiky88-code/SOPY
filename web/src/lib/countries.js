@@ -1,5 +1,6 @@
-// Every country for the sign-up form: the 193 UN member states plus the
-// two observer states (Vatican City, Palestine), grouped by region.
+// Every country for the sign-up form: the UN member states (Israel left
+// out at the client's request) plus the two observer states (Vatican City,
+// Palestine), grouped by region.
 // Each entry is [ISO 3166 code, English name]. The English name is what's
 // saved (tenants.country), so it stays the same whatever the browser or
 // language; the code gives the name in the viewer's language.
@@ -10,7 +11,7 @@ export const COUNTRY_GROUPS = [
   ]],
   ['middleEast', [
     ['JO', 'Jordan'], ['LB', 'Lebanon'], ['SY', 'Syria'], ['IQ', 'Iraq'], ['PS', 'Palestine'],
-    ['YE', 'Yemen'], ['IR', 'Iran'], ['IL', 'Israel'], ['TR', 'Turkey'],
+    ['YE', 'Yemen'], ['IR', 'Iran'], ['TR', 'Turkey'],
   ]],
   ['northAfrica', [
     ['EG', 'Egypt'], ['MA', 'Morocco'], ['DZ', 'Algeria'], ['TN', 'Tunisia'], ['LY', 'Libya'],
