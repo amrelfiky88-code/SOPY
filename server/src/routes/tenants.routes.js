@@ -5,6 +5,8 @@ import { query, withTransaction } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
 import { isValidRole, canAssignRole, canManageUser, EDITABLE_STATUSES } from '../auth/roles.js';
 import { PLAN_LIMITS, clampPlanCount } from '../../../shared/pricing.js';
+import { countryCode } from '../../../shared/countries.js';
+import fs from 'node:fs/promises';
 
 export const tenantsRouter = Router();
 
@@ -86,6 +88,21 @@ tenantsRouter.get('/current', requireAuth, async (req, res) => {
 // submissions keep their store. Every list must therefore filter on it —
 // this one didn't, so a "removed" store stayed in every picker while the
 // dashboard's active-store count (which did filter) disagreed with it.
+// The cities of the business's country, for the store City box: biggest
+// first, as [english, arabic?]. From GeoNames (see scripts/build-cities.js);
+// loaded on first use. "Other" or an unknown country gives an empty list,
+// and the box still takes any typed city.
+let citiesByCountry = null;
+tenantsRouter.get('/cities', requireAuth, async (req, res) => {
+  const { rows } = await query('SELECT country FROM tenants WHERE id = $1', [req.auth.tenantId]);
+  const code = countryCode(rows[0]?.country);
+  if (code && !citiesByCountry) {
+    citiesByCountry = JSON.parse(await fs.readFile(new URL('../../data/cities.json', import.meta.url), 'utf8'));
+  }
+  res.set('Cache-Control', 'private, max-age=86400');
+  res.json({ country: rows[0]?.country || null, cities: (code && citiesByCountry[code]) || [] });
+});
+
 // works_here marks the stores the signed-in person belongs to, so report
 // forms can default to their own store rather than the business's first.
 tenantsRouter.get('/branches', requireAuth, async (req, res) => {

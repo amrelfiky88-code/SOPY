@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { useT } from '../../i18n/index.jsx';
+import CityField from '../../components/CityField.jsx';
 
 export default function StepStores({ onNext, onBack }) {
   const t = useT();
@@ -67,10 +68,7 @@ export default function StepStores({ onNext, onBack }) {
           <label htmlFor="branchName">{t('page.branchName')}</label>
           <input id="branchName" required value={name} onChange={(e) => setName(e.target.value)} placeholder={t('onb.stores.placeholder')} />
         </div>
-        <div className="field">
-          <label htmlFor="branchCity">{t('page.city')}</label>
-          <input id="branchCity" value={city} onChange={(e) => setCity(e.target.value)} />
-        </div>
+        <CityField id="branchCity" label={t('page.city')} value={city} onChange={setCity} />
         <button className="btn btn-secondary" type="submit" disabled={submitting}>{t('page.addBranch')}</button>
       </form>
 

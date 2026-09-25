@@ -6,6 +6,7 @@ import { ROLES, roleName } from '../onboarding/roles.js';
 import { canAssignRole, canManageUser } from '../../../../shared/roles.js';
 import { StorefrontIcon } from '../../components/icons.jsx';
 import InviteLink from '../../components/InviteLink.jsx';
+import CityField from '../../components/CityField.jsx';
 import JobTitleSelect, { withRole, titleForRole } from '../../components/JobTitleSelect.jsx';
 
 export default function Team() {
@@ -158,10 +159,7 @@ export default function Team() {
               <label htmlFor="bname">{t('page.branchName')}</label>
               <input id="bname" required value={branchForm.name} onChange={(e) => setBranchForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
-            <div className="field">
-              <label htmlFor="bcity">{t('page.city')}</label>
-              <input id="bcity" value={branchForm.city} onChange={(e) => setBranchForm((f) => ({ ...f, city: e.target.value }))} />
-            </div>
+            <CityField id="bcity" label={t('page.city')} value={branchForm.city} onChange={(v) => setBranchForm((f) => ({ ...f, city: v }))} />
             <button className="btn btn-secondary" type="submit" disabled={busy === 'branch'}>
               {busy === 'branch' ? t('page.adding') : t('page.addBranch')}
             </button>

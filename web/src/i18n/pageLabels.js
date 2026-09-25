@@ -26,6 +26,7 @@ const ROWS = [
   ['page.role', 'Role', 'الدور', 'Rôle'],
   ['page.name', 'Name', 'الاسم', 'Nom'],
   ['page.city', 'City', 'المدينة', 'Ville'],
+  ['page.cityHint', "Pick a city from the list, or type it if it isn't there. City names from GeoNames (CC BY 4.0).", 'اختر مدينة من القائمة، أو اكتبها إن لم تكن موجودة. أسماء المدن من GeoNames ‏(CC BY 4.0).', "Choisissez une ville dans la liste, ou saisissez-la si elle n'y est pas. Noms de villes : GeoNames (CC BY 4.0)."],
   ['page.store', 'Store', 'الفرع', 'Établissement'],
   ['page.stores', 'Stores', 'الفروع', 'Établissements'],
   ['page.status', 'Status', 'الحالة', 'Statut'],

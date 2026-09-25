@@ -180,3 +180,19 @@ test('staff can list their colleagues\' names, and nothing more', async () => {
   }
   assert.equal((await api('GET', '/api/tenants/users', { token: A.emp.token })).status, 403);
 });
+
+// The store City box suggests the cities of the country chosen at sign-up.
+test("the city list follows the business's country", async () => {
+  const egypt = await api('GET', '/api/tenants/cities', { token: A.emp.token });
+  assert.equal(egypt.status, 200);
+  assert.equal(egypt.body.country, 'Egypt');
+  assert.deepEqual(egypt.body.cities[0], ['Cairo', 'القاهرة'], 'biggest first, with its Arabic name');
+  assert.ok(egypt.body.cities.length > 100);
+
+  const other = await api('POST', '/api/auth/signup', {
+    body: { fullName: 'Elsewhere', email: 'other-country@example.com', password: 'OwnerPass123', restaurantName: 'Elsewhere', country: 'Other', branchCount: 1, userCount: 1 },
+  });
+  const none = await api('GET', '/api/tenants/cities', { token: other.body.token });
+  assert.deepEqual(none.body.cities, [], '"Other" has no list; the box still takes a typed city');
+  assert.equal((await api('GET', '/api/tenants/cities')).status, 401);
+});

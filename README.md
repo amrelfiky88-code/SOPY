@@ -318,3 +318,12 @@ in that component**, and the server's upload endpoint
 - **Invite emails** aren't actually sent — `POST /api/tenants/users/invite`
   returns the invite link directly in the API response for the demo; wire
   up an email provider before real use.
+
+## Third-party data
+
+The store City suggestions (`server/data/cities.json`) come from
+[GeoNames](https://www.geonames.org/) (`cities15000`, every city of 15,000+
+people), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+The app credits GeoNames under the City box. To refresh the list, download
+`https://download.geonames.org/export/dump/cities15000.zip`, unzip it, and
+run `node scripts/build-cities.js path/to/cities15000.txt` from `server/`.

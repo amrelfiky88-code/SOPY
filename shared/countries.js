@@ -96,3 +96,14 @@ export function countryOptions(lang) {
       .sort((a, b) => a.label.localeCompare(b.label, lang)),
   }));
 }
+
+// ISO code for a saved country name (tenants.country), or null for
+// "Other" and anything not in the list.
+const CODE_BY_NAME = new Map(COUNTRY_GROUPS.flatMap(([, list]) => list.map(([code, english]) => [english, code])));
+export const countryCode = (englishName) => CODE_BY_NAME.get(englishName) || null;
+
+// Arab League members: their cities get Arabic names in the city list.
+export const ARABIC_NAMED_COUNTRIES = new Set([
+  'SA', 'AE', 'KW', 'QA', 'BH', 'OM', 'JO', 'LB', 'SY', 'IQ', 'PS', 'YE',
+  'EG', 'MA', 'DZ', 'TN', 'LY', 'SD', 'SO', 'DJ', 'KM', 'MR',
+]);

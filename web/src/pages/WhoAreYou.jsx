@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext.jsx';
 import { useI18n } from '../i18n/index.jsx';
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
 import { REFERRAL_WELCOME_USD } from '../../../shared/referrals.js';
-import { countryOptions } from '../lib/countries.js';
+import { countryOptions } from '../../../shared/countries.js';
 import JobTitleSelect from '../components/JobTitleSelect.jsx';
 
 // The code from a referral link (?ref=… now, or saved by main.jsx when the
