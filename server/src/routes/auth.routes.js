@@ -116,6 +116,31 @@ authRouter.post('/login', async (req, res) => {
   res.json({ token, user: publicUser(user), tenant: { ...tenantRows[0], plan_ended: await planEnded(user.tenant_id) } });
 });
 
+// What an invite or reset link is for, so the page can greet the person
+// ("Cairo Corner Cafe invited you — you'll log in as omar@…") and say up
+// front when a link is dead, instead of only after they've typed a
+// password. The link itself is the credential; this reveals nothing its
+// holder isn't about to be signed in as.
+authRouter.get('/invite/:token', async (req, res) => {
+  const { rows } = await query(
+    `SELECT u.full_name, u.email, u.status, u.invite_expires_at, t.restaurant_name
+     FROM users u JOIN tenants t ON t.id = u.tenant_id
+     WHERE u.invite_token = $1 AND u.status IN ('invited', 'active')`,
+    [String(req.params.token)]
+  );
+  const u = rows[0];
+  if (!u) return res.status(404).json({ error: 'This link has already been used or is no longer valid' });
+  if (u.invite_expires_at && new Date(u.invite_expires_at) < new Date()) {
+    return res.status(410).json({ error: 'This link has expired. Ask your manager for a new one.' });
+  }
+  res.json({
+    fullName: u.full_name,
+    email: u.email,
+    restaurantName: u.restaurant_name,
+    kind: u.status === 'invited' ? 'invite' : 'reset',
+  });
+});
+
 // Accept an invite: sets a password for a pre-created 'invited' user
 authRouter.post('/accept-invite', async (req, res) => {
   const { inviteToken, password } = req.body;

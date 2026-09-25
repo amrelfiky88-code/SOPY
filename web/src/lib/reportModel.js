@@ -1,4 +1,4 @@
-import { reportTitle } from '../i18n/formLabels.js';
+import { reportTitle, FORM_LABELS } from '../i18n/formLabels.js';
 
 // Turns GET /submissions/:id/report into a list of layout-free blocks.
 // Both the on-screen report and the PDF are drawn from the same blocks,
@@ -64,13 +64,33 @@ function fallbackRank(key, depth) {
   return i >= 0 ? i : 100;
 }
 
-// Object.entries in the order the form had them (see useOpsReport's
-// withFieldOrder), falling back to the ranks above.
+// The form's own field order, from its label list (formLabels.js is
+// written in form order). The saved _fieldOrder records the order of the
+// data in memory, which after resuming a draft is jsonb's shuffled key
+// order, and for table rows is whatever order people happened to fill
+// them in — so it only decides fields the form doesn't define.
+function formOrder(kind) {
+  const prefix = `f.${kind}.`;
+  const map = new Map();
+  if (!kind) return map;
+  Object.keys(FORM_LABELS.en).forEach((key, i) => {
+    if (key.startsWith(prefix)) map.set(key.slice(prefix.length), i);
+  });
+  return map;
+}
+
 function orderedEntries(obj, prefix, order) {
   const depth = prefix ? prefix.split('.').length - 1 : 0;
+  const rank = (k, i) => {
+    const path = prefix + k;
+    if (order.form.has(path)) return order.form.get(path);
+    if (SUB_ORDER.includes(k)) return 500_000 + SUB_ORDER.indexOf(k); // Start → Mid → End
+    if (order.saved.has(path)) return 1_000_000 + order.saved.get(path);
+    return 2_000_000 + fallbackRank(k, depth) * 100 + i;
+  };
   return Object.entries(obj)
     .filter(([k]) => k !== '_fieldOrder')
-    .map(([k, v], i) => [k, v, order.get(prefix + k) ?? 10_000 + fallbackRank(k, depth) * 100 + i])
+    .map(([k, v], i) => [k, v, rank(k, i)])
     .sort((a, b) => a[2] - b[2])
     .map(([k, v]) => [k, v]);
 }
@@ -89,7 +109,7 @@ function inline(obj, t, prefix, order, label, labelPaths) {
 // out as label/value rows, skipping anything left blank.
 export function formDataSections(formData, t, kind) {
   const label = labeler(t, kind);
-  const order = new Map((formData?._fieldOrder || []).map((path, i) => [path, i]));
+  const order = { form: formOrder(kind), saved: new Map((formData?._fieldOrder || []).map((path, i) => [path, i])) };
   const sections = [];
   for (const [key, value] of orderedEntries(formData || {}, '', order)) {
     if (isEmpty(value)) continue;

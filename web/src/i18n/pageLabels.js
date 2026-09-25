@@ -83,6 +83,12 @@ const ROWS = [
   ['accept.title', 'Set your password', 'عيّن كلمة المرور', 'Choisissez votre mot de passe'],
   ['accept.intro', 'Finish setting up your SOPY account.', 'أكمل إعداد حسابك في SOPY.', 'Terminez la configuration de votre compte SOPY.'],
   ['accept.submit', 'Set password and log in', 'تعيين كلمة المرور وتسجيل الدخول', 'Définir le mot de passe et se connecter'],
+  ['accept.invitedBy', 'Hi {name} — {restaurant} invited you to SOPY.', 'مرحبًا {name} — دعاك {restaurant} إلى SOPY.', 'Bonjour {name} — {restaurant} vous invite sur SOPY.'],
+  ['accept.resetFor', 'Hi {name} — choose a new password for {restaurant}.', 'مرحبًا {name} — اختر كلمة مرور جديدة لـ {restaurant}.', 'Bonjour {name} — choisissez un nouveau mot de passe pour {restaurant}.'],
+  ['accept.loginAs', 'You’ll log in as', 'ستسجّل الدخول باسم', 'Vous vous connecterez avec'],
+  ['accept.resetTitle', 'Choose a new password', 'اختر كلمة مرور جديدة', 'Choisissez un nouveau mot de passe'],
+  ['accept.newPassword', 'New password', 'كلمة المرور الجديدة', 'Nouveau mot de passe'],
+  ['accept.showPassword', 'Show password', 'إظهار كلمة المرور', 'Afficher le mot de passe'],
 
   // --- Sign-up (Who are you?) ------------------------------------------
   ['signup.title', 'Who are you?', 'من أنت؟', 'Qui êtes-vous ?'],

@@ -10,7 +10,15 @@ import { useT } from '../../i18n/index.jsx';
 // translated it), so these behave the same in every language.
 const categoryKey = (item) => item.category_en || item.category || '';
 const isObservationItem = (item) => categoryKey(item).includes('Consumer Behavior');
-const isTemperatureItem = (item) => categoryKey(item).toLowerCase().includes('temperature');
+// A reading box for checkpoints that are actually about a temperature
+// (a stated °C/°F, "temperature", a thermometer or probe). Going by the
+// section name gave one to everything in "Food Safety & Temperature
+// Control" — labelling, defrosting, allergens. Uses the English text.
+const READING_RE = /-?\d+(\.\d+)?\s*°|\b\d+\s?[CF]\b|\btemps?\b|\btemperatures?\b|thermometer|\bprobe\b/i;
+const isTemperatureItem = (item) => {
+  const text = item.text_en || item.text || '';
+  return categoryKey(item) === 'temperature' || (READING_RE.test(text) && !/room temp/i.test(text));
+};
 
 export default function ChecklistRun() {
   const { submissionId } = useParams();

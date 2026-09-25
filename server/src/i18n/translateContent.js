@@ -10,8 +10,24 @@ import { DEFAULT_LANGUAGE } from '../../../shared/languages.js';
 // Anything without a translation falls through as English rather than
 // rendering blank, so a partially-translated library degrades into a
 // mixed-language list instead of a broken one.
+// The starter library's section names are stored lower-case ('hygiene',
+// 'temperature'); Arabic and French translate them, but English showed
+// them raw ("temperature" as a heading on the score screen).
+const ENGLISH_SECTION_NAMES = {
+  closing: 'Closing', equipment: 'Equipment', hygiene: 'Hygiene',
+  receiving: 'Receiving', temperature: 'Temperature', waste: 'Waste',
+};
+
+function englishDisplay(rows, fields) {
+  if (!fields.includes('category')) return rows;
+  return rows.map((row) => (ENGLISH_SECTION_NAMES[row.category]
+    ? { ...row, category_en: row.category, category: ENGLISH_SECTION_NAMES[row.category] }
+    : row));
+}
+
 export async function translateRows(rows, lang, fields) {
-  if (!lang || lang === DEFAULT_LANGUAGE || !rows.length) return rows;
+  if (!rows.length) return rows;
+  if (!lang || lang === DEFAULT_LANGUAGE) return englishDisplay(rows, fields);
 
   const sources = new Set();
   for (const row of rows) {
