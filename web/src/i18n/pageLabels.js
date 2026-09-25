@@ -44,6 +44,7 @@ const ROWS = [
   ['page.languageLabel', 'Language', 'اللغة', 'Langue'],
   ['qty.fewer', 'One fewer — {label}', 'إنقاص واحد — {label}', 'Un de moins — {label}'],
   ['qty.more', 'One more — {label}', 'زيادة واحد — {label}', 'Un de plus — {label}'],
+  ['qty.slider', 'Slider — {label}', 'شريط التمرير — {label}', 'Curseur — {label}'],
   ['api.offline', "Couldn't reach SOPY — check your connection and try again.", 'تعذّر الوصول إلى SOPY — تحقق من اتصالك وحاول مجددًا.', 'Impossible de joindre SOPY — vérifiez votre connexion et réessayez.'],
   ['api.failed', 'Request failed ({status})', 'فشل الطلب ({status})', 'La requête a échoué ({status})'],
 

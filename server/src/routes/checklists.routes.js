@@ -43,8 +43,11 @@ checklistsRouter.get('/library', requireAuth, requireOnboardingComplete, async (
     // explicit ordinal matching the source document's own sequence — a
     // multi-row INSERT doesn't guarantee row order on its own, and
     // created_at ties within one statement, so this is the real ordering.
-    `SELECT * FROM checklist_items WHERE ${clauses.join(' AND ')} ORDER BY standard, category, sort_order`,
-    params
+    // Standards in the Builder's filter order. Alphabetical put the convenience-store
+    // section (C_STORE) at the top of every restaurant's library.
+    `SELECT * FROM checklist_items WHERE ${clauses.join(' AND ')}
+     ORDER BY array_position($${i}::text[], standard::text), category, sort_order`,
+    [...params, STANDARDS]
   );
   // Order by the English category deliberately: it keeps the source
   // document's grouping stable no matter which language is rendered.

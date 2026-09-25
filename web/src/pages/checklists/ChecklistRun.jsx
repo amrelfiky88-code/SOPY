@@ -284,6 +284,7 @@ export default function ChecklistRun() {
                   <button
                     type="button"
                     className={`btn btn-small ${r.isCompliant === true ? 'btn-primary' : 'btn-secondary'}`}
+                    aria-pressed={r.isCompliant === true}
                     onClick={() => saveAnswer(item.id, true)}
                   >
                     {t('run.compliant')}
@@ -291,6 +292,7 @@ export default function ChecklistRun() {
                   <button
                     type="button"
                     className={`btn btn-small ${r.isCompliant === false ? 'btn-danger' : 'btn-secondary'}`}
+                    aria-pressed={r.isCompliant === false}
                     style={r.isCompliant === false ? { background: 'var(--red)', color: 'white' } : undefined}
                     onClick={() => saveAnswer(item.id, false)}
                   >

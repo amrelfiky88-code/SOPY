@@ -122,6 +122,22 @@ test('business-wide KPIs are for managers, and store managers see their own stor
   assert.equal(peek.body.submissionsCount, 0, 'asking for another store by id shows nothing');
 });
 
+// Regression: a store manager's KPIs covered only their store, but they
+// could list and open every store's reports.
+test('store managers see the reports of their own stores only', async () => {
+  const list = await api('GET', '/api/submissions', { token: M.token });
+  assert.equal(list.status, 200);
+  assert.ok(list.body.submissions.every((s) => s.branch_id === storeB || s.submitted_by === M.id), 'nothing from store A');
+
+  const ownerList = await api('GET', `/api/submissions?branchId=${storeA}&status=submitted`, { token: O.token });
+  const fromA = ownerList.body.submissions[0];
+  assert.ok(fromA, 'store A has a submitted report to test with');
+  for (const path of [`/api/submissions/${fromA.id}`, `/api/submissions/${fromA.id}/report`, `/api/submissions/${fromA.id}/scorecard`]) {
+    assert.equal((await api('GET', path, { token: M.token })).status, 404, path);
+  }
+  assert.equal((await api('GET', `/api/submissions/${fromA.id}/report`, { token: O.token })).status, 200);
+});
+
 test('the store list marks where the person works, for report forms to default to', async () => {
   const { body } = await api('GET', '/api/tenants/branches', { token: M.token });
   assert.deepEqual(body.branches.filter((b) => b.works_here).map((b) => b.id), [storeB]);
@@ -195,7 +211,8 @@ test("staff can't read a colleague's run, its score, the staff list or the assig
   assert.equal((await api('GET', `/api/submissions/${sub}`, { token: E2.token })).status, 404);
   assert.equal((await api('GET', `/api/submissions/${sub}/scorecard`, { token: E2.token })).status, 404);
   assert.equal((await api('GET', `/api/submissions/${sub}`, { token: E1.token })).status, 200, 'their own is fine');
-  assert.equal((await api('GET', `/api/submissions/${sub}`, { token: M.token })).status, 200, 'managers see everyone’s');
+  assert.equal((await api('GET', `/api/submissions/${sub}`, { token: O.token })).status, 200, 'the owner sees every store’s');
+  assert.equal((await api('GET', `/api/submissions/${sub}`, { token: M.token })).status, 404, 'a store manager sees only their own stores’');
   assert.equal((await api('GET', '/api/tenants/users', { token: E1.token })).status, 403);
   assert.equal((await api('GET', '/api/checklists/assignments', { token: E1.token })).status, 403);
   assert.equal((await api('GET', '/api/tenants/users', { token: O.token })).status, 200);
@@ -255,4 +272,13 @@ test("a daily report can't be assigned as a checklist (it has no checkpoints to 
   const res = await api('POST', '/api/checklists/assignments', { token: O.token, body: { templateId: kitchen } });
   assert.equal(res.status, 400);
   assert.equal((await api('POST', '/api/checklists/assignments', { token: O.token, body: { templateId } })).status, 201);
+});
+
+// Regression: sorted by name, the convenience-store section (C_STORE)
+// opened every restaurant's Checklist Builder.
+test('the library lists standards in the Builder filter order', async () => {
+  const { items } = (await api('GET', '/api/checklists/library', { token: O.token })).body;
+  const order = [...new Set(items.map((i) => i.standard))];
+  assert.equal(order[0], 'HACCP');
+  assert.ok(order.indexOf('C_STORE') > order.indexOf('SOP'), order.join(','));
 });

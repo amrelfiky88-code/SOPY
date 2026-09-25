@@ -185,7 +185,7 @@ export default {
   'referral.aRestaurant': 'مطعم',
   'referral.usedSoFar': 'استُخدم {amount} من الرصيد في الدفعات حتى الآن.',
   'builder.title': 'منشئ قوائم الفحص',
-  'builder.pickCheckpoints': '١. اختر البنود من المكتبة الرئيسية',
+  'builder.pickCheckpoints': '1. اختر البنود من المكتبة الرئيسية',
   'builder.search': 'ابحث في البنود…',
   'builder.allStandards': 'كل المعايير',
   'builder.criticalOnly': 'الحرجة فقط',

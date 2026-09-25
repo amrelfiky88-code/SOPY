@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
-import { MY_ASSIGNMENTS_FROM, myAssignmentParams, ALL_STORE_ROLES } from '../assignments.js';
+import { MY_ASSIGNMENTS_FROM, myAssignmentParams } from '../assignments.js';
+import { visibleBranchIds } from '../auth/scope.js';
 
 export const dashboardRouter = Router();
 
@@ -49,15 +50,7 @@ dashboardRouter.get('/kpi', requireAuth, requireRole('business_owner', 'operatio
   const branchId = req.query.branchId || null;
   const since = periodStart(period);
 
-  let scopedBranchIds = null; // null = every store
-  if (!ALL_STORE_ROLES.includes(req.auth.role)) {
-    const { rows } = await query(
-      `SELECT ub.branch_id FROM user_branches ub JOIN branches b ON b.id = ub.branch_id
-       WHERE ub.user_id = $1 AND b.tenant_id = $2 AND b.is_active`,
-      [req.auth.userId, req.auth.tenantId]
-    );
-    scopedBranchIds = rows.map((r) => r.branch_id);
-  }
+  const scopedBranchIds = await visibleBranchIds(req.auth); // null = every store
 
   const params = [req.auth.tenantId, since];
   const clauses = [];

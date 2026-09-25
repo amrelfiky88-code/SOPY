@@ -55,7 +55,7 @@ export default function QuantityField({ id, label, value, onChange, limits, slid
         max={sliderMax}
         value={Math.min(Number(value) || limits.min, sliderMax)}
         onChange={(e) => commit(e.target.value)}
-        aria-label={`${label} slider`}
+        aria-label={t('qty.slider', { label })}
       />
     </div>
   );

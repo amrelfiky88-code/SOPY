@@ -8,6 +8,7 @@ import { requireAuth } from '../auth/middleware.js';
 import { translateRows, requestLanguage } from '../i18n/translateContent.js';
 import { signPhotos } from '../uploads.js';
 import { SHARE_ROOT, SHARE_DAYS, sweepSoon } from '../shares.js';
+import { visibleBranchIds, canSeeSubmission, SEES_OWN_ONLY } from '../auth/scope.js';
 
 export const submissionsRouter = Router();
 
@@ -28,14 +29,16 @@ const upload = multer({
 
 // Writes are only allowed on this tenant's submissions, and only while
 // they're still in progress — a submitted report is a record, not a draft.
-// Staff can only change their own runs (as they can only see their own);
+// Staff can only change their own runs (as they can only see their own),
+// and area and store managers only runs at their own stores;
 // before, any employee could answer or sign off a colleague's checklist.
 async function findOpenSubmission(req, res) {
   const { rows } = await query(
-    'SELECT id, status, template_id, submitted_by FROM checklist_submissions WHERE id = $1 AND tenant_id = $2',
+    'SELECT id, status, template_id, submitted_by, branch_id FROM checklist_submissions WHERE id = $1 AND tenant_id = $2',
     [req.params.id, req.auth.tenantId]
   );
-  if (!rows[0] || (SEES_OWN_ONLY.includes(req.auth.role) && rows[0].submitted_by !== req.auth.userId)) {
+  // Managers step into runs at the stores they can see, like reading them.
+  if (!(await canSeeSubmission(req.auth, rows[0]))) {
     res.status(404).json({ error: 'Not found' });
     return null;
   }
@@ -279,15 +282,14 @@ submissionsRouter.post('/:id/submit', requireAuth, async (req, res) => {
 
 // Staff see only their own runs here too, as on /report — this and the
 // scorecard used to hand any employee a colleague's answers and photos.
-const canSee = (req, submission) =>
-  !!submission && (!SEES_OWN_ONLY.includes(req.auth.role) || submission.submitted_by === req.auth.userId);
+const canSee = (req, submission) => canSeeSubmission(req.auth, submission);
 
 submissionsRouter.get('/:id', requireAuth, async (req, res) => {
   const { rows } = await query(
     'SELECT * FROM checklist_submissions WHERE id = $1 AND tenant_id = $2',
     [req.params.id, req.auth.tenantId]
   );
-  if (!canSee(req, rows[0])) return res.status(404).json({ error: 'Not found' });
+  if (!(await canSee(req, rows[0]))) return res.status(404).json({ error: 'Not found' });
   const { rows: responses } = await query(
     `SELECT r.*, ci.text AS item_text FROM checklist_submission_responses r
      JOIN checklist_items ci ON ci.id = r.item_id
@@ -311,7 +313,7 @@ submissionsRouter.get('/:id/scorecard', requireAuth, async (req, res) => {
     [req.params.id, req.auth.tenantId]
   );
   const submission = subRows[0];
-  if (!canSee(req, submission)) return res.status(404).json({ error: 'Not found' });
+  if (!(await canSee(req, submission))) return res.status(404).json({ error: 'Not found' });
   const scorecard = await computeScorecard(submission);
   scorecard.sections = await translateRows(scorecard.sections, await requestLanguage(req), ['category']);
   res.json(scorecard);
@@ -374,8 +376,6 @@ async function computeScorecard(submission) {
   };
 }
 
-// Staff see their own reports; managers and up see the whole business's.
-const SEES_OWN_ONLY = ['employee'];
 
 // Everything needed to render (and PDF) a finished report in one call:
 // header details, the checklist's checkpoints with their answers and
@@ -393,10 +393,7 @@ submissionsRouter.get('/:id/report', requireAuth, async (req, res) => {
     [req.params.id, req.auth.tenantId]
   );
   const submission = rows[0];
-  if (!submission) return res.status(404).json({ error: 'Not found' });
-  if (SEES_OWN_ONLY.includes(req.auth.role) && submission.submitted_by !== req.auth.userId) {
-    return res.status(404).json({ error: 'Not found' });
-  }
+  if (!(await canSee(req, submission))) return res.status(404).json({ error: 'Not found' });
 
   const { rows: itemRows } = await query(
     `SELECT ci.id, ci.text, ci.description, ci.category, ci.is_critical, ti.sort_order,
@@ -440,13 +437,11 @@ const pdfUpload = multer({
 
 submissionsRouter.post('/:id/share', requireAuth, pdfUpload.single('pdf'), async (req, res) => {
   const { rows } = await query(
-    'SELECT id, status, submitted_by FROM checklist_submissions WHERE id = $1 AND tenant_id = $2',
+    'SELECT id, status, submitted_by, branch_id FROM checklist_submissions WHERE id = $1 AND tenant_id = $2',
     [req.params.id, req.auth.tenantId]
   );
   const submission = rows[0];
-  if (!submission || (SEES_OWN_ONLY.includes(req.auth.role) && submission.submitted_by !== req.auth.userId)) {
-    return res.status(404).json({ error: 'Not found' });
-  }
+  if (!(await canSee(req, submission))) return res.status(404).json({ error: 'Not found' });
   if (submission.status !== 'submitted') return res.status(409).json({ error: 'Submit the report before sharing it' });
   if (!req.file || req.file.buffer.subarray(0, 5).toString('latin1') !== '%PDF-') {
     return res.status(400).json({ error: 'A PDF file is required' });
@@ -483,6 +478,11 @@ submissionsRouter.get('/', requireAuth, async (req, res) => {
   const params = [req.auth.tenantId];
   let i = 2;
   if (SEES_OWN_ONLY.includes(req.auth.role)) { clauses.push(`s.submitted_by = $${i++}`); params.push(req.auth.userId); }
+  else {
+    // Area and store managers: their stores' reports, and anything they filed.
+    const stores = await visibleBranchIds(req.auth);
+    if (stores) { clauses.push(`(s.branch_id = ANY($${i++}::uuid[]) OR s.submitted_by = $${i++})`); params.push(stores, req.auth.userId); }
+  }
   if (branchId) { clauses.push(`s.branch_id = $${i++}`); params.push(branchId); }
   if (from) { clauses.push(`s.started_at >= $${i++}`); params.push(from); }
   if (to) { clauses.push(`s.started_at <= $${i++}`); params.push(to); }
