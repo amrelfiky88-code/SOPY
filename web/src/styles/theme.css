@@ -172,6 +172,17 @@ input[type="range"] {
   .card td input[type="checkbox"] { width: 24px; height: 24px; }
 }
 
+/* A checkbox inside a .field (the "Works at" store list on invite forms)
+   took the text-box styles above and stretched across the row, with its
+   store name pushed onto the next line. */
+.field input[type='checkbox'],
+.field input[type='radio'] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
 .field input:focus,
 .field select:focus,
 .field textarea:focus {

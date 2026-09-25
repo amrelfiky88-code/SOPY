@@ -179,6 +179,10 @@ async function validBranchIds(branchIds, tenantId) {
 
 tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
   const { fullName, email, role, branchIds } = req.body;
+  // Optional job title, chosen by the manager (e.g. QAQC, which QC visit
+  // reports use to find inspectors). The person can change it in Profile.
+  const title = typeof req.body.title === 'string' ? req.body.title.trim() : '';
+  if (title.length > 120) return res.status(400).json({ error: 'That text is too long' });
   if (typeof fullName !== 'string' || typeof email !== 'string' || !fullName.trim() || !email.trim() || !role) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
@@ -207,9 +211,9 @@ tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', '
   try {
     user = await withTransaction(async (client) => {
       const { rows } = await client.query(
-        `INSERT INTO users (tenant_id, full_name, email, role, status, invite_token, invite_expires_at, password_hash)
-         VALUES ($1, $2, $3, $4, 'invited', $5, now() + interval '${INVITE_DAYS} days', $6) RETURNING *`,
-        [req.auth.tenantId, fullName.trim(), cleanEmail, role, inviteToken, placeholderHash]
+        `INSERT INTO users (tenant_id, full_name, email, role, status, invite_token, invite_expires_at, password_hash, title)
+         VALUES ($1, $2, $3, $4, 'invited', $5, now() + interval '${INVITE_DAYS} days', $6, $7) RETURNING *`,
+        [req.auth.tenantId, fullName.trim(), cleanEmail, role, inviteToken, placeholderHash, title || null]
       );
       if (branches.length) {
         const values = branches.map((_, idx) => `($1, $${idx + 2})`).join(', ');
@@ -225,7 +229,7 @@ tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', '
   // In production this would send an email with the invite link.
   // Returned directly here so the demo/onboarding flow can show it.
   res.status(201).json({
-    user: { id: user.id, fullName: user.full_name, email: user.email, role: user.role },
+    user: { id: user.id, fullName: user.full_name, email: user.email, role: user.role, title: user.title },
     inviteLink: `/accept-invite?token=${inviteToken}`,
   });
 });

@@ -6,6 +6,7 @@ import { ROLES, roleName } from '../onboarding/roles.js';
 import { canAssignRole, canManageUser } from '../../../../shared/roles.js';
 import { StorefrontIcon } from '../../components/icons.jsx';
 import InviteLink from '../../components/InviteLink.jsx';
+import JobTitleSelect, { withRole, titleForRole } from '../../components/JobTitleSelect.jsx';
 
 export default function Team() {
   const t = useT();
@@ -13,7 +14,7 @@ export default function Team() {
   const [branches, setBranches] = useState([]);
   const [users, setUsers] = useState([]);
   const [branchForm, setBranchForm] = useState({ name: '', city: '' });
-  const [inviteForm, setInviteForm] = useState({ fullName: '', email: '', role: 'employee', branchIds: [] });
+  const [inviteForm, setInviteForm] = useState({ fullName: '', email: '', role: 'employee', title: titleForRole('employee'), branchIds: [] });
   const [lastInvite, setLastInvite] = useState(null);
   const [confirmingRemove, setConfirmingRemove] = useState(null);
   const [error, setError] = useState('');
@@ -70,7 +71,8 @@ export default function Team() {
       // here belonged to no store and never received store checklists.
       const res = await api.post('/tenants/users/invite', inviteForm);
       setLastInvite({ path: res.inviteLink, email: inviteForm.email });
-      setInviteForm({ fullName: '', email: '', role: assignableRoles.at(-1)?.value || 'employee', branchIds: [] });
+      const nextRole = assignableRoles.at(-1)?.value || 'employee';
+      setInviteForm({ fullName: '', email: '', role: nextRole, title: titleForRole(nextRole), branchIds: [] });
       await load();
     } catch (err) { setError(err.message); } finally { setBusy(''); }
   };
@@ -280,9 +282,13 @@ export default function Team() {
               </div>
               <div className="field">
                 <label htmlFor="irole">{t('page.role')}</label>
-                <select id="irole" value={inviteForm.role} onChange={(e) => setInviteForm((f) => ({ ...f, role: e.target.value }))}>
+                <select id="irole" value={inviteForm.role} onChange={(e) => setInviteForm((f) => withRole(f, e.target.value))}>
                   {assignableRoles.map((r) => <option key={r.value} value={r.value}>{roleName(t, r.value)}</option>)}
                 </select>
+              </div>
+              <div className="field">
+                <label htmlFor="ititle">{t('account.jobTitle')}</label>
+                <JobTitleSelect id="ititle" value={inviteForm.title} onChange={(v) => setInviteForm((f) => ({ ...f, title: v }))} />
               </div>
               {branches.length > 0 && !['operations_manager'].includes(inviteForm.role) && (
                 <fieldset className="field" style={{ border: 0, padding: 0, margin: '0 0 18px' }}>

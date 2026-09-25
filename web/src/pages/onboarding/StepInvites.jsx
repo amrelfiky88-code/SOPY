@@ -4,13 +4,14 @@ import { useAuth } from '../../auth/AuthContext.jsx';
 import { useT } from '../../i18n/index.jsx';
 import { ROLES, roleName } from './roles.js';
 import InviteLink from '../../components/InviteLink.jsx';
+import JobTitleSelect, { withRole, titleForRole } from '../../components/JobTitleSelect.jsx';
 
 export default function StepInvites({ onNext, onBack, finishing }) {
   const t = useT();
   const { tenant } = useAuth();
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
-  const [form, setForm] = useState({ fullName: '', email: '', role: 'employee', branchIds: [] });
+  const [form, setForm] = useState({ fullName: '', email: '', role: 'employee', title: titleForRole('employee'), branchIds: [] });
   const [lastInviteLink, setLastInviteLink] = useState(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -42,7 +43,7 @@ export default function StepInvites({ onNext, onBack, finishing }) {
     try {
       const res = await api.post('/tenants/users/invite', form);
       setLastInviteLink({ path: res.inviteLink, email: form.email });
-      setForm({ fullName: '', email: '', role: 'employee', branchIds: [] });
+      setForm({ fullName: '', email: '', role: 'employee', title: titleForRole('employee'), branchIds: [] });
       await load();
     } catch (err) {
       setError(err.message);
@@ -79,11 +80,15 @@ export default function StepInvites({ onNext, onBack, finishing }) {
         </div>
         <div className="field">
           <label htmlFor="role">{t('page.role')}</label>
-          <select id="role" value={form.role} onChange={set('role')}>
+          <select id="role" value={form.role} onChange={(e) => setForm((f) => withRole(f, e.target.value))}>
             {ROLES.filter((r) => r.value !== 'business_owner').map((r) => (
               <option key={r.value} value={r.value}>{roleName(t, r.value)}</option>
             ))}
           </select>
+        </div>
+        <div className="field">
+          <label htmlFor="jobTitle">{t('account.jobTitle')}</label>
+          <JobTitleSelect id="jobTitle" value={form.title} onChange={(v) => setForm((f) => ({ ...f, title: v }))} />
         </div>
         <fieldset className="field" style={{ border: 0, padding: 0, margin: '0 0 18px' }}>
           <legend style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{t('onb.invites.assignBranches')}</legend>

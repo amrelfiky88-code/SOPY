@@ -149,3 +149,20 @@ test('a removed store disappears from the store list', async () => {
   const { rows } = await pool.query('SELECT is_active FROM branches WHERE id = $1', [created.body.branch.id]);
   assert.equal(rows[0].is_active, false);
 });
+
+// The manager sets a job title when inviting (QC visit reports find
+// inspectors by the QAQC title); before, only the person could set it.
+test('an invite can carry a job title', async () => {
+  const tooLong = await api('POST', '/api/tenants/users/invite', {
+    token: B.token, body: { fullName: 'Q', email: 'q-long@example.com', role: 'employee', title: 'x'.repeat(121) },
+  });
+  assert.equal(tooLong.status, 400);
+
+  const invite = await api('POST', '/api/tenants/users/invite', {
+    token: B.token, body: { fullName: 'Quality Person', email: 'qaqc-b@example.com', role: 'employee', title: '  QAQC ' },
+  });
+  assert.equal(invite.status, 201, JSON.stringify(invite.body));
+  assert.equal(invite.body.user.title, 'QAQC');
+  const { users } = (await api('GET', '/api/tenants/users', { token: B.token })).body;
+  assert.equal(users.find((u) => u.email === 'qaqc-b@example.com').title, 'QAQC');
+});
