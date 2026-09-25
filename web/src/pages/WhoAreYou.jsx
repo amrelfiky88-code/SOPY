@@ -1,15 +1,10 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useI18n } from '../i18n/index.jsx';
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
 import { REFERRAL_WELCOME_USD } from '../../../shared/referrals.js';
-
-// Stored as the English name (tenants.country); shown via country.* labels.
-const COUNTRIES = [
-  'United States', 'United Kingdom', 'United Arab Emirates', 'Saudi Arabia', 'Egypt',
-  'Morocco', 'Canada', 'Australia', 'India', 'Germany', 'France', 'Other',
-];
+import { countryOptions } from '../lib/countries.js';
 
 // The code from a referral link (?ref=… now, or saved by main.jsx when the
 // link was opened within the last 30 days).
@@ -25,6 +20,8 @@ function readReferralCode() {
 
 export default function WhoAreYou() {
   const { t, lang } = useI18n();
+  // All 195 countries by region, named in the page's language.
+  const countryGroups = useMemo(() => countryOptions(lang), [lang]);
   const navigate = useNavigate();
   const { signup } = useAuth();
   const [form, setForm] = useState({
@@ -104,7 +101,12 @@ export default function WhoAreYou() {
           <label htmlFor="country">{t('signup.country')}</label>
           <select id="country" required value={form.country} onChange={set('country')}>
             <option value="" disabled>{t('signup.selectCountry')}</option>
-            {COUNTRIES.map((c) => <option key={c} value={c}>{t(`country.${c}`)}</option>)}
+            {countryGroups.map((g) => (
+              <optgroup key={g.key} label={t(`countryGroup.${g.key}`)}>
+                {g.countries.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </optgroup>
+            ))}
+            <option value="Other">{t('country.Other')}</option>
           </select>
         </div>
         <div className="field">
