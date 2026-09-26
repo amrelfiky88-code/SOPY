@@ -81,6 +81,15 @@ function StaffRedirect({ children }) {
   return user?.role === 'employee' ? <Navigate to="/app/dashboard" replace /> : children;
 }
 
+// Pages for the roles that have them in the menu (and that the server
+// accepts): typing the address as staff or a store manager opened a page
+// whose every save was refused.
+const MANAGER_ROLES = ['business_owner', 'operations_manager', 'area_manager'];
+function ManagerOnly({ children }) {
+  const { user } = useAuth();
+  return user && !MANAGER_ROLES.includes(user.role) ? <Navigate to="/app/dashboard" replace /> : children;
+}
+
 function NotFoundRedirect() {
   const { user, loading } = useAuth();
   if (loading) return null;
@@ -115,19 +124,21 @@ export default function App() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<DashboardRouter />} />
         <Route path="kpi" element={<StaffRedirect><KpiDashboard /></StaffRedirect>} />
-        <Route path="checklists" element={<ChecklistBuilder />} />
+        <Route path="checklists" element={<ManagerOnly><ChecklistBuilder /></ManagerOnly>} />
         <Route path="checklists/run/:submissionId" element={<ChecklistRun />} />
         <Route path="forms/kitchen" element={<KitchenDailyForm />} />
         <Route path="forms/bar" element={<BarDailyForm />} />
         <Route path="forms/opening" element={<OpeningDailyForm />} />
         <Route path="forms/closing" element={<ClosingDailyForm />} />
-        <Route path="forms/qc-visit" element={<QcVisitForm />} />
-        <Route path="forms/area-manager-visit" element={<AreaManagerVisitForm />} />
-        <Route path="forms/ops-manager-visit" element={<OpsManagerVisitForm />} />
-        <Route path="team" element={<Team />} />
+        <Route path="forms/qc-visit" element={<ManagerOnly><QcVisitForm /></ManagerOnly>} />
+        <Route path="forms/area-manager-visit" element={<ManagerOnly><AreaManagerVisitForm /></ManagerOnly>} />
+        <Route path="forms/ops-manager-visit" element={<ManagerOnly><OpsManagerVisitForm /></ManagerOnly>} />
+        <Route path="team" element={<ManagerOnly><Team /></ManagerOnly>} />
         <Route path="account" element={<Account />} />
         <Route path="reports" element={<ReportsList />} />
         <Route path="reports/:submissionId" element={<ReportView />} />
+        {/* An unknown address inside the app showed an empty page. */}
+        <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
       </Route>
 
       {/* A mistyped or stale address sent signed-in staff to the marketing

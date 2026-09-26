@@ -13,6 +13,8 @@ const ROWS = [
   ['tab.reports', 'Reports', 'التقارير', 'Rapports'],
   ['dashboard.welcomeFirst', 'Welcome to SOPY, {name}', 'أهلًا بك في SOPY، {name}', 'Bienvenue sur SOPY, {name}'],
   ['dashboard.buildFirst', 'Build your first checklist', 'أنشئ أول قائمة فحص', 'Créer votre première check-list'],
+  ['run.notFound', "This checklist can't be opened. The link may be wrong, or it may belong to someone else.", 'تعذّر فتح قائمة الفحص هذه. قد يكون الرابط غير صحيح أو أنها تخص شخصًا آخر.', "Impossible d'ouvrir cette check-list. Le lien est peut-être erroné, ou elle appartient à quelqu'un d'autre."],
+  ['reports.notFound', "This report can't be opened. The link may be wrong, or you may not have access to it.", 'تعذّر فتح هذا التقرير. قد يكون الرابط غير صحيح أو ليست لديك صلاحية الاطلاع عليه.', "Impossible d'ouvrir ce rapport. Le lien est peut-être erroné, ou vous n'y avez pas accès."],
   ['run.retryUpload', 'Try uploading again', 'أعد محاولة الرفع', "Réessayer l'envoi"],
   ['reports.loadMore', 'Load more reports', 'عرض المزيد من التقارير', 'Afficher plus de rapports'],
   ['page.remove', 'Remove', 'حذف', 'Supprimer'],

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, getToken } from '../../api.js';
 import CameraCapture from '../../components/CameraCapture.jsx';
 import ReportLink from '../../components/ReportLink.jsx';
@@ -35,6 +35,8 @@ export default function ChecklistRun() {
   // can be sent again — before, it was lost and had to be retaken.
   const [failedPhotos, setFailedPhotos] = useState({}); // itemId -> blob
   const [error, setError] = useState('');
+  // The run couldn't be loaded because the link is wrong or isn't theirs.
+  const [missing, setMissing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [scorecard, setScorecard] = useState(null);
   // Saves for one checkpoint go out one after another: tapping Compliant
@@ -68,7 +70,8 @@ export default function ChecklistRun() {
         setTemplate(template);
         setItems(items);
       } catch (err) {
-        setError(err.message);
+        if (err.status === 400 || err.status === 404) setMissing(true);
+        else setError(err.message);
       }
     })();
   }, [submissionId]);
@@ -200,7 +203,18 @@ export default function ChecklistRun() {
     }
   };
 
-  if (!template) return error ? <div className="error-banner">{error}</div> : <p>{t('run.loadingChecklist')}</p>;
+  if (!template) {
+    // A wrong or someone else's link used to show a bare "Invalid id" with no way back.
+    if (missing || error) {
+      return (
+        <div className="card empty-state">
+          <p style={{ margin: 0 }}>{missing ? t('run.notFound') : error}</p>
+          <Link className="btn btn-primary btn-small" to="/app/dashboard">{t('run.backToDashboard')}</Link>
+        </div>
+      );
+    }
+    return <p>{t('run.loadingChecklist')}</p>;
+  }
 
   if (scorecard) {
     return <Scorecard scorecard={scorecard} submissionId={submissionId} onDone={() => navigate('/app/dashboard')} />;

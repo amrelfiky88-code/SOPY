@@ -305,3 +305,15 @@ test('API responses are never cached by the browser', async () => {
   const res = await fetch(`${baseUrl}/api/tenants/branches`, { headers: { Authorization: `Bearer ${O.token}` } });
   assert.equal(res.headers.get('cache-control'), 'no-store');
 });
+
+// Regression: area managers have the Checklist Builder (and can assign
+// checklists) but were refused when they saved one.
+test('area managers can build checklists; staff and store managers cannot', async () => {
+  await api('PATCH', '/api/billing/subscription/quantities', { token: O.token, body: { branchCount: 2, userCount: 10 } });
+  const area = await join('ev-area@example.com', 'area_manager', [storeA, storeB]);
+  const body = { name: 'Area checks', itemIds };
+  const made = await api('POST', '/api/checklists/templates', { token: area.token, body });
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  assert.equal((await api('POST', '/api/checklists/templates', { token: M.token, body })).status, 403);
+  assert.equal((await api('POST', '/api/checklists/templates', { token: E1.token, body })).status, 403);
+});

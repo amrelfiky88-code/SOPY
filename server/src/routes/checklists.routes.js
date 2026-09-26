@@ -124,7 +124,10 @@ function requireManagerUnlessBuiltinDailyReport(req, res, next) {
   const kind = req.body.kind;
   if (OPEN_TO_ANYONE_REPORT_KINDS.has(kind)) return next();
   if (MANAGER_VISIT_REPORT_KINDS.has(kind)) return requireRole(...MANAGER_VISIT_REPORT_ROLES)(req, res, next);
-  return requireRole('business_owner', 'operations_manager')(req, res, next);
+  // Building a checklist: the same managers who have the Checklist Builder
+  // and can assign checklists. Area managers were shown the Builder (and a
+  // "Build your first checklist" button) but refused when they saved.
+  return requireRole('business_owner', 'operations_manager', 'area_manager')(req, res, next);
 }
 
 checklistsRouter.post('/templates', requireAuth, requireOnboardingComplete, requireManagerUnlessBuiltinDailyReport, async (req, res) => {

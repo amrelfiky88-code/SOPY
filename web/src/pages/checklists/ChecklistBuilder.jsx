@@ -189,7 +189,7 @@ export default function ChecklistBuilder() {
       <div className="card">
         <h3 style={{ marginBottom: 12 }}>{t('builder.pickCheckpoints')}</h3>
         <div className="field">
-          <input placeholder={t('builder.search')} value={q} onChange={(e) => setQ(e.target.value)} />
+          <input type="search" aria-label={t('builder.search')} placeholder={t('builder.search')} value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <div className="filter-row">
           {STANDARDS.map((code) => (

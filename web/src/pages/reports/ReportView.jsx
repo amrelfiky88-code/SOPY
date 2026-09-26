@@ -21,7 +21,7 @@ export default function ReportView() {
     setError('');
     api.get(`/submissions/${submissionId}/report?lang=${lang}`)
       .then(setReport)
-      .catch((err) => setError(err.message));
+      .catch((err) => setError(err.status === 400 || err.status === 404 ? t('reports.notFound') : err.message));
   }, [submissionId, lang]);
 
   const model = useMemo(() => (report ? buildReportModel(report, t, lang) : null), [report, t, lang]);
