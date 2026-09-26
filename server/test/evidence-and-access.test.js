@@ -317,3 +317,22 @@ test('area managers can build checklists; staff and store managers cannot', asyn
   assert.equal((await api('POST', '/api/checklists/templates', { token: M.token, body })).status, 403);
   assert.equal((await api('POST', '/api/checklists/templates', { token: E1.token, body })).status, 403);
 });
+
+// The declared file type is the client's word: a web page labelled
+// image/jpeg was stored as evidence. The file itself must be a photo.
+test('only real JPEG or PNG files count as evidence photos', async () => {
+  const sub = await start(E1.token);
+  const form = new FormData();
+  form.append('itemId', itemIds[0]);
+  form.append('isCompliant', 'true');
+  form.append('photo', new Blob(['<html><script>alert(1)</script></html>'], { type: 'image/jpeg' }), 'evidence.jpg');
+  const fake = await fetch(`${baseUrl}/api/submissions/${sub}/responses`, { method: 'POST', headers: { Authorization: `Bearer ${E1.token}` }, body: form });
+  assert.equal(fake.status, 400);
+  const png = new Blob([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], { type: 'image/jpeg' });
+  const real = new FormData();
+  real.append('itemId', itemIds[0]);
+  real.append('photo', png, 'evidence.jpg');
+  const ok = await fetch(`${baseUrl}/api/submissions/${sub}/responses`, { method: 'POST', headers: { Authorization: `Bearer ${E1.token}` }, body: real });
+  assert.equal(ok.status, 201);
+  assert.match((await ok.json()).response.photo_path, /\.png(\?|$)/, 'named by what it is, not by its label');
+});

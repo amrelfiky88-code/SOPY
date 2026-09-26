@@ -170,9 +170,16 @@ submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), as
 
   let photoPath = null;
   if (req.file) {
+    // The declared type is the client's word; evidence must really be a
+    // photo. Check the file's own signature (JPEG FF D8 FF, PNG 89 50 4E 47)
+    // and name it by what it is.
+    const head = req.file.buffer.subarray(0, 4);
+    const isJpeg = head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff;
+    const isPng = head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47;
+    if (!isJpeg && !isPng) return res.status(400).json({ error: 'Only camera-captured JPEG/PNG images are accepted' });
     const dir = path.join(UPLOAD_ROOT, req.auth.tenantId, req.params.id);
     fs.mkdirSync(dir, { recursive: true });
-    const ext = req.file.mimetype === 'image/png' ? 'png' : 'jpg';
+    const ext = isPng ? 'png' : 'jpg';
     const filename = `${itemId}-${Date.now()}.${ext}`;
     fs.writeFileSync(path.join(dir, filename), req.file.buffer);
     photoPath = `/uploads/${req.auth.tenantId}/${req.params.id}/${filename}`;
