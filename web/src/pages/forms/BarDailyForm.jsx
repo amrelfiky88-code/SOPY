@@ -5,19 +5,13 @@ import {
   LabeledInput, LabeledSelect, LabeledTextarea, ReportStart, ReportSubmitted, ReportActions, useFormLabels, choiceOptions,
   PersonSelect, usePeople,
 } from './OpsFormParts.jsx';
+import { TEMPERATURE_ROWS, temperatureDeviations } from '../../../../shared/temperatures.js';
 
 const KIND = 'bar_daily';
 
 // Labels live in i18n/formLabels.js under f.bar_daily.<form_data path>.
-const TEMP_ROWS = [
-  { key: 'displayFridge', range: 'display' },
-  { key: 'backBar', range: 'fridge' },
-  { key: 'juiceFridge', range: 'fridge' },
-  { key: 'frozenDessert', range: 'frozenDessert' },
-  { key: 'fountain', range: 'fountain' },
-  { key: 'coffeeMachine', range: 'coffee' },
-  { key: 'boiler', range: 'boiler' },
-];
+// Equipment rows and their safe ranges are shared with the server's KPIs.
+const TEMP_ROWS = TEMPERATURE_ROWS[KIND];
 
 const STOCK_ITEM_COUNT = 17;
 const STOCK_COLUMNS = [
@@ -91,7 +85,8 @@ export default function BarDailyForm() {
   const numbered = (prefix, n) => Array.from({ length: n }, (_, i) => `${prefix}${i}`);
   const tasks = (which, n) => Array.from({ length: n }, (_, i) => L(`checklist.${which}.${i}`));
 
-  const hasIncident = !!(form.notes.staffIssues?.trim() || form.tempDeviation.found || form.tempDeviation.faultReported);
+  // A reading outside its safe range is an incident too.
+  const hasIncident = !!(form.notes.staffIssues?.trim() || form.tempDeviation.found || form.tempDeviation.faultReported || temperatureDeviations(KIND, form.temperatureLog).length > 0);
   // Saves quietly a moment after each change (see useOpsReport).
   useEffect(() => { report.autosave(form, hasIncident); }, [form]); // eslint-disable-line react-hooks/exhaustive-deps
   // Sign-off names are picked from the team instead of typed.
@@ -150,6 +145,7 @@ export default function BarDailyForm() {
         <TemperatureLogTable
           rows={TEMP_ROWS.map((r) => ({ ...r, label: L(`temperatureLog.${r.key}`), safeRange: L(`range.${r.range}`) }))}
           values={form.temperatureLog}
+          kind={KIND}
           onChange={setFixedRow('temperatureLog')}
         />
         <div className="form-grid-2col" style={{ marginTop: 12 }}>

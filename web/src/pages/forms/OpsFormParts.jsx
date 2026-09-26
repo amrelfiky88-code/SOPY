@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/AuthContext.jsx';
 import { useT } from '../../i18n/index.jsx';
 import ReportLink from '../../components/ReportLink.jsx';
 import { CheckCircleIcon } from '../../components/icons.jsx';
+import { TEMPERATURE_RANGES, readingValue, isOutOfRange, temperatureDeviations } from '../../../../shared/temperatures.js';
 
 // Labels come from i18n/formLabels.js, keyed by the same form_data path the
 // field saves to, so each form builds a scoped lookup: L('shift.reportNo')
@@ -192,9 +193,28 @@ export function ReportActions({ report, form, hasIncident, signerName, needNameH
 // Shared by both reports: a fixed list of equipment, each with a safe
 // range and Start/Mid/End readings. `midNA` marks a row's Mid column as
 // not applicable (e.g. fryer oil temp isn't read mid-shift in KDR-001).
-export function TemperatureLogTable({ rows, values, onChange }) {
+// kind: the report's kind, so each reading is checked against its safe
+// range (shared/temperatures.js). A reading outside it is outlined in red
+// and listed below the table; the form flags the report as an incident.
+export function TemperatureLogTable({ rows, values, onChange, kind }) {
   const t = useT();
+  const ranges = TEMPERATURE_RANGES[kind] || {};
+  const out = (row, field) => isOutOfRange(readingValue(values[row.key]?.[field]), ranges[row.range]);
+  const cell = (row, field) => (
+    <input
+      type="number"
+      inputMode="decimal"
+      className={`mono${out(row, field) ? ' temp-out' : ''}`}
+      aria-invalid={out(row, field) || undefined}
+      aria-label={`${row.label} — ${t(`f.col.${field}`)}`}
+      style={{ width: 70 }}
+      value={values[row.key]?.[field] || ''}
+      onChange={(e) => onChange(row.key, field, e.target.value)}
+    />
+  );
+  const deviations = temperatureDeviations(kind, values);
   return (
+    <>
     <div className="table-scroll">
       <table>
         <thead>
@@ -207,19 +227,29 @@ export function TemperatureLogTable({ rows, values, onChange }) {
               <tr key={row.key}>
                 <td>{row.label}</td>
                 <td className="hint">{row.safeRange}</td>
-                <td><input type="number" aria-label={`${row.label} — ${t('f.col.s')}`} style={{ width: 70 }} value={v.s || ''} onChange={(e) => onChange(row.key, 's', e.target.value)} /></td>
-                <td>
-                  {row.midNA ? t('f.na') : (
-                    <input type="number" aria-label={`${row.label} — ${t('f.col.m')}`} style={{ width: 70 }} value={v.m || ''} onChange={(e) => onChange(row.key, 'm', e.target.value)} />
-                  )}
-                </td>
-                <td><input type="number" aria-label={`${row.label} — ${t('f.col.e')}`} style={{ width: 70 }} value={v.e || ''} onChange={(e) => onChange(row.key, 'e', e.target.value)} /></td>
+                <td>{cell(row, 's')}</td>
+                <td>{row.midNA ? t('f.na') : cell(row, 'm')}</td>
+                <td>{cell(row, 'e')}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
     </div>
+    {deviations.length > 0 && (
+      <div className="error-banner" role="alert" style={{ marginTop: 12 }}>
+        {deviations.map((d) => {
+          const row = rows.find((r) => r.key === d.key);
+          return (
+            <div key={d.key + d.field}>
+              {t('f.tempOut', { unit: row?.label || d.key, when: t(`f.col.${d.field}`), value: d.value, range: row?.safeRange || '' })}
+            </div>
+          );
+        })}
+        <div style={{ marginTop: 6 }}>{t('f.tempOutAction')}</div>
+      </div>
+    )}
+    </>
   );
 }
 

@@ -5,21 +5,13 @@ import {
   LabeledInput, LabeledSelect, LabeledTextarea, ReportStart, ReportSubmitted, ReportActions, useFormLabels, choiceOptions,
   PersonSelect, usePeople,
 } from './OpsFormParts.jsx';
+import { TEMPERATURE_ROWS, temperatureDeviations } from '../../../../shared/temperatures.js';
 
 const KIND = 'kitchen_daily';
 
 // Labels live in i18n/formLabels.js under f.kitchen_daily.<form_data path>.
-const TEMP_ROWS = [
-  { key: 'fridge1', range: 'fridge' },
-  { key: 'fridge2', range: 'fridge' },
-  { key: 'freezer', range: 'freezer' },
-  { key: 'prepFridge', range: 'fridge' },
-  { key: 'displayFridge', range: 'display' },
-  { key: 'fryerOil', range: 'fryerOil', midNA: true },
-  { key: 'grill', range: 'grill', midNA: true },
-  { key: 'hotHolding', range: 'hotHolding' },
-  { key: 'steamTable', range: 'steamTable' },
-];
+// Equipment rows and their safe ranges are shared with the server's KPIs.
+const TEMP_ROWS = TEMPERATURE_ROWS[KIND];
 
 const RECEIVING_COLUMNS = [
   { key: 'time', type: 'time', width: 100 },
@@ -95,7 +87,8 @@ export default function KitchenDailyForm() {
   const columns = (section, cols) => cols.map((c) => ({ ...c, label: L(`${section}[].${c.key}`) }));
   const tasks = (which, n) => Array.from({ length: n }, (_, i) => L(`checklist.${which}.${i}`));
 
-  const hasIncident = !!(form.notes.incidents?.trim() || form.tempDeviation.found);
+  // A reading outside its safe range is an incident too.
+  const hasIncident = !!(form.notes.incidents?.trim() || form.tempDeviation.found || temperatureDeviations(KIND, form.temperatureLog).length > 0);
   // Saves quietly a moment after each change (see useOpsReport).
   useEffect(() => { report.autosave(form, hasIncident); }, [form]); // eslint-disable-line react-hooks/exhaustive-deps
   // Sign-off names are picked from the team instead of typed.
@@ -140,6 +133,7 @@ export default function KitchenDailyForm() {
         <TemperatureLogTable
           rows={TEMP_ROWS.map((r) => ({ ...r, label: L(`temperatureLog.${r.key}`), safeRange: L(`range.${r.range}`) }))}
           values={form.temperatureLog}
+          kind={KIND}
           onChange={setTempReading}
         />
         <div className="form-grid-2col" style={{ marginTop: 12 }}>

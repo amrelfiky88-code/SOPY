@@ -1100,3 +1100,6 @@ a.sopy-logo, a:has(> .sopy-logo) { text-decoration: none; }
 /* Its parts are <bdi>-isolated, so the line follows the page direction
    (plaintext would see no strong letter and fall back to left-to-right). */
 .report-list-text > .report-list-meta { unicode-bidi: normal; text-align: start; }
+
+/* A temperature reading outside its safe range (shared/temperatures.js). */
+.card input.temp-out, input.temp-out { border-color: var(--red); background: var(--red-tint); color: var(--red); font-weight: 600; }

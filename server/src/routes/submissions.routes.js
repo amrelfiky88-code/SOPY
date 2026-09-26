@@ -9,6 +9,7 @@ import { translateRows, requestLanguage } from '../i18n/translateContent.js';
 import { signPhotos } from '../uploads.js';
 import { SHARE_ROOT, SHARE_DAYS, sweepSoon } from '../shares.js';
 import { visibleBranchIds, canSeeSubmission, SEES_OWN_ONLY } from '../auth/scope.js';
+import { temperatureDeviations } from '../../../shared/temperatures.js';
 
 export const submissionsRouter = Router();
 
@@ -282,12 +283,20 @@ submissionsRouter.post('/:id/submit', requireAuth, async (req, res) => {
     return res.status(400).json({ error: `Answer every checkpoint, with a photo, before submitting (${missing[0].n} left).` });
   }
 
+  // A Kitchen or Bar report with a temperature outside its safe range is an
+  // incident, whatever the client sent as has_incident.
+  const { rows: current } = await query(
+    `SELECT s.form_data, t.kind FROM checklist_submissions s JOIN checklist_templates t ON t.id = s.template_id WHERE s.id = $1`,
+    [open.id]
+  );
+  const tempIncident = temperatureDeviations(current[0]?.kind, current[0]?.form_data?.temperatureLog).length > 0;
+
   const { rows } = await query(
     `UPDATE checklist_submissions
      SET status = 'submitted', submitted_at = now(), gps_lat = $1, gps_lng = $2,
-         signed_off_by = $3, signed_off_at = now()
+         signed_off_by = $3, signed_off_at = now(), has_incident = has_incident OR $6
      WHERE id = $4 AND tenant_id = $5 RETURNING *`,
-    [coordinate(gpsLat, 90), coordinate(gpsLng, 180), req.auth.userId, req.params.id, req.auth.tenantId]
+    [coordinate(gpsLat, 90), coordinate(gpsLng, 180), req.auth.userId, req.params.id, req.auth.tenantId, tempIncident]
   );
   if (!rows[0]) return res.status(404).json({ error: 'Not found' });
   res.json({ submission: rows[0] });

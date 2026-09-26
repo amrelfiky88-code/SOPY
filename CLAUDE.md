@@ -37,6 +37,7 @@ There are no frontend tests. UI changes must be checked in a real browser, inclu
 
 **`shared/` is imported by both server and web** (web reaches it via `../../../shared/...`; Vite's `fs.allow: ['..']` permits this). It is the single source of truth for:
 - `pricing.js` — the tapering rate schedule, `calculatePricing`, and `PLAN_LIMITS`/`clampPlanCount`. The Pricing page, tenant PATCH, checkout, and plan changes all use it so the displayed price always equals the billed price.
+- `temperatures.js` — the Kitchen and Bar reports' equipment rows and safe ranges as numbers. The form outlines an out-of-range reading, lists it, and flags the report as an incident; `/submit` also sets `has_incident` for one; KPIs count each such reading. The printed range wording stays in `formLabels.js` (`range.*`), so change both together.
 - `languages.js` — supported UI languages (`en`, `ar`, `fr`) and their text direction.
 - `countries.js` — the sign-up country list (grouped by region; the English name is what's saved in `tenants.country`) and `countryCode()`. The store City box (`CityField.jsx`) suggests that country's cities from `GET /tenants/cities`, which serves `server/data/cities.json`, built from GeoNames `cities15000` by `server/scripts/build-cities.js`. The data is CC BY 4.0, so the credit shown under the box must stay. Arabic city names are kept only for Arab countries.
 

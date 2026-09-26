@@ -336,3 +336,25 @@ test('only real JPEG or PNG files count as evidence photos', async () => {
   assert.equal(ok.status, 201);
   assert.match((await ok.json()).response.photo_path, /\.png(\?|$)/, 'named by what it is, not by its label');
 });
+
+// Logged temperatures are checked against the safe ranges printed on the
+// Kitchen and Bar reports. Before, only a ticked "deviation found" box
+// counted, so a freezer logged at -10 °C went unnoticed.
+test('a temperature outside its safe range flags the report and shows on the KPIs', async () => {
+  const { temperatureDeviations } = await import('../../shared/temperatures.js');
+  assert.deepEqual(temperatureDeviations('kitchen_daily', { freezer: { s: '-20', e: '-10' }, fridge1: { s: '3', m: '', e: 'x' } }),
+    [{ key: 'freezer', field: 'e', value: -10, range: 'freezer' }]);
+  assert.equal(temperatureDeviations('kitchen_daily', { fryerOil: { m: '20' } }).length, 0, 'no mid reading for the fryer');
+  assert.equal(temperatureDeviations('bar_daily', { boiler: { s: '96' }, fountain: { s: '17' } }).length, 1);
+  assert.equal(temperatureDeviations('opening_daily', { freezer: { s: '40' } }).length, 0, 'only reports with a temperature log');
+
+  const before = (await api('GET', '/api/dashboard/kpi?period=monthly', { token: O.token })).body.temperatureDeviations;
+  const tpl = (await api('POST', '/api/checklists/templates', { token: O.token, body: { name: 'Kitchen Daily Report', kind: 'kitchen_daily', itemIds: [] } })).body.template;
+  const sub = (await api('POST', '/api/submissions', { token: O.token, body: { templateId: tpl.id, branchId: storeA } })).body.submission;
+  await api('PATCH', `/api/submissions/${sub.id}`, { token: O.token, body: { formData: { temperatureLog: { freezer: { s: '-10', e: '-9' }, fridge1: { s: '3' } } }, hasIncident: false } });
+  const done = await api('POST', `/api/submissions/${sub.id}/submit`, { token: O.token, body: {} });
+  assert.equal(done.status, 200, JSON.stringify(done.body));
+  assert.equal(done.body.submission.has_incident, true);
+  const after = (await api('GET', '/api/dashboard/kpi?period=monthly', { token: O.token })).body.temperatureDeviations;
+  assert.equal(after - before, 2, 'both freezer readings count');
+});

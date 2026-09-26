@@ -22,6 +22,8 @@ const COMMON = [
   ['f.removeRow', 'Remove row', 'حذف الصف', 'Supprimer la ligne'],
   ['f.na', 'N/A', 'لا ينطبق', 'N/A'],
   ['f.today', 'today', 'اليوم', "aujourd'hui"],
+  ['f.tempOut', '{unit} ({when}): {value} °C. Safe range: {range}.', '{unit} ({when}): {value} °م. النطاق الآمن: {range}.', '{unit} ({when}) : {value} °C. Plage sûre : {range}.'],
+  ['f.tempOutAction', 'This report will be flagged as an incident. Record what you did about it below.', 'سيُسجَّل هذا التقرير كحادثة. دوّن أدناه الإجراء الذي اتخذته.', 'Ce rapport sera signalé comme incident. Indiquez ci-dessous ce que vous avez fait.'],
   ['f.choosePerson', 'Choose a name', 'اختر الاسم', 'Choisir un nom'],
   ['f.noOneWithTitle', 'No one on your team has this title yet, so everyone is listed.', 'لا يحمل أحد في فريقك هذا المسمى بعد، لذا يظهر الجميع.', "Personne dans votre équipe n'a encore ce titre : tout le monde est affiché."],
   ['f.equipmentUnit', 'Equipment / Unit', 'المعدة / الوحدة', 'Équipement / unité'],
@@ -89,7 +91,7 @@ const KITCHEN = ['kitchen_daily', [
   ['sec.I', 'I. Sign-off & authorization', 'I. الاعتماد والتفويض', 'I. Signature et validation'],
 
   ['shift', 'Shift identification', 'بيانات الوردية', 'Identification du service'],
-  ['shift.reportNo', 'Report No. (KDR-)', 'رقم التقرير (KDR-)', 'N° de rapport (KDR-)'],
+  ['shift.reportNo', 'Report No. (KDR-)', 'رقم التقرير (⁦KDR-⁩)', 'N° de rapport (KDR-)'],
   ['shift.shiftType', 'Shift', 'الوردية', 'Service'],
   ['shift.dayOfWeek', 'Day of week', 'يوم الأسبوع', 'Jour de la semaine'],
   ['shift.phase', 'Opening / Mid / Closing', 'افتتاح / منتصف / إغلاق', 'Ouverture / milieu / fermeture'],
@@ -238,7 +240,7 @@ const BAR = ['bar_daily', [
   ['sec.I', 'I. Sign-off & authorization', 'I. الاعتماد والتفويض', 'I. Signature et validation'],
 
   ['shift', 'Shift identification', 'بيانات الوردية', 'Identification du service'],
-  ['shift.reportNo', 'Report No. (BDR-)', 'رقم التقرير (BDR-)', 'N° de rapport (BDR-)'],
+  ['shift.reportNo', 'Report No. (BDR-)', 'رقم التقرير (⁦BDR-⁩)', 'N° de rapport (BDR-)'],
   ['shift.shiftType', 'Shift', 'الوردية', 'Service'],
   ['shift.dayOfWeek', 'Day of week', 'يوم الأسبوع', 'Jour de la semaine'],
   ['shift.reportType', 'Report type', 'نوع التقرير', 'Type de rapport'],

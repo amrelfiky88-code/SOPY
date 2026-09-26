@@ -3,6 +3,7 @@ import { query } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
 import { MY_ASSIGNMENTS_FROM, myAssignmentParams } from '../assignments.js';
 import { visibleBranchIds } from '../auth/scope.js';
+import { temperatureDeviations as formTemperatureDeviations } from '../../../shared/temperatures.js';
 
 export const dashboardRouter = Router();
 
@@ -59,8 +60,9 @@ dashboardRouter.get('/kpi', requireAuth, requireRole('business_owner', 'operatio
   const branchClause = clauses.map((c) => `AND ${c}`).join(' ');
 
   const { rows: submissionRows } = await query(
-    `SELECT s.id, s.has_incident, s.form_data
+    `SELECT s.id, s.has_incident, s.form_data, t.kind
      FROM checklist_submissions s
+     JOIN checklist_templates t ON t.id = s.template_id
      WHERE s.tenant_id = $1 AND s.status = 'submitted' AND s.started_at >= $2 ${branchClause}`,
     params
   );
@@ -84,11 +86,17 @@ dashboardRouter.get('/kpi', requireAuth, requireRole('business_owner', 'operatio
 
   // Matches both the original placeholder category ('temperature') and
   // the richer imported category names (e.g. "... Food Safety &
-  // Temperature Control") — substring, case-insensitive. Kitchen reports
-  // with "Temperature deviation found" ticked count too.
+  // Temperature Control") — substring, case-insensitive. On the Kitchen
+  // and Bar reports, each logged reading outside its safe range counts
+  // (these used to count only when "Temperature deviation found" was
+  // ticked, so a freezer logged at 4 °C went unnoticed); a ticked box with
+  // no out-of-range reading still counts once.
   const temperatureDeviations =
     answered.filter((r) => r.category?.toLowerCase().includes('temperature') && r.is_compliant === false).length +
-    submissionRows.filter((s) => s.form_data?.tempDeviation?.found === true).length;
+    submissionRows.reduce((sum, s) => {
+      const readings = formTemperatureDeviations(s.kind, s.form_data?.temperatureLog).length;
+      return sum + Math.max(readings, s.form_data?.tempDeviation?.found === true ? 1 : 0);
+    }, 0);
 
   const criticalFailCount = answered.filter((r) => r.is_critical && r.is_compliant === false).length;
   const incidentCount = submissionRows.filter((s) => s.has_incident).length;
