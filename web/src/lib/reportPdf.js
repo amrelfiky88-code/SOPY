@@ -9,19 +9,35 @@ const H = 1754;
 const MARGIN = 96;
 const FOOTER = 60;
 const CONTENT_W = W - MARGIN * 2;
-const FONT = '"Segoe UI", Roboto, "Noto Sans", "Noto Sans Arabic", "Helvetica Neue", Arial, sans-serif';
-const SERIF = 'Georgia, "Times New Roman", "Noto Serif", serif';
+// Brand type (design/brand-kit), as on screen, with device fonts behind it
+// for a phone that couldn't load the web fonts.
+const FONT = '"IBM Plex Sans", "IBM Plex Sans Arabic", "Segoe UI", Roboto, "Noto Sans", "Noto Sans Arabic", "Helvetica Neue", Arial, sans-serif';
+const SERIF = '"Source Serif 4", "IBM Plex Sans Arabic", Georgia, "Times New Roman", "Noto Serif", serif';
+
+// A canvas draws with whatever fonts are loaded at that moment; one the
+// page hasn't used yet (bold serif, Arabic) would silently come out in a
+// fallback. Load them first, but never hold the PDF up for long offline.
+async function loadBrandFonts() {
+  if (!document.fonts?.load) return;
+  const faces = ['400 24px "IBM Plex Sans"', '600 24px "IBM Plex Sans"', '700 24px "IBM Plex Sans"',
+    '700 24px "Source Serif 4"', '400 24px "IBM Plex Sans Arabic"', '700 24px "IBM Plex Sans Arabic"'];
+  await Promise.race([
+    Promise.all(faces.map((f) => document.fonts.load(f, 'Aa أب').catch(() => null))),
+    new Promise((r) => setTimeout(r, 2500)),
+  ]);
+}
 
 const COLORS = {
+  // The brand's status colours: Green, Amber, Red on their tints.
   ink: '#1c231f',
-  soft: '#5b6660',
-  line: '#e2dccf',
+  soft: '#4a534d',
+  line: '#d9d2c3',
   brand: '#1c3d2e',
-  good: '#1f7a45',
-  goodTint: '#e3f1e8',
-  warn: '#a86a00',
-  warnTint: '#fbefd5',
-  bad: '#b3261e',
+  good: '#1c3d2e',
+  goodTint: '#e7ede9',
+  warn: '#8a4a12',
+  warnTint: '#f7e9da',
+  bad: '#a13a2f',
   badTint: '#f7e4e1',
   muted: '#8a938d',
   mutedTint: '#eeeeea',
@@ -100,6 +116,7 @@ function canvasToJpeg(canvas) {
  * @returns {Promise<Blob>}
  */
 export async function renderReportPdf(model, { dir, footer, photoMissing, critical }) {
+  await loadBrandFonts();
   const rtl = dir === 'rtl';
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -132,6 +149,42 @@ export async function renderReportPdf(model, { dir, footer, photoMissing, critic
     ctx.fillStyle = COLORS.brand;
     ctx.fillRect(0, 0, W, 14);
     y = MARGIN;
+    if (pageNo === 1) { drawLogo(44); y += 44 + 36; }
+  };
+
+  // The SOPY lockup from the brand kit, at the reading edge of page 1: the
+  // Checkpoint mark (tile radius 22%, bars 9.5% thick with 7.5% gaps, dot
+  // 17%) and the wordmark, سوبي in Arabic.
+  const drawLogo = (size) => {
+    const u = (n) => n * size;
+    const tileX = rtl ? W - MARGIN - size : MARGIN;
+    const top = y;
+    ctx.fillStyle = COLORS.brand;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(tileX, top, size, size, u(0.22)); else ctx.rect(tileX, top, size, size);
+    ctx.fill();
+    ctx.fillStyle = '#f4efe6';
+    const barX = tileX + u(0.22);
+    const barW = u(0.56);
+    const barH = u(0.095);
+    let barY = top + (size - (3 * barH + 2 * u(0.075))) / 2;
+    const bar = (x, w) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, barY, w, barH, barH / 2); else ctx.rect(x, barY, w, barH); ctx.fill(); };
+    bar(barX, barW); barY += barH + u(0.075);
+    bar(barX, barW); barY += barH + u(0.075);
+    bar(barX, u(0.26));
+    ctx.beginPath();
+    ctx.arc(barX + u(0.26) + u(0.07) + u(0.085), barY + barH / 2, u(0.085), 0, Math.PI * 2);
+    ctx.fill();
+    const arabic = rtl;
+    const word = arabic ? 'سوبي' : 'SOPY';
+    const wordSize = u(arabic ? 0.84 : 0.92);
+    ctx.font = font(wordSize, 700, arabic ? '"IBM Plex Sans Arabic", ' + FONT : SERIF);
+    ctx.fillStyle = COLORS.brand;
+    ctx.direction = arabic ? 'rtl' : 'ltr';
+    ctx.textAlign = arabic ? 'right' : 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(word, arabic ? tileX - u(0.32) : tileX + size + u(0.32), top + size / 2 + u(0.04));
+    ctx.textBaseline = 'top';
   };
 
   const finishPage = async () => {

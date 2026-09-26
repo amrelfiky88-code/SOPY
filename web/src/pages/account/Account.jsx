@@ -177,7 +177,7 @@ function ProfileCard({ user, tenant, setUser }) {
 
       <div className="summary-row">
         <span>{t('account.email')}</span>
-        <span>{user?.email}</span>
+        <span className="summary-wrap" dir="ltr">{user?.email}</span>
       </div>
       <div className="summary-row">
         <span>{t('account.role')}</span>

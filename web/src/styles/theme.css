@@ -35,6 +35,10 @@
 
 * { box-sizing: border-box; }
 
+/* Form controls don't inherit the page font by default, so the KPI period
+   buttons and other bare buttons showed the browser's font, not Plex. */
+button, input, select, textarea { font-family: inherit; }
+
 html {
   height: 100%;
 }
@@ -755,6 +759,8 @@ tbody tr:hover { background: var(--paper); }
 }
 .summary-row:last-child { border-bottom: none; }
 .summary-row > span:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Text values (a long email address) wrap instead of running off a phone screen. */
+.summary-row > span.summary-wrap { white-space: normal; overflow-wrap: anywhere; min-width: 0; text-align: end; }
 .summary-row .hint { display: block; margin-top: 2px; }
 .summary-total {
   margin-top: 4px;
