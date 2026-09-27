@@ -20,4 +20,4 @@ In this repo: `videos/SOPY_<nn>-<slug>_AR_EG_4x5.mp4`, covers in `covers/*_AR_EG
 
 ## English and standard Arabic (9:16 and 4:5)
 
-Delivered as files in the Cowork task "Tutorial videos for SOPY app" (not yet in this repo).
+In this repo: `videos/SOPY_<nn>-<slug>_<EN|AR>.mp4` (9:16) and `videos/SOPY_<nn>-<slug>_<EN|AR>_4x5.mp4` (4:5 feed); covers in `covers/*_<EN|AR>_cover.jpg`.
