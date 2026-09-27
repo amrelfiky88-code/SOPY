@@ -23,6 +23,7 @@ const COMMON = [
   ['f.na', 'N/A', 'لا ينطبق', 'N/A'],
   ['f.today', 'today', 'اليوم', "aujourd'hui"],
   ['f.tempOut', '{unit} ({when}): {value} °C. Safe range: {range}.', '{unit} ({when}): {value} °م. النطاق الآمن: {range}.', '{unit} ({when}) : {value} °C. Plage sûre : {range}.'],
+  ['f.tempOutShort', 'outside safe range ({range})', 'خارج النطاق الآمن ({range})', 'hors plage sûre ({range})'],
   ['f.tempOutAction', 'This report will be flagged as an incident. Record what you did about it below.', 'سيُسجَّل هذا التقرير كحادثة. دوّن أدناه الإجراء الذي اتخذته.', 'Ce rapport sera signalé comme incident. Indiquez ci-dessous ce que vous avez fait.'],
   ['f.choosePerson', 'Choose a name', 'اختر الاسم', 'Choisir un nom'],
   ['f.noOneWithTitle', 'No one on your team has this title yet, so everyone is listed.', 'لا يحمل أحد في فريقك هذا المسمى بعد، لذا يظهر الجميع.', "Personne dans votre équipe n'a encore ce titre : tout le monde est affiché."],

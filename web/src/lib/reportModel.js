@@ -1,4 +1,5 @@
 import { reportTitle, FORM_LABELS } from '../i18n/formLabels.js';
+import { TEMPERATURE_ROWS, temperatureDeviations } from '../../../shared/temperatures.js';
 
 // Turns GET /submissions/:id/report into a list of layout-free blocks.
 // Both the on-screen report and the PDF are drawn from the same blocks,
@@ -111,6 +112,9 @@ export function formDataSections(formData, t, kind) {
   const label = labeler(t, kind);
   const order = { form: formOrder(kind), saved: new Map((formData?._fieldOrder || []).map((path, i) => [path, i])) };
   const sections = [];
+  // Temperature readings outside their safe range (Kitchen and Bar
+  // reports): the report only said "incident flagged" without which ones.
+  const outOfRange = new Set(temperatureDeviations(kind, formData?.temperatureLog).map((d) => d.key));
   for (const [key, value] of orderedEntries(formData || {}, '', order)) {
     if (isEmpty(value)) continue;
     const rows = [];
@@ -125,7 +129,13 @@ export function formDataSections(formData, t, kind) {
         const text = typeof v === 'object'
           ? inline(v, t, `${key}.${k}.`, order, label, (sub) => [`${key}.${k}.${sub}`, `${key}.*.${sub}`])
           : formatValue(v, t);
-        if (text) rows.push({ label: label([`${key}.${k}`], k), value: text });
+        if (!text) continue;
+        if (key === 'temperatureLog' && outOfRange.has(k)) {
+          const range = TEMPERATURE_ROWS[kind]?.find((r) => r.key === k)?.range;
+          rows.push({ label: label([`${key}.${k}`], k), value: `${text} — ${t('f.tempOutShort', { range: label([`range.${range}`], range) })}`, tone: 'bad' });
+        } else {
+          rows.push({ label: label([`${key}.${k}`], k), value: text });
+        }
       }
     } else {
       rows.push({ label: label([key], key), value: formatValue(value, t) });
@@ -215,7 +225,7 @@ export function buildReportModel(report, t, lang) {
     blocks.push({ type: 'heading', text: t('report.details') });
     sections.forEach((sec) => {
       blocks.push({ type: 'subheading', text: sec.title });
-      sec.rows.forEach((row) => blocks.push({ type: 'row', label: row.label, value: row.value }));
+      sec.rows.forEach((row) => blocks.push({ type: 'row', label: row.label, value: row.value, tone: row.tone }));
     });
   }
 
