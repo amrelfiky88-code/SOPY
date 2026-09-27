@@ -41,7 +41,9 @@ try {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
+    {/* Opt in to React Router v7 behaviour now: silences its warnings, and the
+        app only uses absolute paths, so relative-splat resolution is safe. */}
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <I18nProvider>
         <AuthProvider>
           <App />
