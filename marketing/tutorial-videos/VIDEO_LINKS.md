@@ -2,7 +2,7 @@
 
 ## Egyptian Arabic, 9:16 (1080×1920), voice "Marcus" via Higgsfield
 
-Stored in the Higgsfield project "SOPY Arabic voiceovers".
+Stored in the Higgsfield project "SOPY Arabic voiceovers". Videos 01–06 are also in this repo as `videos/SOPY_<nn>-<slug>_AR_EG.mp4`; 00 (overview) is link-only for now.
 
 | # | Topic | Length | Link |
 | --- | --- | --- | --- |
