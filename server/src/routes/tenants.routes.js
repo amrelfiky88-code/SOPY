@@ -199,8 +199,11 @@ tenantsRouter.get('/users', requireAuth, requireRole('business_owner', 'operatio
 // Branch ids arrive from the client, so they must be proven to belong to
 // this tenant before being linked to a user — otherwise a crafted request
 // could attach staff to another business's store.
+// null = leave as is; undefined = refuse. Anything but a list is refused:
+// a string used to reach the invite's insert and fail there as a 500.
 async function validBranchIds(branchIds, tenantId) {
-  if (!Array.isArray(branchIds)) return null;
+  if (branchIds === null || branchIds === undefined) return null;
+  if (!Array.isArray(branchIds)) return undefined;
   if (!branchIds.length) return [];
   const unique = [...new Set(branchIds)];
   const { rows } = await query(

@@ -20,7 +20,7 @@ export default function KpiSnapshot() {
       <div className="kpi-grid">
         <Tile icon={CheckCircleIcon} tone="green" label={t('kpi.complianceShort')} value={kpi.compliancePct !== null ? `${kpi.compliancePct}%` : t('common.none')} />
         <Tile icon={ThermometerIcon} tone="amber" label={t('kpi.tempDeviationsShort')} value={kpi.temperatureDeviations} />
-        <Tile icon={TrashIcon} tone="amber" label={t('kpi.wasteValue')} value={`$${kpi.wasteValue.toFixed(2)}`} />
+        <Tile icon={TrashIcon} tone="amber" label={t('kpi.wasteValue')} value={kpi.wasteValue.toFixed(2)} />
         <Tile icon={AlertTriangleIcon} tone="red" label={t('kpi.incidentsShort')} value={kpi.incidentCount} />
       </div>
     </div>

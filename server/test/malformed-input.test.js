@@ -44,6 +44,30 @@ const ROUTES = [
   ['PATCH', '/api/tenants/users/:user'], ['POST', '/api/tenants/branches'], ['POST', '/api/tenants/users/:bad/reset-link'],
   ['POST', '/api/tenants/users/invite'], ['DELETE', '/api/tenants/branches/:bad'],
 ];
+// A valid body for each write endpoint. The deep pass below swaps one of
+// its fields at a time for a wrong shape, so the bad value gets past the
+// "missing fields" checks and into the code that uses it. (A store list
+// sent as text used to crash an invite this way.)
+const VALID = {
+  'PATCH /api/auth/me': () => ({ fullName: 'A', title: 'Chef', phone: '123', language: 'en' }),
+  'PATCH /api/billing/subscription/quantities': () => ({ branchCount: 50, userCount: 200 }),
+  'POST /api/billing/checkout': () => ({ branchCount: 50, userCount: 200 }),
+  'POST /api/checklists/library': () => ({ text: 'T', description: 'D', category: 'C', standard: 'CUSTOM', requiresPhoto: true, isCritical: false }),
+  'POST /api/checklists/templates': () => ({ name: 'N', itemIds: [ids.item], frequency: 'daily', kind: 'custom' }),
+  'POST /api/checklists/assignments': () => ({ templateId: ids.template, branchId: ids.branch, role: 'employee', dueTime: '09:00' }),
+  'POST /api/feedback': () => ({ category: 'bug', message: 'm', pagePath: '/app' }),
+  'POST /api/submissions': () => ({ templateId: ids.template, branchId: ids.branch }),
+  'PATCH /api/submissions/:submission': () => ({ formData: { a: '1' }, hasIncident: false }),
+  'POST /api/submissions/:submission/responses': () => ({ itemId: ids.item, isCompliant: 'true', valueText: 'x', gpsLat: 1, gpsLng: 1 }),
+  'POST /api/submissions/:submission/submit': () => ({ gpsLat: 1, gpsLng: 1 }),
+  'PATCH /api/tenants/current': () => ({ branchCount: 50, userCount: 200, businessType: 'restaurant' }),
+  'PATCH /api/tenants/users/:user': () => ({ role: 'employee', status: 'active', branchIds: [ids.branch], title: 'Chef' }),
+  'POST /api/tenants/branches': () => ({ name: 'S', address: 'a', city: 'c', timezone: 'UTC' }),
+  'POST /api/tenants/users/invite': () => ({ fullName: 'I', email: `deep${++deepInvites}@example.com`, role: 'employee', branchIds: [ids.branch], title: 'Chef' }),
+};
+let deepInvites = 0;
+const DEEP_BAD = FULL ? BAD : ['x', 12345, {}, null, ['x'], [12345]];
+
 const BAD_IDS = ['not-a-uuid', '00000000-0000-0000-0000-000000000000', "1' OR '1'='1", '%00', 'x'.repeat(300)];
 
 async function call(method, path, { body, query, raw } = {}) {
@@ -74,12 +98,13 @@ before(async () => {
     return res.json();
   };
   const signup = await api('POST', '/api/auth/signup', {
-    fullName: 'Fuzz', email: 'fuzz@example.com', password: 'FuzzPass123', restaurantName: 'Fuzz Cafe', country: 'Egypt', branchCount: 3, userCount: 5,
+    fullName: 'Fuzz', email: 'fuzz@example.com', password: 'FuzzPass123', restaurantName: 'Fuzz Cafe', country: 'Egypt', branchCount: 50, userCount: 200,
   });
   token = signup.token;
   await completeSetup((m, p, o = {}) => fetch(baseUrl + p, { method: m, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${o.token || token}` }, body: o.body && JSON.stringify(o.body) }).then(async (r) => ({ status: r.status, body: await r.json() })), token);
   ids.branch = (await api('POST', '/api/tenants/branches', { name: 'Main' })).branch.id;
   const item = (await api('GET', '/api/checklists/library?standard=HACCP')).items[0];
+  ids.item = item.id;
   ids.template = (await api('POST', '/api/checklists/templates', { name: 'One', itemIds: [item.id] })).template.id;
   ids.submission = (await api('POST', '/api/submissions', { templateId: ids.template, branchId: ids.branch })).submission.id;
   const kt = await api('POST', '/api/checklists/templates', { name: 'Kitchen Daily Report', kind: 'kitchen_daily', itemIds: [] });
@@ -117,6 +142,12 @@ test('no endpoint crashes on malformed input', async () => {
       note(await call(method, path, { raw: '"text"' }), `${label} string body`);
       for (const v of FULL ? BAD : BAD.filter((b, i) => i % 2 === 0 || typeof b === 'string')) {
         note(await call(method, path, { body: Object.fromEntries(FIELDS.map((f) => [f, v])) }), `${label} all=${JSON.stringify(v).slice(0, 20)}`);
+      }
+      const valid = VALID[`${method} ${pattern}`];
+      if (valid) {
+        for (const f of Object.keys(valid())) {
+          for (const v of DEEP_BAD) note(await call(method, path, { body: { ...valid(), [f]: v } }), `${label} valid but ${f}=${JSON.stringify(v).slice(0, 20)}`);
+        }
       }
       // One field wrong at a time, next to otherwise plausible values.
       // (Sign-up and login hash the password on every call, so they only

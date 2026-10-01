@@ -489,6 +489,10 @@ submissionsRouter.post('/:id/share', requireAuth, pdfUpload.single('pdf'), async
 // form_data, which the list never shows.
 const LIST_COLUMNS = `s.id, s.tenant_id, s.template_id, s.branch_id, s.assignment_id, s.submitted_by, s.status,
   s.started_at, s.submitted_at, s.has_incident, coalesce(s.submitted_at, s.started_at) AS sort_at`;
+// The cursor keeps Postgres's full microsecond timestamp. Rounded to a
+// JavaScript millisecond, a report filed within the same millisecond as
+// the last one on a page never appeared on the next.
+const CURSOR_AT = "to_char(coalesce(s.submitted_at, s.started_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"')";
 
 submissionsRouter.get('/', requireAuth, async (req, res) => {
   const { branchId, from, to, status, before } = req.query;
@@ -518,7 +522,7 @@ submissionsRouter.get('/', requireAuth, async (req, res) => {
   params.push(limit + 1);
 
   const { rows } = await query(
-    `SELECT ${LIST_COLUMNS}, t.name AS template_name, t.kind, b.name AS branch_name, u.full_name AS submitted_by_name
+    `SELECT ${LIST_COLUMNS}, ${CURSOR_AT} AS cursor_at, t.name AS template_name, t.kind, b.name AS branch_name, u.full_name AS submitted_by_name
      FROM checklist_submissions s
      JOIN checklist_templates t ON t.id = s.template_id
      JOIN branches b ON b.id = s.branch_id
@@ -531,7 +535,7 @@ submissionsRouter.get('/', requireAuth, async (req, res) => {
   const page = more ? rows.slice(0, limit) : rows;
   const last = page[page.length - 1];
   res.json({
-    submissions: page,
-    nextBefore: more ? `${new Date(last.sort_at).toISOString()}|${last.id}` : null,
+    submissions: page.map(({ cursor_at, ...row }) => row),
+    nextBefore: more ? `${last.cursor_at}|${last.id}` : null,
   });
 });

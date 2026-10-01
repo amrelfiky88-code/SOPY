@@ -132,6 +132,19 @@ test("a user cannot be linked to another tenant's store", async () => {
   assert.equal(invite.status, 400);
 });
 
+test('a store list that is not a list is refused, not a server error', async () => {
+  for (const branchIds of ['x', 7, { a: 1 }, true]) {
+    const invite = await api('POST', '/api/tenants/users/invite', {
+      token: A.token, body: { fullName: 'Shape', email: 'shape@example.com', role: 'employee', branchIds },
+    });
+    assert.equal(invite.status, 400, `invite with branchIds ${JSON.stringify(branchIds)}: ${JSON.stringify(invite.body)}`);
+    const edit = await api('PATCH', `/api/tenants/users/${A.emp.userId}`, { token: A.token, body: { branchIds } });
+    assert.equal(edit.status, 400, `edit with branchIds ${JSON.stringify(branchIds)}: ${JSON.stringify(edit.body)}`);
+  }
+  const { rows } = await pool.query("SELECT count(*)::int AS n FROM users WHERE email = 'shape@example.com'");
+  assert.equal(rows[0].n, 0);
+});
+
 // --- Branch removal --------------------------------------------------
 
 test('a removed store disappears from the store list', async () => {

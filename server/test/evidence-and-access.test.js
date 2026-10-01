@@ -245,6 +245,30 @@ test('the reports list pages through every report, newest submitted first, witho
   assert.equal((await api('GET', '/api/submissions?status=bogus', { token: O.token })).status, 400);
 });
 
+test('reports filed within the same millisecond all show up when paging', async () => {
+  // Postgres keeps microseconds; a cursor rounded to milliseconds skipped
+  // the reports that fell between the rounded and the real time.
+  await pool.query(
+    `UPDATE checklist_submissions s SET submitted_at = timestamptz '2026-01-01 10:00:00.123' + (n.rn * interval '100 microseconds')
+     FROM (SELECT id, row_number() OVER (ORDER BY id) AS rn FROM checklist_submissions WHERE status = 'submitted') n
+     WHERE s.id = n.id`
+  );
+  const seen = [];
+  let before = null;
+  do {
+    const q = new URLSearchParams({ status: 'submitted', limit: '1', ...(before ? { before } : {}) });
+    const page = await api('GET', `/api/submissions?${q}`, { token: O.token });
+    assert.equal(page.status, 200, JSON.stringify(page.body));
+    assert.ok(page.body.submissions.every((s) => !('cursor_at' in s)));
+    seen.push(...page.body.submissions);
+    before = page.body.nextBefore;
+  } while (before && seen.length < 100);
+  const { rows } = await pool.query("SELECT count(*)::int AS n FROM checklist_submissions s JOIN users u ON u.id = s.submitted_by WHERE u.tenant_id = (SELECT tenant_id FROM users WHERE email = 'ev-owner@example.com') AND s.status = 'submitted'");
+  assert.ok(rows[0].n >= 3);
+  assert.equal(seen.length, rows[0].n, 'every report is reachable');
+  assert.equal(new Set(seen.map((s) => s.id)).size, seen.length, 'no duplicates across pages');
+});
+
 test('names and details have sensible length limits', async () => {
   const long = 'x'.repeat(500);
   const signup = await api('POST', '/api/auth/signup', { body: { fullName: long, email: 'long@example.com', password: 'OwnerPass123', restaurantName: 'L', country: 'Egypt' } });

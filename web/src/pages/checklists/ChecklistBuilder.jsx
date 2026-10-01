@@ -193,11 +193,11 @@ export default function ChecklistBuilder() {
         </div>
         <div className="filter-row">
           {STANDARDS.map((code) => (
-            <button key={code} className={standard === code ? 'active' : ''} onClick={() => setStandard(code)}>
+            <button key={code} type="button" aria-pressed={standard === code} className={standard === code ? 'active' : ''} onClick={() => setStandard(code)}>
               {t(code ? `std.${code}` : 'std.all')}
             </button>
           ))}
-          <button className={criticalOnly ? 'active' : ''} onClick={() => setCriticalOnly((c) => !c)}>
+          <button type="button" aria-pressed={criticalOnly} className={criticalOnly ? 'active' : ''} onClick={() => setCriticalOnly((c) => !c)}>
             {t('builder.criticalOnly')}
           </button>
         </div>

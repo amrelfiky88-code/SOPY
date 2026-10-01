@@ -23,7 +23,7 @@ Single test file (from `server/`):
 node --env-file=.env.test --test test/billing.test.js
 ```
 
-`test/malformed-input.test.js` sends every endpoint wrong-shaped input and fails on any 500 or hang. It takes about a minute; `FUZZ_FULL=1` runs the full, several-minute version. When you add an endpoint, add it to its `ROUTES` list.
+`test/malformed-input.test.js` sends every endpoint wrong-shaped input and fails on any 500 or hang. It takes about a minute; `FUZZ_FULL=1` runs the full, several-minute version. When you add an endpoint, add it to its `ROUTES` list, and give a write endpoint a working body in `VALID`: the deep pass swaps one field of it at a time for a wrong shape, which is what reaches code past the "missing fields" checks.
 
 Tests need a `sopy_test` database (`createdb sopy_test`, same role as `server/.env.example`). Every test file calls `resetTestDb()`, which drops and rebuilds the whole schema — that's why the suite runs with `--test-concurrency=1`. Don't remove that flag.
 

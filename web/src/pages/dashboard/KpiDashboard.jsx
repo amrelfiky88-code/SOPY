@@ -36,7 +36,7 @@ export default function KpiDashboard() {
 
       <div className="filter-row">
         {PERIODS.map((p) => (
-          <button key={p} className={period === p ? 'active' : ''} onClick={() => setPeriod(p)}>{t(`kpi.${p}`)}</button>
+          <button key={p} type="button" aria-pressed={period === p} className={period === p ? 'active' : ''} onClick={() => setPeriod(p)}>{t(`kpi.${p}`)}</button>
         ))}
       </div>
 
@@ -61,7 +61,7 @@ export default function KpiDashboard() {
         <div className="kpi-grid">
           <Tile icon={CheckCircleIcon} tone="green" label={t('kpi.compliance')} value={kpi.compliancePct !== null ? `${kpi.compliancePct}%` : t('kpi.noData')} />
           <Tile icon={ThermometerIcon} tone="amber" label={t('kpi.tempDeviations')} value={kpi.temperatureDeviations} />
-          <Tile icon={TrashIcon} tone="amber" label={t('kpi.wasteValue')} value={`$${kpi.wasteValue.toFixed(2)}`} />
+          <Tile icon={TrashIcon} tone="amber" label={t('kpi.wasteValue')} value={kpi.wasteValue.toFixed(2)} />
           <Tile icon={AlertTriangleIcon} tone="red" label={t('kpi.incidents')} value={kpi.incidentCount} />
           <Tile icon={XCircleIcon} tone="red" label={t('kpi.criticalFails')} value={kpi.criticalFailCount} />
         </div>
