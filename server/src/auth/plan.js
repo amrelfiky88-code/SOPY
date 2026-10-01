@@ -10,15 +10,23 @@ import { requireAuth } from './middleware.js';
 // counts as ended. Pending, past-due (Paddle is still retrying the card)
 // and businesses with no subscription row at all are left alone, so a
 // delayed webhook can't lock anyone out.
+//
+// A Paymob plan (Egypt) is paid a month at a time and never renews by
+// itself, so it also ends when the month paid for runs out without the
+// next one being paid, after PAYMOB_GRACE_DAYS.
+export const PAYMOB_GRACE_DAYS = 3;
+
 export async function planEnded(tenantId) {
   const { rows } = await query(
-    `SELECT status, current_period_end FROM subscriptions
+    `SELECT status, current_period_end, provider FROM subscriptions
      WHERE tenant_id = $1 AND status IN ('active', 'past_due', 'canceled')
      ORDER BY created_at DESC LIMIT 1`,
     [tenantId]
   );
   const sub = rows[0];
-  return !!sub && sub.status === 'canceled' && !!sub.current_period_end && new Date(sub.current_period_end) < new Date();
+  if (!sub?.current_period_end) return false;
+  const over = (graceDays) => new Date(sub.current_period_end).getTime() + graceDays * 86_400_000 < Date.now();
+  return (sub.status === 'canceled' && over(0)) || (sub.provider === 'paymob' && sub.status === 'active' && over(PAYMOB_GRACE_DAYS));
 }
 
 export const PLAN_ENDED_MESSAGE = 'Your SOPY subscription has ended. Past reports stay available; subscribe again in Profile & billing to continue.';

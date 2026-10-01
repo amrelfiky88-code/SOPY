@@ -86,10 +86,37 @@ CREATE TABLE subscriptions (
   paddle_customer_id     TEXT,
   paddle_transaction_id  TEXT,
   current_period_end    TIMESTAMPTZ,
+  provider              TEXT NOT NULL DEFAULT 'paddle', -- paddle | paymob (Egypt: paid month by month)
   created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_subscriptions_tenant ON subscriptions(tenant_id);
+
+-- Paymob (Egypt) payments. Paymob charges once, not monthly, so each
+-- payment is a row: the first month (checkout), a further month
+-- (renewal), or the rest of the month on a bigger plan (upgrade). It's
+-- applied when Paymob reports it paid, once (status pending -> paid), and
+-- only if Paymob's amount matches amount_egp_cents.
+CREATE TABLE paymob_payments (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id           UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  subscription_id     UUID NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
+  purpose             TEXT NOT NULL,              -- checkout | renewal | upgrade
+  branch_count        INTEGER NOT NULL,
+  user_count          INTEGER NOT NULL,
+  amount_usd          NUMERIC(10,2) NOT NULL,     -- what's due in USD, after credit
+  credit_applied      NUMERIC(10,2) NOT NULL DEFAULT 0,
+  amount_egp_cents    BIGINT NOT NULL,            -- what Paymob charges, in piasters
+  reference           TEXT NOT NULL UNIQUE,       -- our special_reference (Paymob's merchant_order_id)
+  paymob_order_id     TEXT,
+  client_secret       TEXT,
+  paymob_transaction_id TEXT,
+  status              TEXT NOT NULL DEFAULT 'pending', -- pending | paid
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  paid_at             TIMESTAMPTZ
+);
+CREATE INDEX idx_paymob_payments_tenant ON paymob_payments(tenant_id);
+CREATE INDEX idx_paymob_payments_order ON paymob_payments(paymob_order_id);
 
 -- Master checkpoint library: global (tenant_id NULL) + tenant-custom items
 CREATE TABLE checklist_items (

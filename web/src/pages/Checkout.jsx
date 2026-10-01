@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useI18n } from '../i18n/index.jsx';
-import { money } from '../i18n/pageLabels.js';
+import { money, egp } from '../i18n/pageLabels.js';
+import { paysInEgypt, paymobReturnParams } from '../lib/paymentRegion.js';
 import { CheckCircleIcon, ShieldIcon } from '../components/icons.jsx';
 
 export default function Checkout() {
@@ -18,6 +19,9 @@ export default function Checkout() {
   // Canceled but still paid up: the plan can be kept instead of bought again.
   const [resumable, setResumable] = useState(null);
   const [transactionId, setTransactionId] = useState(null);
+  // Paying from Egypt: the Paymob payment ({ checkoutUrl, amountEgp, egpPerUsd }).
+  const [paymob, setPaymob] = useState(null);
+  const [locating, setLocating] = useState(false);
   const [error, setError] = useState('');
   // preparing → the order is being priced; ready → waiting on the customer;
   // processing → payment taken, waiting for it to be confirmed.
@@ -40,8 +44,15 @@ export default function Checkout() {
     setError('');
     setStatus('preparing');
     try {
-      const data = await api.post('/billing/checkout', {});
+      // Egypt pays in EGP through Paymob: the phone's location, or the
+      // business's country when the phone won't share it.
+      setLocating(true);
+      const method = (await paysInEgypt(tenant?.country)) ? 'paymob' : 'card';
       if (!liveRef.current) return;
+      setLocating(false);
+      const data = await api.post('/billing/checkout', { method });
+      if (!liveRef.current) return;
+      setPaymob(data.provider === 'paymob' && data.paymob ? data.paymob : null);
       setPricing(data.pricing);
       setCredit({ applied: Number(data.creditApplied || 0), kind: data.creditKind, dueToday: data.dueToday ?? data.pricing?.monthlyTotal });
       setMock(!!data.mock);
@@ -49,14 +60,25 @@ export default function Checkout() {
       setResumable(data.canResume ? data.subscription : null);
       setTransactionId(data.transactionId || null);
       setStatus('ready');
+      // Account credit covered the whole first month: nothing to pay.
+      if (data.settled) finishRef.current?.();
     } catch (err) {
       if (!liveRef.current) return;
+      setLocating(false);
       setError(err.message);
       setStatus('ready');
     }
-  }, [user]);
+  }, [user, tenant?.country]);
 
-  useEffect(() => { loadOrder(); }, [loadOrder]);
+  // Back from Paymob, the signed result is in the address. Checked once,
+  // then taken out of the address so it isn't reused or left in history.
+  const paymobReturn = useRef(paymobReturnParams(window.location.search));
+  const finishRef = useRef(null);
+
+  useEffect(() => {
+    if (paymobReturn.current) return;
+    loadOrder();
+  }, [loadOrder]);
 
   const finish = useCallback(async () => {
     const { tenant: updated } = await api.get('/tenants/current');
@@ -67,6 +89,7 @@ export default function Checkout() {
     // Say the payment worked — it used to jump straight on with no word.
     navigate(updated?.onboarding_step === 'complete' ? '/app/dashboard' : '/onboarding', { state: { paid: true } });
   }, [navigate, setTenant]);
+  finishRef.current = finish;
 
   // Paddle confirms payment out-of-band via webhook, so after the overlay
   // closes we poll our own record rather than trusting the browser event.
@@ -76,13 +99,35 @@ export default function Checkout() {
       if (!liveRef.current) return;
       const { subscription } = await api.get('/billing/subscription');
       if (!liveRef.current) return;
-      if (subscription?.status === 'active') return finish();
+      if (subscription?.status === 'active') { await finish(); return true; }
     }
     if (liveRef.current) {
       setError(t('checkout.slowConfirm'));
       setStatus('ready');
     }
+    return false;
   }, [finish, t]);
+
+  useEffect(() => {
+    const params = paymobReturn.current;
+    if (!params) return;
+    paymobReturn.current = null;
+    navigate('/checkout', { replace: true });
+    setStatus('confirming');
+    (async () => {
+      let message = '';
+      try {
+        const result = await api.post('/billing/paymob/return', params);
+        if (result.paid && await pollForActiveSubscription()) return;
+        message = result.paid ? t('checkout.slowConfirm') : t('checkout.paymobFailed');
+      } catch (err) {
+        message = err.message;
+      }
+      if (!liveRef.current) return;
+      await loadOrder();
+      if (liveRef.current) setError(message);
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePay = async () => {
     setError('');
@@ -146,12 +191,24 @@ export default function Checkout() {
     );
   }
 
+  if (status === 'confirming') {
+    return (
+      <div className="screen-narrow">
+        <h2>{t('checkout.title')}</h2>
+        <div className="card">
+          <p style={{ margin: 0 }}>{t('checkout.confirming')}</p>
+          <p className="hint" style={{ marginBottom: 0 }}>{t('checkout.confirmingHint')}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (status === 'preparing') {
     return (
       <div className="screen-narrow">
         <CheckoutStepper />
         <h2>{t('checkout.title')}</h2>
-        <p>{t('checkout.preparing')}</p>
+        <p>{locating ? t('checkout.locating') : t('checkout.preparing')}</p>
       </div>
     );
   }
@@ -258,9 +315,19 @@ export default function Checkout() {
             </>
           )}
 
-          <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>
-            {t('checkout.terms', { currency: pricing.currency || 'USD' })}
-          </p>
+          {paymob ? (
+            <>
+              <div className="summary-row summary-total">
+                <span>{t('checkout.inEgp')}</span>
+                <span>{egp(paymob.amountEgp)}</span>
+              </div>
+              <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>{t('checkout.egpRate', { rate: paymob.egpPerUsd })}</p>
+            </>
+          ) : (
+            <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>
+              {t('checkout.terms', { currency: pricing.currency || 'USD' })}
+            </p>
+          )}
           <Link to="/pricing" className="link-btn" style={{ display: 'inline-block', marginTop: 10 }}>
             {t('checkout.changePlan')}
           </Link>
@@ -273,6 +340,17 @@ export default function Checkout() {
         <div className="card">
           <p style={{ margin: 0 }}>{t('checkout.confirming')}</p>
           <p className="hint" style={{ marginBottom: 0 }}>{t('checkout.confirmingHint')}</p>
+        </div>
+      ) : paymob ? (
+        <div className="card">
+          <h3 style={{ fontSize: 16, marginBottom: 8 }}>{t('checkout.payment')}</h3>
+          <p className="hint" style={{ marginTop: 0 }}>{t('checkout.paymobIntro')}</p>
+          <button className="btn btn-primary" onClick={() => window.location.assign(paymob.checkoutUrl)}>
+            {t('checkout.payPaymob', { amount: egp(paymob.amountEgp) })}
+          </button>
+          <p className="hint secure-note">
+            <ShieldIcon size={14} /> {t('checkout.paymobSecure')}
+          </p>
         </div>
       ) : mock ? (
         <div className="card">

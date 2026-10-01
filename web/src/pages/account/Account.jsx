@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api, setToken } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { calculatePricing, PLAN_LIMITS, clampPlanCount } from '../../../../shared/pricing.js';
@@ -8,7 +8,8 @@ import ReferralCard from './ReferralCard.jsx';
 import { LabeledInput } from '../forms/OpsFormParts.jsx';
 import { LANGUAGES } from '../../../../shared/languages.js';
 import { useI18n } from '../../i18n/index.jsx';
-import { money } from '../../i18n/pageLabels.js';
+import { money, egp } from '../../i18n/pageLabels.js';
+import { paymobReturnParams } from '../../lib/paymentRegion.js';
 import JobTitleSelect from '../../components/JobTitleSelect.jsx';
 
 const STATUS_PILL = {
@@ -209,6 +210,10 @@ function SubscriptionCard({ user, tenant }) {
   const [users, setUsers] = useState(1);
   const [saving, setSaving] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [notice, setNotice] = useState('');
+  // A bigger Paymob plan waiting to be paid ({ checkoutUrl, amountEgp }).
+  const [upgradePay, setUpgradePay] = useState(null);
+  const navigate = useNavigate();
 
   const load = async () => {
     setError('');
@@ -224,12 +229,30 @@ function SubscriptionCard({ user, tenant }) {
     }
   };
 
-  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    // Back from paying on Paymob (next month, or a bigger plan): the signed
+    // result is in the address. Check it, then take it out of the address.
+    const params = paymobReturnParams(window.location.search);
+    if (!params) { load(); return; }
+    navigate('/app/account', { replace: true });
+    (async () => {
+      try {
+        const result = await api.post('/billing/paymob/return', params);
+        if (result.paid) setNotice(t('account.paymobPaid'));
+        else setError(t('checkout.paymobFailed'));
+      } catch (err) {
+        setError(err.message);
+      }
+      await load();
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const preview = useMemo(() => calculatePricing({
     branches: clampPlanCount(branches, PLAN_LIMITS.branches) ?? PLAN_LIMITS.branches.min,
     users: clampPlanCount(users, PLAN_LIMITS.users) ?? PLAN_LIMITS.users.min,
   }), [branches, users]);
+  // A changed plan needs a fresh Paymob amount.
+  useEffect(() => { setUpgradePay(null); }, [branches, users]);
   const currentTotal = Number(subscription?.monthly_total || 0);
   const difference = preview.monthlyTotal - currentTotal;
 
@@ -237,17 +260,35 @@ function SubscriptionCard({ user, tenant }) {
     setError('');
     setSaving(true);
     try {
-      const { subscription: updated } = await api.patch('/billing/subscription/quantities', {
+      const res = await api.patch('/billing/subscription/quantities', {
         branchCount: clampPlanCount(branches, PLAN_LIMITS.branches) ?? PLAN_LIMITS.branches.min,
         userCount: clampPlanCount(users, PLAN_LIMITS.users) ?? PLAN_LIMITS.users.min,
       });
-      setSubscription(updated);
+      // Paymob: the bigger plan is paid for (the rest of this month) first.
+      if (res.paymentRequired && res.paymob) { setUpgradePay(res.paymob); return; }
+      setSubscription(res.subscription);
       setEditing(false);
     } catch (err) {
       setError(err.message);
     } finally {
       setSaving(false);
     }
+  };
+
+  // Paymob plans are paid a month at a time.
+  const payNextMonth = async () => {
+    setError('');
+    setNotice('');
+    setSaving(true);
+    try {
+      const res = await api.post('/billing/paymob/renew', {});
+      if (res.paymob) { window.location.assign(res.paymob.checkoutUrl); return; }
+      setNotice(t('account.paymobPaid'));
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
+    setSaving(false);
   };
 
   const cancel = async () => {
@@ -323,6 +364,7 @@ function SubscriptionCard({ user, tenant }) {
       </div>
 
       {error && <div className="error-banner">{error}</div>}
+      {notice && <div className="success-banner" role="status">{notice}</div>}
 
       {editing ? (
         <>
@@ -350,11 +392,20 @@ function SubscriptionCard({ user, tenant }) {
           <p className="hint">
             {difference === 0
               ? t('account.planUnchanged')
-              : t(difference > 0 ? 'account.planUp' : 'account.planDown', {
+              : t(difference > 0 ? (subscription.provider === 'paymob' ? 'account.planUpPaymob' : 'account.planUp') : 'account.planDown', {
                   amount: money(Math.abs(difference)),
                   current: money(currentTotal),
                 })}
           </p>
+
+          {upgradePay && (
+            <>
+              <p className="hint">{t('account.paymobUpgrade', { amount: egp(upgradePay.amountEgp) })}</p>
+              <button className="btn btn-primary" style={{ width: '100%', marginBottom: 10 }} onClick={() => window.location.assign(upgradePay.checkoutUrl)}>
+                {t('checkout.payPaymob', { amount: egp(upgradePay.amountEgp) })}
+              </button>
+            </>
+          )}
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="btn btn-primary btn-small" onClick={saveQuantities} disabled={saving}>
@@ -401,10 +452,18 @@ function SubscriptionCard({ user, tenant }) {
                 ? t('account.pendingNote')
                 : subscription.status === 'past_due'
                   ? t('account.pastDueNote')
-                  : renewal
-                    ? t('account.renewsOn', { date: renewal })
-                    : t('account.renewsMonthly')}
+                  : subscription.provider === 'paymob' && renewal
+                    ? t(stillPaid ? 'account.paidUntil' : 'account.paymobEnded', { date: renewal })
+                    : renewal
+                      ? t('account.renewsOn', { date: renewal })
+                      : t('account.renewsMonthly')}
           </p>
+
+          {isOwner && subscription.provider === 'paymob' && subscription.status === 'active' && subscription.paymob && (
+            <button className="btn btn-primary" style={{ marginTop: 4, marginBottom: 10, width: '100%' }} onClick={payNextMonth} disabled={saving}>
+              {saving ? t('common.saving') : t('account.payNextMonth', { amount: egp(subscription.paymob.renewalEgp) })}
+            </button>
+          )}
 
           {/* A checkout that was started but never paid: changing or
               canceling it failed with "No active subscription". */}

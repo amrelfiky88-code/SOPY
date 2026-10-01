@@ -11,7 +11,7 @@ import { startTestServer, completeSetup } from '../test-utils/server.js';
 // run it with FUZZ_FULL=1. The default keeps the most crash-prone shapes.
 const FULL = process.env.FUZZ_FULL === '1';
 
-let close, baseUrl, token;
+let close, baseUrl, token, realFetch;
 const ids = {};
 
 const FIELDS = [
@@ -29,6 +29,7 @@ const ROUTES = [
   ['POST', '/api/auth/signup'], ['POST', '/api/auth/login'], ['GET', '/api/auth/me'], ['PATCH', '/api/auth/me'],
   ['PATCH', '/api/auth/password'], ['POST', '/api/auth/accept-invite'], ['GET', '/api/auth/invite/:bad'],
   ['GET', '/api/billing/subscription'], ['PATCH', '/api/billing/subscription/quantities'], ['POST', '/api/billing/checkout'],
+  ['POST', '/api/billing/paymob/webhook'], ['POST', '/api/billing/paymob/return'], ['POST', '/api/billing/paymob/renew'],
   ['GET', '/api/checklists/library'], ['POST', '/api/checklists/library'], ['GET', '/api/checklists/templates'],
   ['GET', '/api/checklists/templates/:bad'], ['GET', '/api/checklists/templates/:template'], ['POST', '/api/checklists/templates'],
   ['GET', '/api/checklists/assignments'], ['POST', '/api/checklists/assignments'], ['GET', '/api/checklists/my-assignments'],
@@ -51,7 +52,9 @@ const ROUTES = [
 const VALID = {
   'PATCH /api/auth/me': () => ({ fullName: 'A', title: 'Chef', phone: '123', language: 'en' }),
   'PATCH /api/billing/subscription/quantities': () => ({ branchCount: 50, userCount: 200 }),
-  'POST /api/billing/checkout': () => ({ branchCount: 50, userCount: 200 }),
+  'POST /api/billing/checkout': () => ({ method: 'paymob' }),
+  'POST /api/billing/paymob/webhook': () => ({ type: 'TRANSACTION', hmac: 'a'.repeat(128), obj: { id: 1, amount_cents: 100, currency: 'EGP', success: true, order: { id: 1, merchant_order_id: 'x' }, source_data: { pan: '1' } } }),
+  'POST /api/billing/paymob/return': () => ({ id: '1', success: 'true', amount_cents: '100', currency: 'EGP', order: '1', merchant_order_id: 'x', hmac: 'a'.repeat(128) }),
   'POST /api/checklists/library': () => ({ text: 'T', description: 'D', category: 'C', standard: 'CUSTOM', requiresPhoto: true, isCritical: false }),
   'POST /api/checklists/templates': () => ({ name: 'N', itemIds: [ids.item], frequency: 'daily', kind: 'custom' }),
   'POST /api/checklists/assignments': () => ({ templateId: ids.template, branchId: ids.branch, role: 'employee', dueTime: '09:00' }),
@@ -89,6 +92,13 @@ async function call(method, path, { body, query, raw } = {}) {
 }
 
 before(async () => {
+  // Paymob on, with its API stubbed, so its routes run past the set-up check.
+  Object.assign(process.env, { PAYMOB_SECRET_KEY: 'sk', PAYMOB_PUBLIC_KEY: 'pk', PAYMOB_INTEGRATION_IDS: '1', PAYMOB_HMAC_SECRET: 'h', PAYMOB_EGP_PER_USD: '50' });
+  realFetch = globalThis.fetch;
+  let n = 0;
+  globalThis.fetch = (url, init) => (String(url).includes('paymob.com')
+    ? Promise.resolve(new Response(JSON.stringify({ client_secret: `cs_${++n}`, intention_order_id: n }), { status: 201 }))
+    : realFetch(url, init));
   await resetTestDb();
   const server = await startTestServer();
   close = server.close;
@@ -116,6 +126,8 @@ before(async () => {
 });
 
 after(async () => {
+  globalThis.fetch = realFetch;
+  for (const k of ['PAYMOB_SECRET_KEY', 'PAYMOB_PUBLIC_KEY', 'PAYMOB_INTEGRATION_IDS', 'PAYMOB_HMAC_SECRET', 'PAYMOB_EGP_PER_USD']) delete process.env[k];
   await close();
   await closeDb();
 });

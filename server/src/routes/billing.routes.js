@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { Router } from 'express';
 import { query } from '../db.js';
 import { requireAuth, requireRole } from '../auth/middleware.js';
@@ -5,6 +6,10 @@ import { calculatePricing, clampPlanCount, PLAN_LIMITS } from '../../../shared/p
 import { createCheckoutTransaction, updateSubscriptionQuantities, cancelSubscription, resumeSubscription, createCreditDiscount } from '../paddle/client.js';
 import { creditForPayment, availableCreditKind, spendCreditOnCheckout, grantReferralReward, renewalPaid, releaseScheduledCredit } from '../credits.js';
 import { verifyPaddleSignature } from '../paddle/webhook.js';
+import {
+  paymobConfigured, egpCents, egpPerUsd, createIntention, checkoutUrl,
+  transactionFromCallback, transactionFromRedirect, verifyPaymobHmac, isPaid,
+} from '../paymob/client.js';
 
 export const billingRouter = Router();
 
@@ -71,6 +76,42 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
     mock: !process.env.PADDLE_API_KEY,
   });
 
+  // A device in Egypt (or a business registered there, when the phone
+  // won't say where it is) pays in EGP through Paymob. The browser
+  // decides; without Paymob set up, everyone gets the card checkout.
+  if (req.body?.method === 'paymob' && paymobConfigured()) {
+    try {
+      const { rows: pendingPaymob } = await query(
+        "SELECT id FROM subscriptions WHERE tenant_id = $1 AND status = 'pending' ORDER BY created_at DESC LIMIT 1",
+        [tenant.id]
+      );
+      const values = [pricing.branchCount, pricing.userCount, pricing.branchBlendedRate, pricing.userBlendedRate, pricing.monthlyTotal, creditApplied];
+      const { rows: row } = pendingPaymob[0]
+        ? await query(
+          `UPDATE subscriptions SET branch_count = $1, user_count = $2, branch_rate = $3, user_rate = $4, monthly_total = $5,
+                  credit_applied = $6, provider = 'paymob', paddle_transaction_id = NULL, updated_at = now()
+           WHERE id = $7 RETURNING id`,
+          [...values, pendingPaymob[0].id]
+        )
+        : await query(
+          `INSERT INTO subscriptions (tenant_id, branch_count, user_count, branch_rate, user_rate, monthly_total, credit_applied, status, provider)
+           VALUES ($7, $1, $2, $3, $4, $5, $6, 'pending', 'paymob') RETURNING id`,
+          [...values, tenant.id]
+        );
+      const dueToday = round2(pricing.monthlyTotal - creditApplied);
+      const started = await startPaymobPayment(req, {
+        subscriptionId: row[0].id, purpose: 'checkout', branchCount: pricing.branchCount, userCount: pricing.userCount,
+        amountUsd: dueToday, creditApplied, returnPath: '/checkout',
+      });
+      return res.json({
+        provider: 'paymob', pricing, creditApplied, creditKind, dueToday,
+        ...(started.settled ? { settled: true } : { paymob: paymobView(started.payment, started.checkoutUrl) }),
+      });
+    } catch (err) {
+      return res.status(502).json({ error: err.message });
+    }
+  }
+
   // Nothing about the order changed since the last call (a refresh, the
   // back button, reopening the page while a payment is being confirmed):
   // hand back the same transaction. Minting a new one each time replaced
@@ -111,7 +152,7 @@ billingRouter.post('/checkout', requireAuth, requireRole('business_owner'), asyn
     if (pending) {
       await query(
         `UPDATE subscriptions SET branch_count = $1, user_count = $2, branch_rate = $3, user_rate = $4,
-                                   monthly_total = $5, paddle_transaction_id = $6, credit_applied = $7, updated_at = now()
+                                   monthly_total = $5, paddle_transaction_id = $6, credit_applied = $7, provider = 'paddle', updated_at = now()
          WHERE id = $8`,
         [pricing.branchCount, pricing.userCount, pricing.branchBlendedRate, pricing.userBlendedRate, pricing.monthlyTotal, transaction.id, creditApplied, pending.id]
       );
@@ -147,6 +188,178 @@ async function paymentConfirmed(tenantId, subscription) {
   await spendCreditOnCheckout(tenantId, subscription.id, subscription.credit_applied);
   await grantReferralReward(tenantId);
 }
+
+// --- Paymob (Egypt) ---------------------------------------------------
+// Paymob charges once rather than monthly, so a Paymob plan is paid a
+// month at a time: checkout pays the first month, "Pay for next month"
+// each one after (see auth/plan.js for what happens when one is missed),
+// and growing the plan pays the difference for the rest of the month.
+
+const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+const round2 = (n) => Math.round(Number(n) * 100) / 100;
+
+// Where Paymob sends the customer back to and posts its result.
+function appBaseUrl(req) {
+  return (process.env.APP_URL || req.get('origin') || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+}
+
+const paymobView = (payment, url) => ({ checkoutUrl: url, amountEgp: Number(payment.amount_egp_cents) / 100, egpPerUsd: egpPerUsd() });
+
+// Starts a Paymob payment, or hands back the same one if it's still
+// waiting to be paid (a refresh, the back button), as Paddle checkout
+// does. Under 1 EGP left to pay (credit covered it, or a plan change at
+// the very end of a month) there's nothing to charge: it's settled at once.
+async function startPaymobPayment(req, { subscriptionId, purpose, branchCount, userCount, amountUsd, creditApplied = 0, returnPath }) {
+  let amountCents = egpCents(amountUsd);
+  if (amountCents < 100) amountCents = 0;
+  const { rows: same } = await query(
+    `SELECT * FROM paymob_payments
+     WHERE subscription_id = $1 AND purpose = $2 AND status = 'pending' AND branch_count = $3 AND user_count = $4
+       AND amount_egp_cents = $5 AND credit_applied = $6 AND client_secret IS NOT NULL AND created_at > now() - interval '12 hours'
+     ORDER BY created_at DESC LIMIT 1`,
+    [subscriptionId, purpose, branchCount, userCount, amountCents, creditApplied]
+  );
+  if (same[0]) return { payment: same[0], checkoutUrl: checkoutUrl(same[0].client_secret) };
+
+  const reference = `sopy-${purpose}-${crypto.randomUUID()}`;
+  let intention = { clientSecret: null, orderId: null };
+  if (amountCents > 0) {
+    const { rows: owner } = await query('SELECT full_name, email, phone FROM users WHERE id = $1', [req.auth.userId]);
+    const base = appBaseUrl(req);
+    intention = await createIntention({
+      amountCents,
+      reference,
+      description: `SOPY: ${branchCount} store(s), ${userCount} user(s), ${purpose === 'upgrade' ? 'bigger plan for the time already paid' : '1 month'}`,
+      customer: { fullName: owner[0].full_name, email: owner[0].email, phone: owner[0].phone },
+      notificationUrl: `${base}/api/billing/paymob/webhook`,
+      redirectionUrl: `${base}${returnPath}`,
+    });
+  }
+  const { rows } = await query(
+    `INSERT INTO paymob_payments (tenant_id, subscription_id, purpose, branch_count, user_count, amount_usd, credit_applied,
+                                  amount_egp_cents, reference, paymob_order_id, client_secret)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+    [req.auth.tenantId, subscriptionId, purpose, branchCount, userCount, round2(amountUsd), creditApplied, amountCents, reference, intention.orderId, intention.clientSecret]
+  );
+  if (amountCents === 0) {
+    await confirmPaymobPayment(rows[0], null);
+    return { payment: rows[0], settled: true };
+  }
+  return { payment: rows[0], checkoutUrl: checkoutUrl(intention.clientSecret) };
+}
+
+// A Paymob payment went through: apply it, once. Paymob retries its
+// callback, and the customer's browser reports the same payment on its
+// way back, so only the first report (pending → paid) does anything.
+async function confirmPaymobPayment(payment, transactionId) {
+  const { rows } = await query(
+    "UPDATE paymob_payments SET status = 'paid', paid_at = now(), paymob_transaction_id = $2 WHERE id = $1 AND status = 'pending' RETURNING *",
+    [payment.id, transactionId == null ? null : String(transactionId)]
+  );
+  const paid = rows[0];
+  if (!paid) return false;
+  const pricing = calculatePricing({ branches: paid.branch_count, users: paid.user_count });
+
+  if (paid.purpose === 'checkout') {
+    const { rows: activated } = await query(
+      `UPDATE subscriptions SET status = 'active', provider = 'paymob', branch_count = $2, user_count = $3, branch_rate = $4,
+              user_rate = $5, monthly_total = $6, credit_applied = $7, current_period_end = now() + interval '30 days', updated_at = now()
+       WHERE id = $1 AND status = 'pending'
+         AND NOT EXISTS (SELECT 1 FROM subscriptions WHERE tenant_id = $8 AND status IN ('active', 'past_due'))
+       RETURNING *`,
+      [paid.subscription_id, pricing.branchCount, pricing.userCount, pricing.branchBlendedRate, pricing.userBlendedRate,
+        pricing.monthlyTotal, paid.credit_applied, paid.tenant_id]
+    );
+    if (activated[0]) {
+      await query('UPDATE tenants SET branch_count = $1, user_count = $2 WHERE id = $3', [pricing.branchCount, pricing.userCount, paid.tenant_id]);
+      await advancePastCheckout(paid.tenant_id);
+      await paymentConfirmed(paid.tenant_id, activated[0]);
+    } else {
+      console.warn(`Paymob payment ${paid.reference} was paid, but tenant ${paid.tenant_id} has no checkout waiting for it (already active?)`);
+    }
+  } else if (paid.purpose === 'renewal') {
+    // Paying early adds the month after the one already paid for.
+    await query(
+      `UPDATE subscriptions SET status = 'active', current_period_end = GREATEST(now(), COALESCE(current_period_end, now())) + interval '30 days', updated_at = now()
+       WHERE id = $1`,
+      [paid.subscription_id]
+    );
+    await spendCreditOnCheckout(paid.tenant_id, paid.subscription_id, paid.credit_applied);
+  } else if (paid.purpose === 'upgrade') {
+    await query(
+      `UPDATE subscriptions SET branch_count = $2, user_count = $3, branch_rate = $4, user_rate = $5, monthly_total = $6, updated_at = now()
+       WHERE id = $1`,
+      [paid.subscription_id, pricing.branchCount, pricing.userCount, pricing.branchBlendedRate, pricing.userBlendedRate, pricing.monthlyTotal]
+    );
+    await query('UPDATE tenants SET branch_count = $1, user_count = $2 WHERE id = $3', [pricing.branchCount, pricing.userCount, paid.tenant_id]);
+  }
+  return true;
+}
+
+// A signed Paymob transaction: find the payment it's for and apply it if
+// it was paid in full, for the amount we asked.
+async function applyPaymobTransaction(txn, tenantId = null) {
+  if (!isPaid(txn.fields)) return { applied: false, paid: false };
+  const { rows } = await query(
+    `SELECT * FROM paymob_payments
+     WHERE (reference = $1 OR paymob_order_id = $2) AND ($3::uuid IS NULL OR tenant_id = $3)
+     ORDER BY (reference = $1) DESC LIMIT 1`,
+    [String(txn.merchantOrderId ?? ''), String(txn.orderId ?? ''), tenantId]
+  );
+  const payment = rows[0];
+  if (!payment) return { applied: false, paid: true, unknown: true };
+  if (String(txn.fields.currency) !== 'EGP' || Number(txn.fields.amount_cents) !== Number(payment.amount_egp_cents)) {
+    console.warn(`Paymob payment ${payment.reference}: paid ${txn.fields.amount_cents} ${txn.fields.currency}, expected ${payment.amount_egp_cents} EGP; not applied`);
+    return { applied: false, paid: true, mismatch: true };
+  }
+  return { applied: await confirmPaymobPayment(payment, txn.fields.id), paid: true };
+}
+
+// Paymob's server-to-server result ("transaction processed callback").
+// No session: the HMAC signature is the proof it came from Paymob.
+billingRouter.post('/paymob/webhook', async (req, res) => {
+  if (!paymobConfigured()) return res.status(503).json({ error: 'Paymob is not set up' });
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  if (body.type !== 'TRANSACTION') return res.json({ received: true });
+  const txn = transactionFromCallback(body.obj);
+  const hmac = typeof req.query.hmac === 'string' ? req.query.hmac : body.hmac;
+  if (!verifyPaymobHmac(txn, hmac)) return res.status(401).json({ error: 'Invalid signature' });
+  await applyPaymobTransaction(txn);
+  res.json({ received: true });
+});
+
+// The customer's browser coming back from Paymob, with the signed result
+// in its address. Applying it here too means a payment still counts when
+// Paymob's callback can't reach the server.
+billingRouter.post('/paymob/return', requireAuth, requireRole('business_owner'), async (req, res) => {
+  if (!paymobConfigured()) return res.status(503).json({ error: 'Paymob is not set up' });
+  const q = req.body && typeof req.body === 'object' ? req.body : {};
+  const txn = transactionFromRedirect(q);
+  if (!verifyPaymobHmac(txn, q.hmac)) return res.status(400).json({ error: 'This payment result could not be checked' });
+  const result = await applyPaymobTransaction(txn, req.auth.tenantId);
+  res.json({ paid: result.paid, applied: result.applied });
+});
+
+// Pay for the next month of a Paymob plan.
+billingRouter.post('/paymob/renew', requireAuth, requireRole('business_owner'), async (req, res) => {
+  if (!paymobConfigured()) return res.status(409).json({ error: 'Paying in EGP is not available right now' });
+  const { rows } = await query(
+    "SELECT * FROM subscriptions WHERE tenant_id = $1 AND provider = 'paymob' AND status IN ('active', 'past_due') ORDER BY created_at DESC LIMIT 1",
+    [req.auth.tenantId]
+  );
+  const sub = rows[0];
+  if (!sub) return res.status(404).json({ error: 'No active subscription' });
+  const credit = await creditForPayment(req.auth.tenantId, sub.monthly_total);
+  try {
+    const started = await startPaymobPayment(req, {
+      subscriptionId: sub.id, purpose: 'renewal', branchCount: sub.branch_count, userCount: sub.user_count,
+      amountUsd: round2(Number(sub.monthly_total) - credit), creditApplied: credit, returnPath: '/app/account',
+    });
+    res.json(started.settled ? { settled: true } : { paymob: paymobView(started.payment, started.checkoutUrl) });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
 
 // The newest canceled plan whose paid period hasn't ended yet, if any.
 async function resumableSubscription(tenantId) {
@@ -192,7 +405,13 @@ billingRouter.get('/subscription', requireAuth, async (req, res) => {
      LIMIT 1`,
     [req.auth.tenantId]
   );
-  res.json({ subscription: rows[0] || null });
+  const sub = rows[0] || null;
+  // A Paymob plan is paid month by month: what the next month costs in EGP.
+  if (sub?.provider === 'paymob' && paymobConfigured()) {
+    const credit = await creditForPayment(req.auth.tenantId, sub.monthly_total);
+    sub.paymob = { renewalEgp: egpCents(round2(Number(sub.monthly_total) - credit)) / 100, egpPerUsd: egpPerUsd() };
+  }
+  res.json({ subscription: sub });
 });
 
 // Called when a business owner changes branch/user counts after go-live —
@@ -224,6 +443,26 @@ billingRouter.patch('/subscription/quantities', requireAuth, requireRole('busine
   }
   if (pricing.userCount < usage[0].users) {
     return res.status(409).json({ error: `You have ${usage[0].users} users (including pending invites). Disable users in Team & stores before lowering the plan to ${pricing.userCount}.` });
+  }
+
+  // A bigger Paymob plan: the difference for all the time already paid for
+  // (months paid ahead included) is paid first, as Paddle prorates on its
+  // next invoice. The plan only grows once Paymob confirms it. A smaller one applies at once
+  // and the next month costs less.
+  if (sub.provider === 'paymob' && pricing.monthlyTotal > Number(sub.monthly_total)) {
+    if (!paymobConfigured()) return res.status(409).json({ error: 'Paying in EGP is not available right now' });
+    const left = sub.current_period_end ? Math.max(0, new Date(sub.current_period_end).getTime() - Date.now()) : 0;
+    try {
+      const started = await startPaymobPayment(req, {
+        subscriptionId: sub.id, purpose: 'upgrade', branchCount: pricing.branchCount, userCount: pricing.userCount,
+        amountUsd: round2((pricing.monthlyTotal - Number(sub.monthly_total)) * (left / MONTH_MS)), returnPath: '/app/account',
+      });
+      if (!started.settled) return res.json({ paymentRequired: true, paymob: paymobView(started.payment, started.checkoutUrl), subscription: sub });
+      const { rows: fresh } = await query('SELECT * FROM subscriptions WHERE id = $1', [sub.id]);
+      return res.json({ subscription: fresh[0] });
+    } catch (err) {
+      return res.status(502).json({ error: err.message });
+    }
   }
 
   if (sub.paddle_subscription_id && process.env.PADDLE_API_KEY) {

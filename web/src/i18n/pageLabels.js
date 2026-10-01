@@ -175,6 +175,19 @@ const ROWS = [
   ['checkout.demoNote', "Card payments aren't switched on for this account yet, so you can activate in demo mode and add billing details later.", 'الدفع بالبطاقة غير مفعّل لهذا الحساب بعد، لذا يمكنك التفعيل في الوضع التجريبي وإضافة بيانات الدفع لاحقًا.', "Le paiement par carte n'est pas encore activé pour ce compte : vous pouvez activer en mode démo et ajouter vos informations de facturation plus tard."],
   ['checkout.activateDemo', 'Activate in demo mode', 'التفعيل في الوضع التجريبي', 'Activer en mode démo'],
   ['checkout.pay', 'Pay {amount} and activate', 'ادفع {amount} وفعّل', 'Payer {amount} et activer'],
+  ['checkout.paymobIntro', 'You are paying from Egypt, so you pay in Egyptian pounds through Paymob (card or mobile wallet).', 'أنت تدفع من مصر، لذلك ستدفع بالجنيه المصري عبر Paymob (بطاقة أو محفظة إلكترونية).', 'Vous payez depuis l’Égypte : le paiement se fait en livres égyptiennes via Paymob (carte ou portefeuille mobile).'],
+  ['checkout.inEgp', 'To pay in Egyptian pounds', 'المبلغ المطلوب بالجنيه المصري', 'À payer en livres égyptiennes'],
+  ['checkout.egpRate', 'At {rate} EGP per US dollar. Paid month by month: renew each month from Profile & billing.', 'بسعر {rate} جنيه للدولار الأمريكي. الدفع شهريًا: جدّد كل شهر من صفحة الملف الشخصي والفوترة.', 'Au taux de {rate} EGP pour un dollar US. Paiement mois par mois : renouvelez chaque mois depuis Profil et facturation.'],
+  ['checkout.payPaymob', 'Pay {amount} with Paymob', 'ادفع {amount} عبر Paymob', 'Payer {amount} avec Paymob'],
+  ['checkout.paymobSecure', 'You will continue on Paymob’s secure payment page — SOPY never sees your card details.', 'ستنتقل إلى صفحة الدفع الآمنة لـ Paymob — ولا يطّلع SOPY على بيانات بطاقتك أبدًا.', 'Vous continuerez sur la page de paiement sécurisée de Paymob — SOPY ne voit jamais vos données de carte.'],
+  ['checkout.paymobFailed', 'The payment didn’t go through. You haven’t been charged — you can try again.', 'لم تتم عملية الدفع ولم يُخصم منك أي مبلغ — يمكنك المحاولة مرة أخرى.', 'Le paiement n’a pas abouti. Vous n’avez pas été débité — vous pouvez réessayer.'],
+  ['checkout.locating', 'Checking where you are paying from…', 'جارٍ التحقق من مكان الدفع…', 'Vérification du lieu de paiement…'],
+  ['account.paidUntil', 'Paid until {date}.', 'مدفوع حتى {date}.', 'Payé jusqu’au {date}.'],
+  ['account.paymobEnded', 'The month paid for ended on {date}. Pay for the next month to keep using SOPY.', 'انتهى الشهر المدفوع في {date}. ادفع للشهر التالي لمواصلة استخدام SOPY.', 'Le mois payé s’est terminé le {date}. Payez le mois suivant pour continuer à utiliser SOPY.'],
+  ['account.payNextMonth', 'Pay for next month ({amount})', 'ادفع للشهر التالي ({amount})', 'Payer le mois suivant ({amount})'],
+  ['account.paymobUpgrade', 'You’ll pay {amount} on Paymob for the time already paid for; the bigger plan starts as soon as it’s paid.', 'ستدفع {amount} عبر Paymob عن المدة المدفوعة المتبقية، وتبدأ الباقة الأكبر فور الدفع.', 'Vous paierez {amount} sur Paymob pour la période déjà payée ; la formule plus grande démarre dès le paiement.'],
+  ['account.planUpPaymob', 'Up {amount} from {current} a month. You pay the difference for the time already paid for on Paymob first.', 'زيادة {amount} عن {current} شهريًا. ستدفع الفرق عن المدة المدفوعة المتبقية عبر Paymob أولًا.', 'Hausse de {amount} par rapport à {current} par mois. Vous payez d’abord la différence pour la période déjà payée sur Paymob.'],
+  ['account.paymobPaid', 'Payment received. Thank you!', 'تم استلام الدفع. شكرًا لك!', 'Paiement reçu. Merci !'],
   ['checkout.secure', "Card details are entered on Paddle's secure checkout — SOPY never sees them.", 'تُدخل بيانات البطاقة في صفحة الدفع الآمنة لـ Paddle — ولا يطّلع عليها SOPY أبدًا.', 'Les données de carte sont saisies sur le paiement sécurisé de Paddle — SOPY ne les voit jamais.'],
   ['checkout.slowConfirm', 'Your payment went through but is taking longer than usual to confirm. Refresh this page in a moment.', 'تمت عملية الدفع لكن تأكيدها يستغرق وقتًا أطول من المعتاد. حدّث هذه الصفحة بعد لحظات.', 'Votre paiement est passé mais sa confirmation prend plus de temps que d\'habitude. Actualisez la page dans un instant.'],
   ['checkout.cardsUnavailable', 'Card payments are not available right now. Please contact support.', 'الدفع بالبطاقة غير متاح حاليًا. يُرجى التواصل مع الدعم.', 'Le paiement par carte est indisponible pour le moment. Contactez le support.'],
@@ -284,3 +297,5 @@ export const PAGE_LABELS = build();
 // Wrapped in a left-to-right isolate so Arabic text doesn't turn it into
 // "12.50$" or put the minus on the wrong side.
 export const money = (n, sign = '') => `⁦${sign}$${Number(n || 0).toFixed(2)}⁩`;
+// Egyptian pounds (Paymob), isolated the same way.
+export const egp = (n) => `⁦EGP ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}⁩`;
