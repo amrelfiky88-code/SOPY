@@ -77,7 +77,7 @@ test('a failed critical checkpoint opens an incident thread with the store’s m
   const sub = await runAndSubmit(emp.token, criticalTemplateId, criticalItemId, false);
   assert.equal(sub.has_incident, true);
 
-  const threads = (await api('GET', '/api/inbox/threads', { token: owner.token })).body.threads;
+  const threads = (await api('GET', '/api/inbox/threads', { token: owner.token })).body.threads.filter((t) => t.kind === 'incident');
   assert.equal(threads.length, 1);
   assert.equal(threads[0].kind, 'incident');
   assert.equal(threads[0].submission_id, sub.id);
@@ -95,7 +95,7 @@ test('a failed critical checkpoint opens an incident thread with the store’s m
   assert.equal(detail.messages[0].data.notified, 2);
 
   assert.equal((await api('GET', `/api/inbox/threads/${incidentThreadId}`, { token: otherMgr.token })).status, 404);
-  assert.equal((await api('GET', '/api/inbox/threads', { token: otherMgr.token })).body.threads.length, 0);
+  assert.equal((await api('GET', '/api/inbox/threads', { token: otherMgr.token })).body.threads.filter((t) => t.kind === 'incident').length, 0);
 
   const ownerNotifs = (await api('GET', '/api/notifications', { token: owner.token })).body.notifications;
   assert.equal(ownerNotifs.length, 1);
@@ -134,7 +134,7 @@ test('direct conversations are one per pair, inside the business only', async ()
   assert.equal(again.body.threadId, first.body.threadId, 'either person reopens the same conversation');
 
   await api('POST', `/api/inbox/threads/${first.body.threadId}/messages`, { token: emp.token, body: { body: 'Delivery moved to 14:00' } });
-  const list = (await api('GET', '/api/inbox/threads', { token: otherMgr.token })).body.threads;
+  const list = (await api('GET', '/api/inbox/threads', { token: otherMgr.token })).body.threads.filter((t) => t.kind === 'direct');
   assert.equal(list[0].kind, 'direct');
   assert.equal(list[0].other_id, emp.userId);
   assert.equal(list[0].last_body, 'Delivery moved to 14:00');
@@ -164,10 +164,11 @@ test('notifications can be marked read one by one or all at once, only your own'
 });
 
 test('a report without an incident lets that store’s manager know, and opens no thread', async () => {
-  const before = (await api('GET', '/api/inbox/threads', { token: owner.token })).body.threads.length;
+  const incidents = async () => (await api('GET', '/api/inbox/threads', { token: owner.token })).body.threads.filter((t) => t.kind === 'incident').length;
+  const before = await incidents();
   const sub = await runAndSubmit(emp.token, plainTemplateId, plainItemId, true);
   assert.equal(sub.has_incident, false);
-  assert.equal((await api('GET', '/api/inbox/threads', { token: owner.token })).body.threads.length, before);
+  assert.equal(await incidents(), before);
   const mgr = (await api('GET', '/api/notifications', { token: storeMgr.token })).body.notifications;
   assert.equal(mgr[0].kind, 'report_submitted');
   assert.equal(mgr[0].submission_id, sub.id);

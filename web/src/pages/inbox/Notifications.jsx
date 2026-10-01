@@ -2,16 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api.js';
 import { useInboxBadges } from '../../components/inboxBadges.jsx';
-import { AlertTriangleIcon, BellIcon, CheckCircleIcon, LinkIcon } from '../../components/icons.jsx';
+import { AlertTriangleIcon, BellIcon, CheckCircleIcon, ClockIcon, LinkIcon } from '../../components/icons.jsx';
 import { useI18n } from '../../i18n/index.jsx';
 import { notificationText, shortTime, isToday } from './format.js';
 
-const ICONS = { incident: AlertTriangleIcon, report_submitted: CheckCircleIcon, referral_credit: LinkIcon };
+const ICONS = { checklist_due: ClockIcon, incident: AlertTriangleIcon, report_submitted: CheckCircleIcon, referral_credit: LinkIcon };
 
 // Where tapping a notification goes: the incident's thread, the report,
 // or Profile for referral credit.
 function destination(n) {
   if (n.kind === 'referral_credit') return '/app/account';
+  if (n.kind === 'checklist_due') return '/app/dashboard';
   if (n.thread_id) return `/app/inbox/${n.thread_id}`;
   if (n.submission_id) return `/app/reports/${n.submission_id}`;
   return null;
@@ -71,7 +72,7 @@ export default function Notifications() {
               const Icon = ICONS[n.kind] || BellIcon;
               return (
                 <button key={n.id} type="button" className="list-row" style={{ alignItems: 'flex-start' }} onClick={() => open(n)}>
-                  <span className={`icon-tile icon-tile-round${tone === 'red' ? ' tone-red' : ''}`} style={{ width: 36, height: 36 }}><Icon size={16} /></span>
+                  <span className={`icon-tile icon-tile-round${tone === 'red' ? ' tone-red' : tone === 'amber' ? ' tone-amber' : ''}`} style={{ width: 36, height: 36 }}><Icon size={16} /></span>
                   <span className="row-text" style={{ gap: 2 }}>
                     <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                       <span className="row-title" style={{ fontWeight: n.read_at ? 600 : 700 }}>{title}</span>

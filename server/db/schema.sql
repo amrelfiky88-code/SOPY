@@ -339,3 +339,18 @@ CREATE INDEX idx_notifications_user ON notifications(user_id, created_at DESC);
 -- SOP again reuses it instead of piling up copies in the Builder.
 ALTER TABLE checklist_templates ADD COLUMN library_group TEXT;
 CREATE UNIQUE INDEX idx_templates_library_group ON checklist_templates(tenant_id, library_group) WHERE library_group IS NOT NULL;
+
+-- Store team chats: one thread per store (kind 'store'). Who's in it isn't
+-- stored: it's everyone linked to the store plus the owners and operations
+-- managers, worked out when it's read, so it follows team changes.
+-- Members rows exist for these only to remember last_read_at.
+ALTER TABLE message_threads ADD COLUMN branch_id UUID UNIQUE REFERENCES branches(id) ON DELETE CASCADE;
+
+-- Which notifications a person gets (Profile). Incident threads still
+-- include them either way; this only stops the notification.
+ALTER TABLE users ADD COLUMN notify_incidents BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE users ADD COLUMN notify_reminders BOOLEAN NOT NULL DEFAULT true;
+
+-- One reminder per person, assignment and due day (reminders.js).
+CREATE UNIQUE INDEX idx_notifications_one_reminder
+  ON notifications (user_id, (data->>'assignmentId'), (data->>'dueDate')) WHERE kind = 'checklist_due';

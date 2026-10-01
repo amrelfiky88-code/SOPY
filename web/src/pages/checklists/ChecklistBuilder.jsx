@@ -35,6 +35,7 @@ export default function ChecklistBuilder() {
   const [assignTemplateId, setAssignTemplateId] = useState('');
   const [assignBranchId, setAssignBranchId] = useState('');
   const [assignRole, setAssignRole] = useState('');
+  const [assignDue, setAssignDue] = useState('');
   const [branches, setBranches] = useState([]);
   const [assignments, setAssignments] = useState([]);
 
@@ -156,9 +157,11 @@ export default function ChecklistBuilder() {
         templateId: assignTemplateId,
         branchId: assignBranchId || null,
         role: assignRole || null,
+        dueTime: assignDue || null,
       });
       setAssignBranchId('');
       setAssignRole('');
+      setAssignDue('');
       setNotice(res.existing
         ? t('builder.alreadyAssigned')
         : t('builder.assignedNotice'));
@@ -322,18 +325,24 @@ export default function ChecklistBuilder() {
               {ROLES.map((r) => <option key={r.value} value={r.value}>{roleName(t, r.value)}</option>)}
             </select>
           </div>
+          <div className="field">
+            <label htmlFor="adue">{t('builder.dueBy')}</label>
+            <input id="adue" type="time" value={assignDue} onChange={(e) => setAssignDue(e.target.value)} style={{ maxWidth: 180 }} />
+            <div className="hint">{t('builder.dueByHint')}</div>
+          </div>
           <button className="btn btn-secondary" type="submit" disabled={assigning}>{assigning ? t('builder.assigning') : t('builder.assign')}</button>
         </form>
 
         <div className="table-scroll" style={{ marginTop: 16 }}>
         <table>
-          <thead><tr><th>{t('builder.checklist')}</th><th>{t('page.store')}</th><th>{t('page.role')}</th><th aria-label={t('builder.actions')} /></tr></thead>
+          <thead><tr><th>{t('builder.checklist')}</th><th>{t('page.store')}</th><th>{t('page.role')}</th><th>{t('builder.dueBy')}</th><th aria-label={t('builder.actions')} /></tr></thead>
           <tbody>
             {assignments.map((a) => (
               <tr key={a.id}>
                 <td>{reportTitle(t, a.kind, a.template_name)}</td>
                 <td>{a.branch_name || t('page.allStores')}</td>
                 <td>{a.role ? roleName(t, a.role) : t('page.anyRole')}</td>
+                <td className="mono">{a.due_time ? a.due_time.slice(0, 5) : '—'}</td>
                 <td>
                   <button type="button" className="btn btn-small btn-secondary" onClick={() => unassign(a.id)} aria-label={t('builder.unassignLabel', { name: reportTitle(t, a.kind, a.template_name) })}>
                     {t('builder.unassign')}
@@ -342,7 +351,7 @@ export default function ChecklistBuilder() {
               </tr>
             ))}
             {assignments.length === 0 && (
-              <tr><td colSpan={4} className="hint">{t('builder.nothingAssigned')}</td></tr>
+              <tr><td colSpan={5} className="hint">{t('builder.nothingAssigned')}</td></tr>
             )}
           </tbody>
         </table>

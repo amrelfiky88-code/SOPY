@@ -5,7 +5,7 @@ import { useAuth } from '../../auth/AuthContext.jsx';
 import PageHead from '../../components/PageHead.jsx';
 import { MessageIcon, PlusIcon } from '../../components/icons.jsx';
 import { useI18n } from '../../i18n/index.jsx';
-import { initials, threadTitle, threadSub, lastPreview, shortTime } from './format.js';
+import { initials, threadAvatar, threadTitle, threadSub, lastPreview, shortTime } from './format.js';
 
 // Inbox: incident threads (opened by SOPY when a report is flagged) and
 // conversations with teammates, newest first.
@@ -69,7 +69,7 @@ export default function Inbox() {
         <div className="list-card">
           {threads.map((th) => (
             <Link key={th.id} to={`/app/inbox/${th.id}`} className="list-row">
-              <span className={`avatar avatar-sm${th.kind === 'incident' ? ' tone-red' : ''}`}>{th.kind === 'incident' ? '!' : initials(th.other_name)}</span>
+              <span className={`avatar avatar-sm${th.kind === 'incident' ? ' tone-red' : th.kind === 'store' ? ' tone-amber' : ''}`}>{threadAvatar(th)}</span>
               <span className="row-text">
                 <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                   <span className="row-title" style={{ fontWeight: th.unread ? 700 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{threadTitle(t, th)}</span>

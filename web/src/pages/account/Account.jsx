@@ -64,6 +64,7 @@ export default function Account() {
       </div>
       <ProfileCard user={user} tenant={tenant} setUser={setUser} />
       <LanguageField user={user} setUser={setUser} />
+      <NotificationPrefs user={user} setUser={setUser} />
       <SubscriptionCard user={user} tenant={tenant} />
       {user?.role === 'business_owner' && <ReferralCard />}
 
@@ -129,6 +130,45 @@ function LanguageField({ user, setUser }) {
         ))}
       </div>
       {error && <div className="error-banner" style={{ marginTop: 8, marginBottom: 0 }}>{error}</div>}
+    </div>
+  );
+}
+
+// Which notifications to get (Inbox threads are unaffected). Saved on
+// each switch, like the language.
+function NotificationPrefs({ user, setUser }) {
+  const { t } = useI18n();
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(null);
+  const rows = [
+    ['notifyIncidents', 'prefs.incidents', 'prefs.incidentsHint'],
+    ['notifyReminders', 'prefs.reminders', 'prefs.remindersHint'],
+  ];
+  const toggle = async (key) => {
+    if (saving) return;
+    setError('');
+    setSaving(key);
+    try {
+      const { user: updated } = await api.patch('/auth/me', { [key]: !(user?.[key] !== false) });
+      setUser?.(updated);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(null);
+    }
+  };
+  return (
+    <div className="list-card" style={{ marginBottom: 16, padding: '4px 16px' }}>
+      {rows.map(([key, label, hint]) => {
+        const on = user?.[key] !== false;
+        return (
+          <button key={key} type="button" role="switch" aria-checked={on} className="list-row" onClick={() => toggle(key)} disabled={saving === key}>
+            <span className="row-text"><span className="row-title">{t(label)}</span><span className="row-meta">{t(hint)}</span></span>
+            <span className={`switch${on ? ' on' : ''}`} aria-hidden="true"><span /></span>
+          </button>
+        );
+      })}
+      {error && <div className="error-banner" style={{ margin: '8px 0' }}>{error}</div>}
     </div>
   );
 }

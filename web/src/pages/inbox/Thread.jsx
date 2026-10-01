@@ -6,7 +6,7 @@ import { useInboxBadges } from '../../components/inboxBadges.jsx';
 import { ChevronStartIcon, ChevronEndIcon, FileTextIcon, SendIcon } from '../../components/icons.jsx';
 import { useI18n } from '../../i18n/index.jsx';
 import { reportTitle } from '../../i18n/formLabels.js';
-import { initials, threadTitle, threadSub, incidentMessage, shortTime } from './format.js';
+import { threadAvatar, threadTitle, threadSub, incidentMessage, shortTime } from './format.js';
 
 const MAX_LENGTH = 2000; // mirrors MESSAGE_MAX_LENGTH in inbox.routes.js
 const POLL_MS = 15_000;
@@ -100,8 +100,8 @@ export default function Thread() {
         <button type="button" className="back-btn" onClick={goBack} aria-label={t('page.back')}><ChevronStartIcon size={24} /></button>
         {thread && (
           <>
-            <span className={`avatar avatar-sm${thread.kind === 'incident' ? ' tone-red' : ''}`} style={{ width: 36, height: 36, fontSize: 13 }}>
-              {thread.kind === 'incident' ? '!' : initials(thread.other_name)}
+            <span className={`avatar avatar-sm${thread.kind === 'incident' ? ' tone-red' : thread.kind === 'store' ? ' tone-amber' : ''}`} style={{ width: 36, height: 36, fontSize: 13 }}>
+              {threadAvatar(thread)}
             </span>
             <span className="row-text">
               <span className="row-title" style={{ fontSize: 16, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{threadTitle(t, thread)}</span>

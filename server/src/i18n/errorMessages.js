@@ -96,6 +96,8 @@ const MESSAGES = [
   ['Enter your current and new password', 'أدخل كلمة المرور الحالية والجديدة', 'Saisissez votre mot de passe actuel et le nouveau'],
   ['Choose a plan and complete checkout first', 'اختر خطة وأكمل الدفع أولًا', "Choisissez une formule et finalisez d'abord le paiement"],
   ['Checklist, store or user not found', 'قائمة الفحص أو الفرع أو المستخدم غير موجود', 'Check-list, établissement ou utilisateur introuvable'],
+  ['Enter the due time as hours and minutes', 'أدخل وقت الاستحقاق بالساعات والدقائق', "Saisissez l'heure limite en heures et minutes"],
+  ['Choose on or off', 'اختر تشغيل أو إيقاف', 'Choisissez activé ou désactivé'],
   ['Choose who to message', 'اختر من تريد مراسلته', 'Choisissez à qui écrire'],
   ["You can't message yourself", 'لا يمكنك مراسلة نفسك', 'Vous ne pouvez pas vous écrire à vous-même'],
   ['Choose a procedure to run', 'اختر إجراءً لتنفيذه', 'Choisissez une procédure à exécuter'],

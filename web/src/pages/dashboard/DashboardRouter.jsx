@@ -176,7 +176,10 @@ export default function DashboardRouter() {
                 <span className={`icon-tile${a.done ? '' : ' tone-solid'}`}><Icon size={20} /></span>
                 <span className="row-text">
                   <span className="row-title">{reportTitle(t, a.kind, a.template_name)}</span>
-                  <span className="row-meta"><bdi>{a.branch_name || t('common.allStores')}</bdi> · {t(`kpi.${a.frequency}`)}</span>
+                  <span className="row-meta">
+                    <bdi>{a.branch_name || t('common.allStores')}</bdi> · {t(`kpi.${a.frequency}`)}
+                    {a.due_time && !a.done && <> · {t('app.dueAt', { time: a.due_time.slice(0, 5) })}</>}
+                  </span>
                   {askStore && (
                     <select
                       aria-label={t('common.store')}
