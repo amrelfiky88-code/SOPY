@@ -162,6 +162,15 @@ const planFullMessage = (what, room, role) =>
       ? 'You can add more from Profile & billing once setup is finished.'
       : 'Change your plan in Profile & billing to add more.');
 
+// A store's time zone (IANA name, e.g. Asia/Dubai): checklist reminders
+// go out on its clock. Must be one Postgres knows, since reminders.js
+// does the time zone maths in SQL.
+async function validTimeZone(tz) {
+  if (typeof tz !== 'string' || !tz || tz.length > 64) return false;
+  const { rows } = await query('SELECT 1 FROM pg_timezone_names WHERE name = $1', [tz]);
+  return !!rows[0];
+}
+
 tenantsRouter.post('/branches', requireAuth, requireRole('business_owner', 'operations_manager'), async (req, res) => {
   const { address, city, timezone } = req.body;
   const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
@@ -169,6 +178,9 @@ tenantsRouter.post('/branches', requireAuth, requireRole('business_owner', 'oper
   if (name.length > 120) return res.status(400).json({ error: 'That store name is too long' });
   if ((typeof city === 'string' && city.trim().length > 120) || (typeof address === 'string' && address.length > 300)) {
     return res.status(400).json({ error: 'That text is too long' });
+  }
+  if (timezone !== undefined && timezone !== null && timezone !== '' && !(await validTimeZone(timezone))) {
+    return res.status(400).json({ error: 'Choose a valid time zone' });
   }
   const room = await planRoom(req.auth.tenantId, 'branches');
   if (room.full) return res.status(409).json({ error: planFullMessage('store', room, req.auth.role) });
@@ -178,6 +190,36 @@ tenantsRouter.post('/branches', requireAuth, requireRole('business_owner', 'oper
     [req.auth.tenantId, name, address || null, typeof city === 'string' ? city.trim() || null : null, timezone || 'UTC']
   );
   res.status(201).json({ branch: rows[0] });
+});
+
+// Rename a store, change its city or its time zone.
+tenantsRouter.patch('/branches/:id', requireAuth, requireRole('business_owner', 'operations_manager'), async (req, res) => {
+  const { name, city, timezone } = req.body;
+  const fields = [];
+  const values = [];
+  let i = 1;
+  if (name !== undefined) {
+    if (typeof name !== 'string' || !name.trim()) return res.status(400).json({ error: 'Branch name is required' });
+    if (name.trim().length > 120) return res.status(400).json({ error: 'That store name is too long' });
+    fields.push(`name = $${i++}`); values.push(name.trim());
+  }
+  if (city !== undefined) {
+    if (city !== null && typeof city !== 'string') return res.status(400).json({ error: 'Enter your details as text' });
+    if (typeof city === 'string' && city.trim().length > 120) return res.status(400).json({ error: 'That text is too long' });
+    fields.push(`city = $${i++}`); values.push(typeof city === 'string' ? city.trim() || null : null);
+  }
+  if (timezone !== undefined) {
+    if (!(await validTimeZone(timezone))) return res.status(400).json({ error: 'Choose a valid time zone' });
+    fields.push(`timezone = $${i++}`); values.push(timezone);
+  }
+  if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
+  values.push(req.params.id, req.auth.tenantId);
+  const { rows } = await query(
+    `UPDATE branches SET ${fields.join(', ')} WHERE id = $${i} AND tenant_id = $${i + 1} AND is_active RETURNING *`,
+    values
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Not found' });
+  res.json({ branch: rows[0] });
 });
 
 tenantsRouter.delete('/branches/:id', requireAuth, requireRole('business_owner', 'operations_manager'), async (req, res) => {

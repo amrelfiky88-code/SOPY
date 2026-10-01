@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { api, getToken, setToken } from '../api.js';
 import { useI18n } from '../i18n/index.jsx';
+import { forgetPushOnSignOut } from '../lib/push.js';
 
 const AuthContext = createContext(null);
 
@@ -50,6 +51,7 @@ export function AuthProvider({ children }) {
   useEffect(() => { refresh(); }, [refresh]);
 
   const logout = useCallback(() => {
+    forgetPushOnSignOut(getToken());
     setToken(null);
     setUser(null);
     setTenant(null);

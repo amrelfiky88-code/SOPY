@@ -2,6 +2,8 @@ import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resetTestDb, closeDb } from '../test-utils/db.js';
 import { startTestServer, completeSetup } from '../test-utils/server.js';
+import webpush from 'web-push';
+import { setPushSender } from '../src/push.js';
 
 // Every endpoint, sent the wrong shapes of data (numbers where text goes,
 // lists, objects, null, very long strings, broken ids). A mistake by the
@@ -21,7 +23,7 @@ const FIELDS = [
   'pagePath', 'branchCount', 'userCount', 'businessType', 'onboardingStep', 'language', 'phone',
   'currentPassword', 'newPassword', 'inviteToken', 'restaurantName', 'country', 'referralCode',
   'dueTime', 'text', 'description', 'standard', 'isCritical', 'fileName', 'timezone', 'q', 'from',
-  'to', 'before', 'limit', 'period', 'branches', 'users', 'critical', 'group', 'body', 'notifyIncidents', 'notifyReminders',
+  'to', 'before', 'limit', 'period', 'branches', 'users', 'critical', 'group', 'body', 'notifyIncidents', 'notifyReminders', 'endpoint', 'keys',
 ];
 const BAD = [null, 12345, -1, 1.5, true, [], ['x'], {}, { $gt: '' }, 'x'.repeat(5000), "' OR 1=1 --", '../../etc/passwd', '', 'NaN'];
 
@@ -48,6 +50,8 @@ const ROUTES = [
   ['GET', '/api/inbox/threads/:bad'], ['GET', '/api/inbox/threads/:thread'], ['POST', '/api/inbox/threads/:bad/messages'],
   ['POST', '/api/inbox/threads/:thread/messages'], ['POST', '/api/inbox/threads/:bad/read'], ['GET', '/api/notifications'],
   ['POST', '/api/notifications/read-all'], ['POST', '/api/notifications/:bad/read'],
+  ['GET', '/api/push/config'], ['POST', '/api/push/subscribe'], ['POST', '/api/push/unsubscribe'],
+  ['PATCH', '/api/tenants/branches/:bad'], ['PATCH', '/api/tenants/branches/:branch'],
 ];
 // A valid body for each write endpoint. The deep pass below swaps one of
 // its fields at a time for a wrong shape, so the bad value gets past the
@@ -71,6 +75,9 @@ const VALID = {
   'PATCH /api/tenants/users/:user': () => ({ role: 'employee', status: 'active', branchIds: [ids.branch], title: 'Chef' }),
   'POST /api/tenants/branches': () => ({ name: 'S', address: 'a', city: 'c', timezone: 'UTC' }),
   'POST /api/checklists/library/run': () => ({ group: 'SOP 1: Opening', branchId: ids.branch }),
+  'POST /api/push/subscribe': () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/abc', keys: { p256dh: 'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA', auth: 'tBHItJI5svbpez7KI4CCXg' } }),
+  'POST /api/push/unsubscribe': () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/abc' }),
+  'PATCH /api/tenants/branches/:branch': () => ({ name: 'Main', city: 'Cairo', timezone: 'Africa/Cairo' }),
   'POST /api/inbox/threads': () => ({ userId: ids.user }),
   'POST /api/inbox/threads/:thread/messages': () => ({ body: 'Hello' }),
   'POST /api/tenants/users/invite': () => ({ fullName: 'I', email: `deep${++deepInvites}@example.com`, role: 'employee', branchIds: [ids.branch], title: 'Chef' }),
@@ -100,6 +107,10 @@ async function call(method, path, { body, query, raw } = {}) {
 
 before(async () => {
   // Paymob on, with its API stubbed, so its routes run past the set-up check.
+  // Phone notifications on too, with a fake push service.
+  const vapid = webpush.generateVAPIDKeys();
+  Object.assign(process.env, { VAPID_PUBLIC_KEY: vapid.publicKey, VAPID_PRIVATE_KEY: vapid.privateKey });
+  setPushSender(async () => {});
   Object.assign(process.env, { PAYMOB_SECRET_KEY: 'sk', PAYMOB_PUBLIC_KEY: 'pk', PAYMOB_INTEGRATION_IDS: '1', PAYMOB_HMAC_SECRET: 'h', PAYMOB_EGP_PER_USD: '50' });
   realFetch = globalThis.fetch;
   let n = 0;
@@ -137,6 +148,7 @@ before(async () => {
 
 after(async () => {
   globalThis.fetch = realFetch;
+  for (const k of ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY']) delete process.env[k];
   for (const k of ['PAYMOB_SECRET_KEY', 'PAYMOB_PUBLIC_KEY', 'PAYMOB_INTEGRATION_IDS', 'PAYMOB_HMAC_SECRET', 'PAYMOB_EGP_PER_USD']) delete process.env[k];
   await close();
   await closeDb();
@@ -148,7 +160,7 @@ test('no endpoint crashes on malformed input', async () => {
   for (const [method, pattern] of ROUTES) {
     const paths = pattern.includes(':bad')
       ? (FULL ? BAD_IDS : BAD_IDS.slice(0, 3)).map((b) => pattern.replace(':bad', encodeURIComponent(b)))
-      : [pattern.replace(':template', ids.template).replace(':submission', ids.submission).replace(':done', ids.done).replace(':user', ids.user).replace(':thread', ids.thread)];
+      : [pattern.replace(':template', ids.template).replace(':submission', ids.submission).replace(':done', ids.done).replace(':user', ids.user).replace(':thread', ids.thread).replace(':branch', ids.branch)];
     for (const path of paths) {
       const label = `${method} ${path.slice(0, 80)}`;
       if (method === 'GET' || method === 'DELETE') {

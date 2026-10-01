@@ -1,6 +1,7 @@
 import { query } from './db.js';
 import { ALL_STORE_ROLES } from './assignments.js';
 import { planEnded } from './auth/plan.js';
+import { pushToUsers } from './push.js';
 
 // Checklist reminders. An assignment with a due time ("Due by" in the
 // Checklist Builder) reminds each person it applies to REMINDER_MINUTES
@@ -67,20 +68,22 @@ export async function sendDueReminders(at = new Date()) {
   for (const r of rows) {
     if (!ended.has(r.tenant_id)) ended.set(r.tenant_id, await planEnded(r.tenant_id));
     if (ended.get(r.tenant_id)) continue;
+    const data = {
+      assignmentId: r.assignment_id,
+      dueDate: r.due_ymd,
+      dueTime: r.due_hm,
+      templateName: r.template_name,
+      kind: r.kind,
+      branchName: r.branch_name,
+      started: r.started,
+    };
     const { rowCount } = await query(
       `INSERT INTO notifications (tenant_id, user_id, kind, data)
        VALUES ($1, $2, 'checklist_due', $3)
        ON CONFLICT (user_id, (data->>'assignmentId'), (data->>'dueDate')) WHERE kind = 'checklist_due' DO NOTHING`,
-      [r.tenant_id, r.user_id, {
-        assignmentId: r.assignment_id,
-        dueDate: r.due_ymd,
-        dueTime: r.due_hm,
-        templateName: r.template_name,
-        kind: r.kind,
-        branchName: r.branch_name,
-        started: r.started,
-      }]
+      [r.tenant_id, r.user_id, data]
     );
+    if (rowCount) pushToUsers([r.user_id], 'checklist_due', data, { url: '/app/dashboard', tag: `due-${r.assignment_id}` });
     sent += rowCount;
   }
   return sent;

@@ -1,5 +1,6 @@
 import { query, withTransaction } from './db.js';
 import { ALL_STORE_ROLES } from './assignments.js';
+import { pushToUsers } from './push.js';
 
 // Who acts on a store's problems: owners and operations managers (every
 // store), plus the area and store managers assigned to that store. The same
@@ -44,6 +45,8 @@ async function reportSummary(client, submissionId) {
 // own managers know it's in. Never throws: a report is already submitted
 // by the time this runs, and a failure here mustn't turn that into an error.
 export async function onReportSubmitted(submissionId, { temperatureIssues = 0 } = {}) {
+  // Phone pushes go out once the transaction has committed.
+  let push = null;
   try {
     await withTransaction(async (client) => {
       const r = await reportSummary(client, submissionId);
@@ -76,6 +79,7 @@ export async function onReportSubmitted(submissionId, { temperatureIssues = 0 } 
             [r.tenant_id, id, data, r.id]
           );
         }
+        push = () => pushToUsers(rows.map((x) => x.id), 'report_submitted', data, { url: `/app/reports/${r.id}`, tag: `report-${r.id}` });
         return;
       }
 
@@ -103,7 +107,9 @@ export async function onReportSubmitted(submissionId, { temperatureIssues = 0 } 
           [r.tenant_id, id, data, r.id, threadId]
         );
       }
+      push = () => pushToUsers(alerted, 'incident', data, { url: `/app/inbox/${threadId}`, tag: `thread-${threadId}` });
     });
+    push?.();
   } catch (err) {
     console.error('Could not post the report to the inbox:', err);
   }
@@ -113,12 +119,15 @@ export async function onReportSubmitted(submissionId, { temperatureIssues = 0 } 
 export async function notifyReferralCredit(tenantId, amount, refereeTenantId) {
   try {
     const { rows } = await query('SELECT restaurant_name FROM tenants WHERE id = $1', [refereeTenantId]);
-    await query(
+    const data = { amount: Number(amount), restaurantName: rows[0]?.restaurant_name || '' };
+    const { rows: owners } = await query(
       `INSERT INTO notifications (tenant_id, user_id, kind, data)
        SELECT $1, u.id, 'referral_credit', $2 FROM users u
-       WHERE u.tenant_id = $1 AND u.role = 'business_owner' AND u.status = 'active'`,
-      [tenantId, { amount: Number(amount), restaurantName: rows[0]?.restaurant_name || '' }]
+       WHERE u.tenant_id = $1 AND u.role = 'business_owner' AND u.status = 'active'
+       RETURNING user_id`,
+      [tenantId, data]
     );
+    pushToUsers(owners.map((o) => o.user_id), 'referral_credit', data, { url: '/app/account' });
   } catch (err) {
     console.error('Could not post the referral notification:', err);
   }
