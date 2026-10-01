@@ -319,3 +319,78 @@ export const BriefcaseIcon = (props) => (
     <line x1="3" y1="14" x2="21" y2="14" />
   </Base>
 );
+
+// --- Mobile app (design handoff "SOPY App") ---------------------------
+
+export const BellIcon = (props) => (
+  <Base {...props}>
+    <polygon points="12,3 16.5,5.5 17.5,10 17.5,15 20,18 4,18 6.5,15 6.5,10 7.5,5.5" />
+    <line x1="10" y1="21" x2="14" y2="21" />
+  </Base>
+);
+
+// Paper plane. Points toward the reading end, so it flips in Arabic.
+export const SendIcon = (props) => (
+  <Base {...props} className={`icon-flip ${props.className || ''}`}>
+    <polygon points="3,11 21,3 13,21 11,13" />
+  </Base>
+);
+
+// Chevrons that follow reading direction ("back" points right in Arabic).
+export const ChevronStartIcon = (props) => (
+  <Base strokeWidth="1.8" {...props} className={`icon-flip ${props.className || ''}`}>
+    <polyline points="15,5 8,12 15,19" />
+  </Base>
+);
+
+export const ChevronEndIcon = (props) => (
+  <Base strokeWidth="1.8" {...props} className={`icon-flip ${props.className || ''}`}>
+    <polyline points="9,5 16,12 9,19" />
+  </Base>
+);
+
+export const ChevronDownIcon = (props) => (
+  <Base strokeWidth="1.8" {...props}>
+    <polyline points="6,9 12,15 18,9" />
+  </Base>
+);
+
+export const LockIcon = (props) => (
+  <Base {...props}>
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <polyline points="8,11 8,7.5 12,4.5 16,7.5 16,11" />
+  </Base>
+);
+
+export const PlusIcon = (props) => (
+  <Base strokeWidth="1.8" {...props}>
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </Base>
+);
+
+export const MinusIcon = (props) => (
+  <Base strokeWidth="1.8" {...props}>
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </Base>
+);
+
+export const CheckIcon = (props) => (
+  <Base strokeWidth="1.8" {...props}>
+    <polyline points="5,12.5 10,17 19,7" />
+  </Base>
+);
+
+export const XIcon = (props) => (
+  <Base strokeWidth="1.8" {...props}>
+    <line x1="6" y1="6" x2="18" y2="18" />
+    <line x1="18" y1="6" x2="6" y2="18" />
+  </Base>
+);
+
+export const ClockIcon = (props) => (
+  <Base {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <polyline points="12,7 12,12 15.5,14" />
+  </Base>
+);

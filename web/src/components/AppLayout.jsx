@@ -3,10 +3,10 @@ import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-route
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useT } from '../i18n/index.jsx';
 import FeedbackButton from './FeedbackButton.jsx';
+import { InboxBadgeProvider, useInboxBadges } from './inboxBadges.jsx';
 import SetupInProgress from '../pages/onboarding/SetupInProgress.jsx';
 import Logo from './Logo.jsx';
 import {
-  MenuIcon,
   FileTextIcon,
   GridIcon,
   BarChartIcon,
@@ -21,6 +21,10 @@ import {
   MapPinIcon,
   BriefcaseIcon,
   UserIcon,
+  LayersIcon,
+  MessageIcon,
+  BellIcon,
+  ChevronStartIcon,
 } from './icons.jsx';
 
 // Roles allowed to run the signup funnel (the server enforces the same).
@@ -77,32 +81,85 @@ export default function AppLayout() {
   const seesKpi = !!user && user.role !== 'employee';
 
   return (
-    <div className="layout">
-      <div className="mobile-topbar">
-        <button
-          type="button"
-          className="hamburger-btn"
-          onClick={() => setSidebarOpen(true)}
-          aria-label={t('nav.openMenu')}
-          aria-expanded={sidebarOpen}
-        >
-          <MenuIcon size={22} strokeWidth="2" />
-        </button>
-        <span className="brand"><Logo size={28} theme="reverse" /></span>
-      </div>
+    <InboxBadgeProvider>
+      <AppShell
+        user={user}
+        tenant={tenant}
+        t={t}
+        canManage={canManage}
+        seesKpi={seesKpi}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        onLogout={handleLogout}
+      />
+    </InboxBadgeProvider>
+  );
+}
+
+// The five tabs on a phone (the design handoff's "Today, Library, Reports,
+// Inbox, Profile"). The web's Kitchen and Bar tabs are shortcuts on Today.
+const TABS = [
+  { to: '/app/dashboard', label: 'app.tabToday', icon: GridIcon },
+  { to: '/app/library', label: 'app.tabLibrary', icon: LayersIcon },
+  { to: '/app/reports', label: 'tab.reports', icon: FileTextIcon },
+  { to: '/app/inbox', label: 'app.tabInbox', icon: MessageIcon, badge: 'messages' },
+  { to: '/app/account', label: 'app.tabProfile', icon: UserIcon },
+];
+const TAB_PATHS = TABS.map((tab) => tab.to);
+
+// Where "back" goes from a page opened by address rather than from
+// inside the app (a shared link, a reload), when there's no history.
+function parentOf(pathname) {
+  if (pathname.startsWith('/app/library/')) return '/app/library';
+  if (pathname.startsWith('/app/inbox/')) return '/app/inbox';
+  if (pathname.startsWith('/app/reports/')) return '/app/reports';
+  if (pathname === '/app/team' || pathname === '/app/checklists') return '/app/account';
+  return '/app/dashboard';
+}
+
+function AppShell({ user, tenant, t, canManage, seesKpi, sidebarOpen, setSidebarOpen, onLogout }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { unreadMessages } = useInboxBadges();
+  const onTab = TAB_PATHS.includes(location.pathname);
+  // Pages with their own full-height layout (thread, checklist run) draw
+  // their own header and action bar.
+  const ownChrome = /^\/app\/(inbox\/[^/]+|checklists\/run\/)/.test(location.pathname);
+
+  const goBack = () => {
+    if ((window.history.state?.idx ?? 0) > 0) navigate(-1);
+    else navigate(parentOf(location.pathname));
+  };
+
+  return (
+    <div className={`layout${onTab ? ' on-tab' : ' on-subpage'}`}>
+      {!onTab && !ownChrome && (
+        <div className="back-bar">
+          <button type="button" className="back-btn" onClick={goBack} aria-label={t('page.back')}>
+            <ChevronStartIcon size={24} />
+          </button>
+        </div>
+      )}
 
       <div className={`sidebar-backdrop ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} />
 
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <span className="brand"><Logo size={28} theme="reverse" /></span>
         <nav>
-          <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}><GridIcon size={18} /> {t('nav.dashboard')}</NavLink>
+          <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}><GridIcon size={18} /> {t('app.tabToday')}</NavLink>
+          <NavLink to="/app/library" className={({ isActive }) => (isActive ? 'active' : '')}><LayersIcon size={18} /> {t('app.tabLibrary')}</NavLink>
+          <NavLink to="/app/reports" className={({ isActive }) => (isActive ? 'active' : '')}><FileTextIcon size={18} /> {t('nav.reports')}</NavLink>
+          <NavLink to="/app/inbox" className={({ isActive }) => (isActive ? 'active' : '')}>
+            <MessageIcon size={18} /> <span className="nav-label">{t('app.tabInbox')}</span>
+            {unreadMessages > 0 && <span className="count-badge">{unreadMessages}</span>}
+          </NavLink>
+          <NavLink to="/app/notifications" className={({ isActive }) => (isActive ? 'active' : '')}><BellIcon size={18} /> {t('app.notifications')}</NavLink>
           {seesKpi && <NavLink to="/app/kpi" className={({ isActive }) => (isActive ? 'active' : '')}><BarChartIcon size={18} /> {t('nav.kpi')}</NavLink>}
+          <div className="sidebar-divider" />
           <NavLink to="/app/forms/kitchen" className={({ isActive }) => (isActive ? 'active' : '')}><StoveIcon size={18} /> {t('nav.kitchen')}</NavLink>
           <NavLink to="/app/forms/bar" className={({ isActive }) => (isActive ? 'active' : '')}><CoffeeIcon size={18} /> {t('nav.bar')}</NavLink>
           <NavLink to="/app/forms/opening" className={({ isActive }) => (isActive ? 'active' : '')}><DoorOpenIcon size={18} /> {t('nav.opening')}</NavLink>
           <NavLink to="/app/forms/closing" className={({ isActive }) => (isActive ? 'active' : '')}><DoorClosedIcon size={18} /> {t('nav.closing')}</NavLink>
-          <NavLink to="/app/reports" className={({ isActive }) => (isActive ? 'active' : '')}><FileTextIcon size={18} /> {t('nav.reports')}</NavLink>
           {/* Staff have no manager links; one divider, not two around nothing. */}
           {canManage && <div className="sidebar-divider" />}
           {canManage && <NavLink to="/app/checklists" className={({ isActive }) => (isActive ? 'active' : '')}><ClipboardCheckIcon size={18} /> {t('nav.builder')}</NavLink>}
@@ -113,15 +170,15 @@ export default function AppLayout() {
           <div className="sidebar-divider" />
           <NavLink to="/app/account" className={({ isActive }) => (isActive ? 'active' : '')}><UserIcon size={18} /> {t('nav.account')}</NavLink>
           <FeedbackButton onOpen={() => setSidebarOpen(false)} />
-          <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}><LogOutIcon size={18} /> {t('nav.logout')}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onLogout(); }}><LogOutIcon size={18} /> {t('nav.logout')}</a>
         </nav>
       </div>
       <div className="main">
-        <div style={{ marginBottom: 20, color: 'var(--ink-soft)', fontSize: 14 }}>
+        <div className="main-who">
           {user?.fullName} · <span className="pill pill-green">{t(`role.${user?.role}`)}</span>
         </div>
         {tenant?.plan_ended && (
-          <div className="error-banner" role="status">
+          <div className="error-banner plan-ended-banner" role="status">
             {t('plan.ended')}{' '}
             {user?.role === 'business_owner'
               ? <NavLink to="/app/account" className="link-btn">{t('plan.resubscribe')}</NavLink>
@@ -131,32 +188,19 @@ export default function AppLayout() {
         <Outlet />
       </div>
 
-      <nav className="mobile-tabbar">
-        <NavLink to="/app/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
-          <GridIcon size={20} />
-          {t('tab.home')}
-        </NavLink>
-        <NavLink to="/app/forms/kitchen" className={({ isActive }) => (isActive ? 'active' : '')}>
-          <StoveIcon size={20} />
-          {t('tab.kitchen')}
-        </NavLink>
-        <NavLink to="/app/forms/bar" className={({ isActive }) => (isActive ? 'active' : '')}>
-          <CoffeeIcon size={20} />
-          {t('tab.bar')}
-        </NavLink>
-        {seesKpi ? (
-          <NavLink to="/app/kpi" className={({ isActive }) => (isActive ? 'active' : '')}>
-            <BarChartIcon size={20} />
-            {t('tab.kpi')}
-          </NavLink>
-        ) : (
-          <NavLink to="/app/reports" className={({ isActive }) => (isActive ? 'active' : '')}>
-            <FileTextIcon size={20} />
-            {t('tab.reports')}
-          </NavLink>
-        )}
-      </nav>
+      {onTab && (
+        <nav className="mobile-tabbar" aria-label={t('app.tabs')}>
+          {TABS.map(({ to, label, icon: Icon, badge }) => (
+            <NavLink key={to} to={to} className={({ isActive }) => (isActive ? 'active' : '')}>
+              <span className="tab-icon">
+                <Icon size={22} />
+                {badge === 'messages' && unreadMessages > 0 && <span className="count-badge tab-badge">{unreadMessages > 99 ? '99+' : unreadMessages}</span>}
+              </span>
+              {t(label)}
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }
-

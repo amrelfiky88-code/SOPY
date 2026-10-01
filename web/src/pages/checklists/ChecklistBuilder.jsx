@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../../api.js';
 import { ROLES, roleName } from '../onboarding/roles.js';
 import { ClipboardEmptyIcon } from '../../components/icons.jsx';
@@ -11,15 +12,18 @@ const FREQUENCIES = ['daily', 'weekly', 'monthly', 'quarterly'];
 
 export default function ChecklistBuilder() {
   const t = useT();
+  // "Add to checklist" on a Library SOP opens the Builder with that SOP's
+  // checkpoints already picked and named.
+  const preset = useLocation().state?.preset;
   const [items, setItems] = useState([]);
   const [q, setQ] = useState('');
-  const [standard, setStandard] = useState('');
+  const [standard, setStandard] = useState(preset?.standard || '');
   const [criticalOnly, setCriticalOnly] = useState(false);
-  const [selected, setSelected] = useState([]);
+  const [selected, setSelected] = useState(preset?.itemIds || []);
   const [expanded, setExpanded] = useState(new Set());
   const [templates, setTemplates] = useState([]);
-  const [templateName, setTemplateName] = useState('');
-  const [frequency, setFrequency] = useState('daily');
+  const [templateName, setTemplateName] = useState(preset?.name || '');
+  const [frequency, setFrequency] = useState(preset?.frequency || 'daily');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [assignError, setAssignError] = useState('');
