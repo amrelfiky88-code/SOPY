@@ -215,3 +215,14 @@ test('a score lists its sections in the checklist’s own order', async () => {
   assert.equal(names.length, 5);
   assert.deepEqual(names, [...names].sort(), JSON.stringify(names));
 });
+
+test('Library checklist names come in the reader’s language', async () => {
+  const ar = await api('GET', '/api/checklists/library/groups?lang=ar', { token: emp.token });
+  assert.equal(ar.status, 200);
+  assert.ok(ar.body.names['SOP 1: Opening'], 'keyed by the English name');
+  assert.notEqual(ar.body.names['SOP 1: Opening'], 'SOP 1: Opening');
+  assert.match(ar.body.names['SOP 1: Opening'], /[؀-ۿ]/);
+  const en = await api('GET', '/api/checklists/library/groups', { token: emp.token });
+  assert.equal(en.body.names['Daily QC'], 'Daily QC');
+  assert.equal(en.body.names.HACCP, undefined, 'starter sets aren’t named groups');
+});

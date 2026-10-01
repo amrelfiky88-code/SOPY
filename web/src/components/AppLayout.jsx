@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext.jsx';
 import { useT } from '../i18n/index.jsx';
 import FeedbackButton from './FeedbackButton.jsx';
 import { InboxBadgeProvider, useInboxBadges } from './inboxBadges.jsx';
+import { useLibraryNames } from '../lib/groupNames.js';
 import SetupInProgress from '../pages/onboarding/SetupInProgress.jsx';
 import Logo from './Logo.jsx';
 import {
@@ -118,6 +119,7 @@ function parentOf(pathname) {
 }
 
 function AppShell({ user, tenant, t, canManage, seesKpi, sidebarOpen, setSidebarOpen, onLogout }) {
+  useLibraryNames();
   const location = useLocation();
   const navigate = useNavigate();
   const { unreadMessages } = useInboxBadges();
