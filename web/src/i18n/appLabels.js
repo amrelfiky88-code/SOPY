@@ -23,6 +23,13 @@ const ROWS = [
   ['app.closing', 'Closing', 'الإغلاق', 'Fermeture'],
   ['app.visitReports', 'Visit reports', 'تقارير الزيارات', 'Rapports de visite'],
 
+  // --- Welcome (sample cards) ----------------------------------------
+  ['welcome.sampleReport', 'Daily QC Checklist', 'قائمة فحص الجودة اليومية', 'Check-list QC quotidienne'],
+  ['welcome.green', 'Green', 'أخضر', 'Vert'],
+  ['welcome.sampleCompliant', '101 of 104 checkpoints compliant', '101 من 104 بنود فحص مطابقة', '101 points de contrôle conformes sur 104'],
+  ['welcome.photoCaptured', 'Photo evidence captured', 'تم التقاط صورة الإثبات', 'Photo de preuve prise'],
+  ['welcome.photoMeta', 'Walk-in chiller · 3.2 °C · 07:42', 'غرفة التبريد · 3.2 °م · 07:42', 'Chambre froide · 3,2 °C · 07:42'],
+
   // --- Library --------------------------------------------------------
   ['library.intro', 'SOPs and QC checkpoints your team runs.', 'إجراءات التشغيل وبنود فحص الجودة التي ينفذها فريقك.', 'Les procédures et points de contrôle qualité de votre équipe.'],
   ['library.search', 'Search procedures and checkpoints', 'ابحث في الإجراءات وبنود الفحص', 'Rechercher procédures et points de contrôle'],
