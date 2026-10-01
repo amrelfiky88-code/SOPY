@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useT } from '../i18n/index.jsx';
-import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
-import { ShieldIcon, GraduationCapIcon, CopyIcon, DoorOpenIcon, TrendingUpIcon, LayersIcon } from '../components/icons.jsx';
+import { useI18n } from '../i18n/index.jsx';
+import { LANGUAGES } from '../../../shared/languages.js';
+import { ShieldIcon, GraduationCapIcon, CopyIcon, DoorOpenIcon, TrendingUpIcon, LayersIcon, CameraIcon, CheckCircleIcon } from '../components/icons.jsx';
 import Logo from '../components/Logo.jsx';
 
 // Wording lives in i18n/pageLabels.js as landing.why1…why6.
@@ -14,63 +14,80 @@ const WHY_SOPS = [
   { icon: TrendingUpIcon, tone: 'green' },
   { icon: LayersIcon, tone: 'amber' },
 ];
+const SHORT = { en: 'EN', ar: 'ع', fr: 'FR' };
 
+// Welcome: the brand's dark Forest page (marketing, so the Signal accent
+// is allowed here). A sample score card and photo-evidence card show what
+// SOPY does; the pitch, the six reasons, then Get started / Log in, which
+// stay at the bottom of the screen on a phone.
 export default function Landing() {
-  const t = useT();
+  const { t, lang, setLang } = useI18n();
   return (
-    <div>
-      <div className="top-bar">
-        <span className="brand"><Logo size={28} /></span>
-        <div className="top-bar-actions">
-          <LanguageSwitcher />
-          <Link to="/login" className="btn btn-secondary btn-small">{t('landing.login')}</Link>
+    <div className="welcome">
+      <div className="welcome-scroll">
+        <div className="welcome-top">
+          <Logo size={30} theme="reverse" />
+          <div className="welcome-langs" role="radiogroup" aria-label={t('page.languageLabel')}>
+            {LANGUAGES.map((l) => (
+              <button key={l.code} type="button" role="radio" aria-checked={lang === l.code} aria-label={l.nativeLabel} lang={l.code}
+                className={lang === l.code ? 'active' : ''} onClick={() => setLang(l.code)}>
+                {SHORT[l.code] || l.code.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="welcome-hero">
+          <div className="welcome-cards" aria-hidden="true">
+            <div className="welcome-score">
+              <div className="welcome-score-head">
+                <span>{t('welcome.sampleReport')}</span>
+                <span className="pill pill-green">{t('welcome.green')}</span>
+              </div>
+              <div className="welcome-score-value">97%</div>
+              <div className="welcome-score-sub">{t('welcome.sampleCompliant')}</div>
+            </div>
+            <div className="welcome-photo">
+              <span className="icon-circle icon-circle-green"><CameraIcon size={16} /></span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{t('welcome.photoCaptured')}</div>
+                <div className="mono" style={{ fontSize: 12, color: 'var(--ink-soft)' }}>{t('welcome.photoMeta')}</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="welcome-kicker">{t('landing.kicker')}</div>
+            <h1 className="welcome-title">{t('landing.tagline')}</h1>
+            <p className="welcome-sub">{t('landing.headline')}</p>
+            <div className="welcome-pitch">
+              {['pitch1', 'pitch2', 'pitch3'].map((k) => (
+                <div key={k}><CheckCircleIcon size={16} /><span>{t(`landing.${k}`)}</span></div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="welcome-why">
+          <h2>{t('landing.whyTitle')}</h2>
+          <p>{t('landing.whyIntro')}</p>
+          <div className="welcome-why-cards">
+            {WHY_SOPS.map((item, i) => (
+              <div className="welcome-why-card" key={i}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className={`icon-circle icon-circle-${item.tone}`}><item.icon size={16} /></span>
+                  <strong>{t(`landing.why${i + 1}.title`)}</strong>
+                </div>
+                <div className="welcome-why-body">{t(`landing.why${i + 1}.body`)}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="screen" style={{ paddingTop: 64 }}>
-        <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--green)' }}>
-          {t('landing.kicker')}
-        </p>
-        <h1 style={{ fontSize: 36, lineHeight: 1.15, maxWidth: 580 }}>
-          {t('landing.headline')}
-        </h1>
-        {/* The brand line from the guidelines' cover. */}
-        <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-serif)', fontSize: 22, lineHeight: 1.3, color: 'var(--ink)', maxWidth: 580 }}>
-          {t('landing.tagline')}
-        </p>
-
-        <div className="card" style={{ marginTop: 24 }}>
-          <p style={{ margin: '0 0 10px' }}>{t('landing.pitch1')}</p>
-          <p style={{ margin: '0 0 10px' }}>{t('landing.pitch2')}</p>
-          <p style={{ margin: 0 }}>{t('landing.pitch3')}</p>
-        </div>
-
-        <Link to="/get-started" className="btn btn-primary cta-btn" style={{ marginTop: 12 }}>
-          {t('landing.getStarted')}
-        </Link>
-
-        <h2 style={{ marginTop: 64 }}>{t('landing.whyTitle')}</h2>
-        <p style={{ maxWidth: 560 }}>{t('landing.whyIntro')}</p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginTop: 8 }}>
-          {WHY_SOPS.map((item, i) => (
-            <div className="card" key={i} style={{ marginBottom: 0 }}>
-              {/* Icon beside the title, so a title that wraps lines up with
-                  itself instead of running back under the icon. */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div className={`icon-circle icon-circle-${item.tone}`} style={{ flexShrink: 0 }}>
-                  <item.icon size={18} />
-                </div>
-                <strong>{t(`landing.why${i + 1}.title`)}</strong>
-              </div>
-              <p style={{ margin: '6px 0 0' }}>{t(`landing.why${i + 1}.body`)}</p>
-            </div>
-          ))}
-        </div>
-
-        <Link to="/get-started" className="btn btn-primary cta-btn" style={{ marginTop: 24 }}>
-          {t('landing.getStarted')}
-        </Link>
+      <div className="welcome-actions">
+        <Link to="/get-started" className="btn welcome-start">{t('landing.getStarted')}</Link>
+        <Link to="/login" className="btn welcome-login">{t('landing.login')}</Link>
       </div>
     </div>
   );

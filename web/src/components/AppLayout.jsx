@@ -124,7 +124,7 @@ function AppShell({ user, tenant, t, canManage, seesKpi, sidebarOpen, setSidebar
   const onTab = TAB_PATHS.includes(location.pathname);
   // Pages with their own full-height layout (thread, checklist run) draw
   // their own header and action bar.
-  const ownChrome = /^\/app\/(inbox\/[^/]+|checklists\/run\/)/.test(location.pathname);
+  const ownChrome = /^\/app\/inbox\/[^/]+/.test(location.pathname);
 
   const goBack = () => {
     if ((window.history.state?.idx ?? 0) > 0) navigate(-1);

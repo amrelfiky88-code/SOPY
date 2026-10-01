@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, getToken } from '../../api.js';
 import CameraCapture from '../../components/CameraCapture.jsx';
 import ReportLink from '../../components/ReportLink.jsx';
-import { CameraIcon } from '../../components/icons.jsx';
+import { CameraIcon, CheckIcon, XIcon, ThermometerIcon, AlertTriangleIcon } from '../../components/icons.jsx';
+import { librarySection } from '../../../../shared/libraryGroups.js';
 import { useT } from '../../i18n/index.jsx';
 
 // Decided from the English category (category_en when the server has
@@ -176,13 +177,15 @@ export default function ChecklistRun() {
   // the library flags requires_photo — a checkpoint isn't "answered"
   // until a photo has been captured for it. An empty checklist would pass
   // this vacuously, so it's handled separately below.
-  const allAnswered = items.length > 0 && items.every((item) => {
+  const isAnswered = (item) => {
     const r = responses[item.id];
     if (!r?.hasPhoto) return false;
     if (isObservationItem(item)) return !!r?.valueText?.trim();
     if (r.isCompliant === undefined) return false;
     return true;
-  });
+  };
+  const answeredCount = items.filter(isAnswered).length;
+  const allAnswered = items.length > 0 && answeredCount === items.length;
 
   const handleSubmit = async () => {
     setError('');
@@ -248,16 +251,28 @@ export default function ChecklistRun() {
           </button>
         </div>
       ) : (
-        <button type="button" className="btn btn-secondary btn-small" onClick={() => setActiveCameraItem(item.id)}>
-          <CameraIcon size={14} /> {t('run.openCamera')}
+        <button type="button" className="camera-btn" onClick={() => setActiveCameraItem(item.id)}>
+          <CameraIcon size={16} /> {t('run.openCamera')}
         </button>
       )}
     </div>
   );
 
+  // A checklist made from the Library carries the group's English name;
+  // show it in the reader's language, from its translated sections.
+  const firstCategory = items[0]?.category || '';
+  const title = template.library_group && firstCategory.includes(' — ') ? firstCategory.split(' — ')[0] : template.name;
+  let lastSection = null;
+
   return (
     <div className="has-sticky-actions">
-      <h2>{template.name}</h2>
+      <div className="run-head">
+        <h2>{title}</h2>
+        <div className="run-progress">
+          <div className="run-progress-bar"><div style={{ width: `${items.length ? (answeredCount / items.length) * 100 : 0}%` }} /></div>
+          <span className="hint" style={{ margin: 0, fontVariantNumeric: 'tabular-nums' }}>{answeredCount}/{items.length}</span>
+        </div>
+      </div>
       {error && <div className="error-banner">{error}</div>}
 
       {items.length === 0 && (
@@ -269,20 +284,34 @@ export default function ChecklistRun() {
         </div>
       )}
 
-      {items.map((item) => {
+      {items.map((item, index) => {
         const r = responses[item.id] || {};
         const observation = isObservationItem(item);
+        const answered = isAnswered(item);
+        const section = librarySection(item);
+        const showSection = section && section !== lastSection;
+        lastSection = section;
 
         return (
-          <div className="card" key={item.id}>
-            <p style={{ margin: '0 0 10px', color: 'var(--ink)' }}>
-              {item.text}{' '}
-              {item.is_critical && <span className="pill pill-red">{t('run.critical')}</span>}
-            </p>
-            {item.description && <p className="hint" style={{ marginTop: -6 }}>{item.description}</p>}
+          <React.Fragment key={item.id}>
+          {showSection && <div className="section-label" style={{ margin: '16px 2px 8px' }}>{section}</div>}
+          <div className={`card run-item${r.isCompliant === false ? ' is-fail' : ''}`}>
+            <div className="run-item-head">
+              <span className={`num-dot${answered ? ' done' : ''}`}>{answered ? <CheckIcon size={14} /> : index + 1}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="run-item-text">{item.text}</div>
+                {(item.is_critical || observation) && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                    {item.is_critical && <span className="pill pill-red">{t('run.critical')}</span>}
+                  </div>
+                )}
+                {item.description && <p className="hint" style={{ margin: '6px 0 0' }}>{item.description}</p>}
+              </div>
+            </div>
 
+            <div className="run-item-body">
             {observation ? (
-              <div className="field">
+              <div className="field" style={{ marginBottom: 0 }}>
                 <textarea
                   rows={2}
                   placeholder={t('run.finding')}
@@ -294,51 +323,55 @@ export default function ChecklistRun() {
               </div>
             ) : (
               <>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <div className="answer-row">
                   <button
                     type="button"
-                    className={`btn btn-small ${r.isCompliant === true ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`answer-btn${r.isCompliant === true ? ' yes' : ''}`}
                     aria-pressed={r.isCompliant === true}
                     onClick={() => saveAnswer(item.id, true)}
                   >
-                    {t('run.compliant')}
+                    <CheckIcon size={16} />{t('run.compliant')}
                   </button>
                   <button
                     type="button"
-                    className={`btn btn-small ${r.isCompliant === false ? 'btn-danger' : 'btn-secondary'}`}
+                    className={`answer-btn${r.isCompliant === false ? ' no' : ''}`}
                     aria-pressed={r.isCompliant === false}
-                    style={r.isCompliant === false ? { background: 'var(--red)', color: 'white' } : undefined}
                     onClick={() => saveAnswer(item.id, false)}
                   >
-                    {t('run.notCompliant')}
+                    <XIcon size={16} />{t('run.notCompliant')}
                   </button>
                 </div>
 
                 {item.is_critical && r.isCompliant === false && (
-                  <div className="error-banner" style={{ marginBottom: 10 }}>
-                    {t('run.criticalWarning')}
+                  <div className="error-banner" style={{ margin: '10px 0 0', display: 'flex', gap: 8 }}>
+                    <AlertTriangleIcon size={16} style={{ flexShrink: 0, marginTop: 2 }} />{t('run.criticalWarning')}
                   </div>
                 )}
 
                 {isTemperatureItem(item) && (
-                  <div className="field" style={{ maxWidth: 160 }}>
+                  <div className="field reading-field">
                     <label htmlFor={`reading-${item.id}`}>{t('run.reading')}</label>
-                    <input
-                      id={`reading-${item.id}`}
-                      type="number"
-                      className="mono"
-                      inputMode="decimal"
-                      value={r.valueText || ''}
-                      onChange={(e) => editText(item.id, e.target.value)}
-                      onBlur={() => saveTextResponse(item).catch(() => {})}
-                    />
+                    <div className="reading-box">
+                      <ThermometerIcon size={16} />
+                      <input
+                        id={`reading-${item.id}`}
+                        type="number"
+                        className="mono"
+                        inputMode="decimal"
+                        value={r.valueText || ''}
+                        onChange={(e) => editText(item.id, e.target.value)}
+                        onBlur={() => saveTextResponse(item).catch(() => {})}
+                      />
+                    </div>
                   </div>
                 )}
 
                 {renderPhotoControl(item, r)}
               </>
             )}
+            </div>
           </div>
+          </React.Fragment>
         );
       })}
 
@@ -360,43 +393,36 @@ function Scorecard({ scorecard, submissionId, onDone }) {
     <div>
       <h2>{t('run.scoreSummary')}</h2>
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-          <div>
-            <div style={{ fontSize: 32, fontWeight: 700 }}>
-              {scorecard.percentage !== null ? `${scorecard.percentage}%` : '—'}
-            </div>
-            <div className="hint">{t('report.checkpointsCompliant', { n: scorecard.totalCompliant, total: scorecard.totalScored })}</div>
-          </div>
-          {/* Nothing yes/no to score (observation points only): no Red badge. */}
-          {scorecard.totalScored > 0 && (
-            <span className={`pill ${RAG_PILL_CLASS[scorecard.ragStatus]}`} style={{ fontSize: 14, padding: '6px 14px' }}>
-              {t(`report.rag.${scorecard.ragStatus}`)}
-            </span>
-          )}
-        </div>
+        <div className="score-value">{scorecard.percentage !== null ? `${scorecard.percentage}%` : '—'}</div>
+        <div className="hint" style={{ marginTop: 6 }}>{t('report.checkpointsCompliant', { n: scorecard.totalCompliant, total: scorecard.totalScored })}</div>
+        {/* Nothing yes/no to score (observation points only): no Red badge. */}
+        {scorecard.totalScored > 0 && (
+          <div className={`rag-banner rag-${scorecard.ragStatus}`}>{t(`report.rag.${scorecard.ragStatus}`)}</div>
+        )}
         {scorecard.criticalFails > 0 && (
-          <div className="error-banner">
-            {t('report.criticalFails', { n: scorecard.criticalFails })} — {t('run.flagged')}
+          <div className="error-banner" style={{ margin: '10px 0 0', display: 'flex', gap: 8 }}>
+            <AlertTriangleIcon size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+            <span>{t('report.criticalFails', { n: scorecard.criticalFails })} — {t('run.flagged')}</span>
           </div>
         )}
       </div>
 
       <div className="card">
-        <h3 style={{ marginBottom: 12 }}>{t('report.sections')}</h3>
-        <div className="table-scroll">
-          <table>
-            <thead><tr><th>{t('run.colSection')}</th><th>{t('report.score')}</th><th>{t('run.colCritical')}</th></tr></thead>
-            <tbody>
-              {scorecard.sections.map((s) => (
-                <tr key={s.category}>
-                  <td>{s.category}</td>
-                  <td>{s.total ? `${s.compliant} / ${s.total} (${s.percentage}%)` : '—'}</td>
-                  <td>{s.criticalFails || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <h3 style={{ marginBottom: 4 }}>{t('report.sections')}</h3>
+        {scorecard.sections.map((s) => (
+          <div key={s.category} className="section-score">
+            <div className="section-score-row">
+              <span>{s.category}</span>
+              <span className="hint" style={{ margin: 0, whiteSpace: 'nowrap' }}>
+                {s.total ? `${s.compliant}/${s.total} · ${s.percentage}%` : '—'}
+                {s.criticalFails ? ` · ${t('run.colCritical')}: ${s.criticalFails}` : ''}
+              </span>
+            </div>
+            {s.total > 0 && (
+              <div className="section-bar"><div className={`rag-fill-${s.criticalFails ? 'red' : s.percentage >= 95 ? 'green' : s.percentage >= 85 ? 'amber' : 'red'}`} style={{ width: `${s.percentage}%` }} /></div>
+            )}
+          </div>
+        ))}
       </div>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
