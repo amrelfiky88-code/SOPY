@@ -5,11 +5,12 @@ import ar from './ar.js';
 import fr from './fr.js';
 import { FORM_LABELS } from './formLabels.js';
 import { PAGE_LABELS } from './pageLabels.js';
+import { APP_LABELS } from './appLabels.js';
 
 const DICTIONARIES = {
-  en: { ...en, ...FORM_LABELS.en, ...PAGE_LABELS.en },
-  ar: { ...ar, ...FORM_LABELS.ar, ...PAGE_LABELS.ar },
-  fr: { ...fr, ...FORM_LABELS.fr, ...PAGE_LABELS.fr },
+  en: { ...en, ...FORM_LABELS.en, ...PAGE_LABELS.en, ...APP_LABELS.en },
+  ar: { ...ar, ...FORM_LABELS.ar, ...PAGE_LABELS.ar, ...APP_LABELS.ar },
+  fr: { ...fr, ...FORM_LABELS.fr, ...PAGE_LABELS.fr, ...APP_LABELS.fr },
 };
 const STORAGE_KEY = 'sopy_lang';
 

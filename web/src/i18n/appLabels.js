@@ -1,0 +1,100 @@
+// Wording for the phone app layout (Claude Design handoff "SOPY App"): the
+// tabs, Today, Library, Inbox and Notifications. Written [key, en, ar, fr]
+// side by side like pageLabels.js and merged in i18n/index.jsx. Where the
+// design's own Arabic and French existed for the same English, it's used.
+
+const ROWS = [
+  // --- Tabs and shell -------------------------------------------------
+  ['app.tabs', 'Main sections', 'الأقسام الرئيسية', 'Sections principales'],
+  ['app.tabToday', 'Today', 'اليوم', "Aujourd'hui"],
+  ['app.tabLibrary', 'Library', 'المكتبة', 'Bibliothèque'],
+  ['app.tabInbox', 'Inbox', 'الوارد', 'Messages'],
+  ['app.tabProfile', 'Profile', 'الملف الشخصي', 'Profil'],
+  ['app.notifications', 'Notifications', 'الإشعارات', 'Notifications'],
+  ['app.notificationsUnread', 'Notifications, {n} unread', 'الإشعارات، {n} غير مقروءة', 'Notifications, {n} non lues'],
+
+  // --- Today ----------------------------------------------------------
+  ['app.goodMorning', 'Good morning, {name}', 'صباح الخير يا {name}', 'Bonjour, {name}'],
+  ['app.goodAfternoon', 'Good afternoon, {name}', 'مساء الخير يا {name}', 'Bon après-midi, {name}'],
+  ['app.goodEvening', 'Good evening, {name}', 'مساء الخير يا {name}', 'Bonsoir, {name}'],
+  ['app.checklistsDone', '{done} of {total} checklists done', 'أُنجزت {done} من {total} قوائم فحص', '{done} check-lists sur {total} terminées'],
+  ['app.dailyReports', 'Daily reports', 'التقارير اليومية', 'Rapports quotidiens'],
+  ['app.opening', 'Opening', 'الافتتاح', 'Ouverture'],
+  ['app.closing', 'Closing', 'الإغلاق', 'Fermeture'],
+  ['app.visitReports', 'Visit reports', 'تقارير الزيارات', 'Rapports de visite'],
+
+  // --- Library --------------------------------------------------------
+  ['library.intro', 'SOPs and QC checkpoints your team runs.', 'إجراءات التشغيل وبنود فحص الجودة التي ينفذها فريقك.', 'Les procédures et points de contrôle qualité de votre équipe.'],
+  ['library.search', 'Search procedures and checkpoints', 'ابحث في الإجراءات وبنود الفحص', 'Rechercher procédures et points de contrôle'],
+  ['library.filter.all', 'All', 'الكل', 'Tout'],
+  ['library.filter.qc', 'QC audits', 'تدقيقات الجودة', 'Audits qualité'],
+  ['library.filter.sop', 'SOPs', 'الإجراءات', 'Procédures'],
+  ['library.filter.health', 'Health code', 'اللائحة الصحية', 'Code sanitaire'],
+  ['library.filter.starter', 'Starter sets', 'مجموعات البداية', 'Ensembles de départ'],
+  ['library.filter.cstore', 'C-Store', 'المتجر الصغير', 'Supérette'],
+  ['library.filter.custom', 'Your own', 'الخاصة بك', 'Les vôtres'],
+  ['library.count', '{groups} procedures · {items} checkpoints', '{groups} إجراءً · {items} بند فحص', '{groups} procédures · {items} points de contrôle'],
+  ['library.checkpoints', '{n} checkpoints', '{n} بند فحص', '{n} points de contrôle'],
+  ['library.criticalCount', '{n} critical', '{n} حرج', '{n} critiques'],
+  ['library.none', 'No procedures match your search.', 'لا توجد إجراءات تطابق بحثك.', 'Aucune procédure ne correspond à votre recherche.'],
+  ['library.notFound', "This procedure isn't in the library.", 'هذا الإجراء غير موجود في المكتبة.', "Cette procédure n'est pas dans la bibliothèque."],
+  ['library.researched', 'Researched', 'من البحث', 'Issu de recherches'],
+  ['library.statCheckpoints', 'Checkpoints', 'البنود', 'Points de contrôle'],
+  ['library.statCritical', 'Critical', 'حرجة', 'Critiques'],
+  ['library.statFrequency', 'Frequency', 'التكرار', 'Fréquence'],
+  ['library.critical', 'Critical', 'حرج', 'Critique'],
+  ['library.photoRequired', 'Photo required', 'صورة مطلوبة', 'Photo requise'],
+  ['library.sourceClient', "From your own procedures manual. Critical marks follow your manual's ⚠ items.", 'من دليل الإجراءات الخاص بك. علامات البنود الحرجة تتبع البنود المعلَّمة بـ ⚠ في دليلك.', 'Tiré de votre propre manuel de procédures. Les points critiques suivent les ⚠ de votre manuel.'],
+  ['library.sourceResearched', 'Researched from public sources (such as the FDA Food Code) as a starting point. Review it against your local rules before relying on it.', 'مُعدّ من مصادر عامة (مثل قانون الأغذية الأمريكي FDA) كنقطة بداية. راجعه وفق لوائحك المحلية قبل الاعتماد عليه.', "Issu de sources publiques (comme le FDA Food Code), comme point de départ. Vérifiez-le par rapport à votre réglementation locale avant de vous y fier."],
+  ['library.sourceCustom', "Checkpoints your business added.", 'بنود فحص أضافتها منشأتك.', 'Points de contrôle ajoutés par votre entreprise.'],
+  ['library.addToChecklist', 'Add to checklist', 'إضافة إلى قائمة الفحص', 'Ajouter à la check-list'],
+  ['library.runNow', 'Run now', 'تنفيذ الآن', 'Lancer maintenant'],
+
+  // --- Reports --------------------------------------------------------
+  ['reports.search', 'Search by report, store or person', 'ابحث بالتقرير أو الفرع أو الشخص', 'Rechercher par rapport, établissement ou personne'],
+  ['reports.noMatch', 'No reports match.', 'لا توجد تقارير مطابقة.', 'Aucun rapport ne correspond.'],
+  ['reports.filter.all', 'All', 'الكل', 'Tout'],
+  ['reports.filter.incidents', 'Incidents', 'الحوادث', 'Incidents'],
+  ['reports.filter.checklists', 'Checklists', 'قوائم الفحص', 'Check-lists'],
+  ['reports.filter.daily', 'Daily reports', 'التقارير اليومية', 'Rapports quotidiens'],
+  ['reports.filter.visits', 'Visits', 'الزيارات', 'Visites'],
+
+  // --- Inbox ----------------------------------------------------------
+  ['inbox.intro', 'Incidents open a thread with the managers who need to act.', 'تفتح كل حادثة محادثة مع المديرين المعنيين بالتصرف.', 'Chaque incident ouvre une conversation avec les managers qui doivent agir.'],
+  ['inbox.newMessage', 'New message', 'رسالة جديدة', 'Nouveau message'],
+  ['inbox.noPeople', 'No one else is on the team yet.', 'لا يوجد أحد آخر في الفريق بعد.', "Personne d'autre dans l'équipe pour l'instant."],
+  ['inbox.empty', 'No messages yet. Incidents and conversations with your team show up here.', 'لا توجد رسائل بعد. تظهر هنا الحوادث والمحادثات مع فريقك.', 'Aucun message pour le moment. Les incidents et les conversations avec votre équipe apparaissent ici.'],
+  ['inbox.notFound', "This conversation can't be opened. It may not include you.", 'تعذّر فتح هذه المحادثة. قد لا تكون من أعضائها.', "Impossible d'ouvrir cette conversation. Vous n'en faites peut-être pas partie."],
+  ['inbox.incidentTitle', 'Incident · {report}', 'حادثة · {report}', 'Incident · {report}'],
+  ['inbox.members', '{store} · {n} members', '{store} · {n} أعضاء', '{store} · {n} membres'],
+  ['inbox.incidentAt', '{report} at {store}.', '{report} في {store}.', '{report} à {store}.'],
+  ['inbox.criticalFailed', '{n} critical checkpoint(s) failed. This report is flagged as an incident.', 'لم يتحقق {n} من البنود الحرجة. تم تصنيف هذا التقرير كحادثة.', "{n} point(s) de contrôle critique(s) non conforme(s). Ce rapport est signalé comme incident."],
+  ['inbox.tempsOut', '{n} temperature reading(s) out of the safe range. This report is flagged as an incident.', '{n} من قراءات الحرارة خارج النطاق الآمن. تم تصنيف هذا التقرير كحادثة.', '{n} relevé(s) de température hors de la plage sûre. Ce rapport est signalé comme incident.'],
+  ['inbox.flagged', 'This report is flagged as an incident.', 'تم تصنيف هذا التقرير كحادثة.', 'Ce rapport est signalé comme incident.'],
+  ['inbox.filedBy', 'Filed by {name}.', 'قدّمه {name}.', 'Déposé par {name}.'],
+  ['inbox.notifiedCount', '{n} manager(s) notified.', 'تم إبلاغ {n} من المديرين.', '{n} manager(s) prévenu(s).'],
+  ['inbox.you', 'You: {text}', 'أنت: {text}', 'Vous : {text}'],
+  ['inbox.formerMember', 'Former team member', 'عضو سابق في الفريق', "Ancien membre de l'équipe"],
+  ['inbox.yesterday', 'Yesterday', 'أمس', 'Hier'],
+  ['inbox.message', 'Message', 'رسالة', 'Message'],
+  ['inbox.send', 'Send', 'إرسال', 'Envoyer'],
+
+  // --- Notifications --------------------------------------------------
+  ['notif.markAll', 'Mark all read', 'تعليم الكل كمقروء', 'Tout marquer comme lu'],
+  ['notif.today', 'Today', 'اليوم', "Aujourd'hui"],
+  ['notif.earlier', 'Earlier', 'سابقًا', 'Plus tôt'],
+  ['notif.empty', "You're all caught up.", 'لا جديد لديك.', 'Vous êtes à jour.'],
+  ['notif.unread', 'Unread', 'غير مقروء', 'Non lu'],
+  ['notif.criticalTitle', 'Critical fail flagged', 'رُصد إخفاق حرج', 'Échec critique signalé'],
+  ['notif.incidentTitle', 'Incident flagged', 'رُصدت حادثة', 'Incident signalé'],
+  ['notif.submittedTitle', '{report} submitted', 'تم تقديم {report}', '{report} envoyé'],
+  ['notif.referralTitle', 'Referral credit earned', 'حصلت على رصيد إحالة', 'Crédit de parrainage obtenu'],
+  ['notif.referralBody', '{name} made its first payment. {amount} comes off your next SOPY payment.', 'سدّد {name} أول دفعة. سيُخصم {amount} من دفعتك القادمة في SOPY.', '{name} a effectué son premier paiement. {amount} seront déduits de votre prochain paiement SOPY.'],
+];
+
+export const APP_LABELS = { en: {}, ar: {}, fr: {} };
+for (const [key, en, ar, fr] of ROWS) {
+  APP_LABELS.en[key] = en;
+  APP_LABELS.ar[key] = ar;
+  APP_LABELS.fr[key] = fr;
+}

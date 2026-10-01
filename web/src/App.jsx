@@ -28,6 +28,11 @@ import AcceptInvite from './pages/AcceptInvite.jsx';
 import ReportsList from './pages/reports/ReportsList.jsx';
 import ReportView from './pages/reports/ReportView.jsx';
 import SetupInProgress from './pages/onboarding/SetupInProgress.jsx';
+import Library from './pages/library/Library.jsx';
+import SopDetail from './pages/library/SopDetail.jsx';
+import Inbox from './pages/inbox/Inbox.jsx';
+import Thread from './pages/inbox/Thread.jsx';
+import Notifications from './pages/inbox/Notifications.jsx';
 import Logo from './components/Logo.jsx';
 
 function RequireAuth({ children }) {
@@ -137,6 +142,11 @@ export default function App() {
         <Route path="account" element={<Account />} />
         <Route path="reports" element={<ReportsList />} />
         <Route path="reports/:submissionId" element={<ReportView />} />
+        <Route path="library" element={<Library />} />
+        <Route path="library/:group" element={<SopDetail />} />
+        <Route path="inbox" element={<Inbox />} />
+        <Route path="inbox/:threadId" element={<Thread />} />
+        <Route path="notifications" element={<Notifications />} />
         {/* An unknown address inside the app showed an empty page. */}
         <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
       </Route>

@@ -11,6 +11,12 @@ import { useI18n } from '../../i18n/index.jsx';
 import { money, egp } from '../../i18n/pageLabels.js';
 import { paymobReturnParams } from '../../lib/paymentRegion.js';
 import JobTitleSelect from '../../components/JobTitleSelect.jsx';
+import PageHead from '../../components/PageHead.jsx';
+import FeedbackButton from '../../components/FeedbackButton.jsx';
+import { initials } from '../inbox/format.js';
+import { StorefrontIcon, ClipboardCheckIcon, BarChartIcon, LockIcon, MessageIcon, LogOutIcon, ChevronEndIcon, ChevronDownIcon } from '../../components/icons.jsx';
+
+const MANAGERS = ['business_owner', 'operations_manager', 'area_manager'];
 
 const STATUS_PILL = {
   active: 'pill-green',
@@ -31,16 +37,62 @@ const formatDate = (value, lang) =>
   value ? new Date(value).toLocaleDateString(lang || undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 
 export default function Account() {
-  const { user, tenant, setUser } = useAuth();
+  const { user, tenant, setUser, logout } = useAuth();
   const { t } = useI18n();
+  const navigate = useNavigate();
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const isManager = MANAGERS.includes(user?.role);
+
+  const signOut = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div>
-      <h2>{t('account.title')}</h2>
+      <PageHead title={t('app.tabProfile')} />
+      <div className="card profile-card">
+        <span className="avatar">{initials(user?.fullName)}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 20 }}>{user?.fullName}</div>
+          <div className="hint" style={{ margin: 0, overflowWrap: 'anywhere' }} dir="ltr">{user?.email}</div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+            <span className="pill pill-green">{t(`role.${user?.role}`)}</span>
+            <span className="pill"><bdi>{tenant?.restaurant_name}</bdi></span>
+          </div>
+        </div>
+      </div>
       <ProfileCard user={user} tenant={tenant} setUser={setUser} />
-      <PasswordCard />
+      <LanguageField user={user} setUser={setUser} />
       <SubscriptionCard user={user} tenant={tenant} />
       {user?.role === 'business_owner' && <ReferralCard />}
+
+      <div className="list-card" style={{ marginBottom: 16 }}>
+        {isManager && (
+          <Link to="/app/team" className="list-row settings-row"><StorefrontIcon size={20} /><span className="row-text">{t('nav.team')}</span><span className="row-chev"><ChevronEndIcon size={16} /></span></Link>
+        )}
+        {isManager && (
+          <Link to="/app/checklists" className="list-row settings-row"><ClipboardCheckIcon size={20} /><span className="row-text">{t('nav.builder')}</span><span className="row-chev"><ChevronEndIcon size={16} /></span></Link>
+        )}
+        {user?.role !== 'employee' && (
+          <Link to="/app/kpi" className="list-row settings-row"><BarChartIcon size={20} /><span className="row-text">{t('nav.kpi')}</span><span className="row-chev"><ChevronEndIcon size={16} /></span></Link>
+        )}
+        <button type="button" className="list-row settings-row" onClick={() => setPasswordOpen((o) => !o)} aria-expanded={passwordOpen}>
+          <LockIcon size={20} /><span className="row-text">{t('account.changePassword')}</span>
+          <span className="row-chev">{passwordOpen ? <ChevronDownIcon size={16} /> : <ChevronEndIcon size={16} />}</span>
+        </button>
+        {passwordOpen && <PasswordCard />}
+        <FeedbackButton
+          trigger={(open) => (
+            <button type="button" className="list-row settings-row" onClick={open}>
+              <MessageIcon size={20} /><span className="row-text">{t('feedback.button')}</span><span className="row-chev"><ChevronEndIcon size={16} /></span>
+            </button>
+          )}
+        />
+        <button type="button" className="list-row settings-row danger" onClick={signOut}>
+          <LogOutIcon size={20} /><span className="row-text">{t('nav.logout')}</span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -66,17 +118,17 @@ function LanguageField({ user, setUser }) {
   };
 
   return (
-    <div className="field">
-      <label htmlFor="acct-language">{t('account.language')}</label>
-      <select id="acct-language" value={lang} onChange={(e) => change(e.target.value)}>
+    <div className="card">
+      <h3 style={{ fontSize: 16, marginBottom: 4 }} id="acct-language">{t('account.language')}</h3>
+      <p className="hint" style={{ marginTop: 0, marginBottom: 10 }}>{t('account.languageNote')}</p>
+      <div className="segmented" role="radiogroup" aria-labelledby="acct-language">
         {LANGUAGES.map((l) => (
-          <option key={l.code} value={l.code}>
-            {l.nativeLabel}{l.nativeLabel !== l.label ? ` — ${l.label}` : ''}
-          </option>
+          <button key={l.code} type="button" role="radio" aria-checked={lang === l.code} className={lang === l.code ? 'active' : ''} onClick={() => lang !== l.code && change(l.code)} lang={l.code}>
+            {l.nativeLabel}
+          </button>
         ))}
-      </select>
-      <p className="hint">{t('account.languageNote')}</p>
-      {error && <div className="error-banner" style={{ marginTop: 8 }}>{error}</div>}
+      </div>
+      {error && <div className="error-banner" style={{ marginTop: 8, marginBottom: 0 }}>{error}</div>}
     </div>
   );
 }
@@ -110,8 +162,7 @@ function PasswordCard() {
   };
 
   return (
-    <form className="card" onSubmit={save}>
-      <h3 style={{ fontSize: 16, marginBottom: 12 }}>{t('account.password')}</h3>
+    <form onSubmit={save} style={{ padding: '4px 0 16px' }}>
       {error && <div className="error-banner">{error}</div>}
       {status === 'saved' && <div className="success-banner" role="status">{t('account.passwordChanged')}</div>}
       <div className="field">
@@ -173,8 +224,6 @@ function ProfileCard({ user, tenant, setUser }) {
         </div>
         <LabeledInput label={t('account.phone')} type="tel" value={form.phone} onChange={(v) => set('phone', v)} />
       </div>
-
-      <LanguageField user={user} setUser={setUser} />
 
       <div className="summary-row">
         <span>{t('account.email')}</span>

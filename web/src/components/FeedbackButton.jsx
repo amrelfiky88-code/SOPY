@@ -8,7 +8,9 @@ import { MessageIcon, CheckCircleIcon } from './icons.jsx';
 const CATEGORIES = ['bug', 'idea', 'other'];
 const MAX_LENGTH = 2000; // mirrors FEEDBACK_MAX_LENGTH in feedback.routes.js
 
-export default function FeedbackButton({ onOpen }) {
+// `trigger` draws a different opener (Profile's settings row); it's given
+// the function that opens the form.
+export default function FeedbackButton({ onOpen, trigger }) {
   const t = useT();
   const location = useLocation();
   const [open, setOpen] = useState(false);
@@ -54,9 +56,11 @@ export default function FeedbackButton({ onOpen }) {
 
   return (
     <>
-      <button type="button" className="nav-btn" onClick={openForm}>
-        <MessageIcon size={18} /> {t('feedback.button')}
-      </button>
+      {trigger ? trigger(openForm) : (
+        <button type="button" className="nav-btn" onClick={openForm}>
+          <MessageIcon size={18} /> {t('feedback.button')}
+        </button>
+      )}
 
       {/* Portalled to <body>: the button lives in the sidebar, which is
           CSS-transformed on mobile, and a transformed ancestor becomes the
