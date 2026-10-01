@@ -187,7 +187,10 @@ authRouter.get('/me', requireAuth, async (req, res) => {
 // carries a global unique index, so changing it is an account-recovery
 // flow rather than a profile edit.
 authRouter.patch('/me', requireAuth, async (req, res) => {
-  const { fullName, title, phone, language } = req.body;
+  const { fullName, title, phone, language, notifyIncidents, notifyReminders } = req.body;
+  if ([notifyIncidents, notifyReminders].some((v) => v !== undefined && typeof v !== 'boolean')) {
+    return res.status(400).json({ error: 'Choose on or off' });
+  }
   // Text only (title and phone may be cleared with null). An object was
   // saved as the name "[object Object]", and a list skipped the length limit.
   if (fullName !== undefined && typeof fullName !== 'string') return res.status(400).json({ error: 'Enter your details as text' });
@@ -209,6 +212,8 @@ authRouter.patch('/me', requireAuth, async (req, res) => {
   }
   if (title !== undefined) { fields.push(`title = $${i++}`); values.push(title?.trim() || null); }
   if (phone !== undefined) { fields.push(`phone = $${i++}`); values.push(phone?.trim() || null); }
+  if (notifyIncidents !== undefined) { fields.push(`notify_incidents = $${i++}`); values.push(notifyIncidents); }
+  if (notifyReminders !== undefined) { fields.push(`notify_reminders = $${i++}`); values.push(notifyReminders); }
 
   if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
 
@@ -266,5 +271,7 @@ function publicUser(u) {
     role: u.role,
     language: u.language || DEFAULT_LANGUAGE,
     status: u.status,
+    notifyIncidents: u.notify_incidents !== false,
+    notifyReminders: u.notify_reminders !== false,
   };
 }

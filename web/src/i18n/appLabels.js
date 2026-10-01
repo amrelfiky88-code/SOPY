@@ -86,6 +86,10 @@ const ROWS = [
   ['inbox.message', 'Message', 'رسالة', 'Message'],
   ['inbox.send', 'Send', 'إرسال', 'Envoyer'],
 
+  ['inbox.storeChat', '{store} team', 'فريق {store}', 'Équipe {store}'],
+  ['inbox.memberCount', '{n} members', '{n} أعضاء', '{n} membres'],
+  ['inbox.storeChatEmpty', 'Team chat for everyone at this store.', 'محادثة الفريق لكل العاملين في هذا الفرع.', "Discussion d'équipe pour tout l'établissement."],
+
   // --- Notifications --------------------------------------------------
   ['notif.markAll', 'Mark all read', 'تعليم الكل كمقروء', 'Tout marquer comme lu'],
   ['notif.today', 'Today', 'اليوم', "Aujourd'hui"],
@@ -95,6 +99,16 @@ const ROWS = [
   ['notif.criticalTitle', 'Critical fail flagged', 'رُصد إخفاق حرج', 'Échec critique signalé'],
   ['notif.incidentTitle', 'Incident flagged', 'رُصدت حادثة', 'Incident signalé'],
   ['notif.submittedTitle', '{report} submitted', 'تم تقديم {report}', '{report} envoyé'],
+  ['notif.dueTitle', '{report} due at {time}', '{report} مستحق الساعة {time}', '{report} à faire avant {time}'],
+  ['notif.dueNotStarted', 'Not started yet', 'لم يبدأ بعد', 'Pas encore commencé'],
+  ['notif.dueStarted', 'Started, not signed off yet', 'بدأ ولم يُعتمد بعد', 'Commencé, pas encore validé'],
+  ['prefs.incidents', 'Critical fails & incidents', 'الإخفاقات الحرجة والحوادث', 'Échecs critiques et incidents'],
+  ['prefs.incidentsHint', 'When a report at your store is flagged. You stay in its Inbox thread either way.', 'عند تصنيف تقرير في فرعك كحادثة. تبقى في محادثته في الوارد في كل الأحوال.', "Quand un rapport de votre établissement est signalé. Vous restez dans sa conversation dans tous les cas."],
+  ['prefs.reminders', 'Checklist reminders', 'تذكيرات قوائم الفحص', 'Rappels de check-lists'],
+  ['prefs.remindersHint', '30 minutes before a checklist is due, if it isn\'t done yet.', 'قبل 30 دقيقة من موعد قائمة الفحص إن لم تُنجز بعد.', "30 minutes avant l'heure limite d'une check-list, si elle n'est pas encore faite."],
+  ['builder.dueBy', 'Due by', 'موعد الإنجاز', 'À faire avant'],
+  ['builder.dueByHint', 'Optional. People get a reminder 30 minutes before, in the store\'s time zone.', 'اختياري. يصل تذكير قبل 30 دقيقة، بتوقيت الفرع.', "Facultatif. Un rappel est envoyé 30 minutes avant, à l'heure de l'établissement."],
+  ['app.dueAt', 'Due {time}', 'مستحق {time}', 'Avant {time}'],
   ['notif.referralTitle', 'Referral credit earned', 'حصلت على رصيد إحالة', 'Crédit de parrainage obtenu'],
   ['notif.referralBody', '{name} made its first payment. {amount} comes off your next SOPY payment.', 'سدّد {name} أول دفعة. سيُخصم {amount} من دفعتك القادمة في SOPY.', '{name} a effectué son premier paiement. {amount} seront déduits de votre prochain paiement SOPY.'],
 ];

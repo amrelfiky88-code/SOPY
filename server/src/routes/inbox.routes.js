@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
+import { ALL_STORE_ROLES } from '../assignments.js';
 
 // Inbox: incident threads (opened by inbox.js when a report with an
 // incident is submitted) and direct conversations between two people in
@@ -10,19 +11,35 @@ export const inboxRouter = Router();
 export const MESSAGE_MAX_LENGTH = 2000;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Unread: messages from someone else since the member last opened it.
+// Every query binds $1 tenant, $2 user, $3 role, $4 ALL_STORE_ROLES.
+const viewer = (req) => [req.auth.tenantId, req.auth.userId, req.auth.role, ALL_STORE_ROLES];
+
+// Unread: messages from someone else since the person last opened it.
 const UNREAD = `(SELECT count(*)::int FROM messages um
    WHERE um.thread_id = t.id AND um.sender_id IS DISTINCT FROM $2
      AND um.created_at > coalesce(me.last_read_at, '-infinity'::timestamptz))`;
 
-const THREAD_COLUMNS = `t.id, t.kind, t.submission_id, t.last_message_at, ${UNREAD} AS unread,
-  rt.name AS template_name, rt.kind AS report_kind, rb.name AS branch_name,
+// Who can see a thread. Incident and direct threads: their members.
+// A store's team chat: everyone linked to that open store, plus the
+// owners and operations managers — decided now, so it follows the team.
+const VISIBLE = `((t.kind <> 'store' AND me.user_id IS NOT NULL)
+  OR (t.kind = 'store' AND sb.is_active AND ($3::text = ANY($4::text[])
+      OR EXISTS (SELECT 1 FROM user_branches eu WHERE eu.user_id = $2 AND eu.branch_id = t.branch_id))))`;
+
+// The same rule for anyone (alias su): who's in a store chat.
+export const STORE_MEMBER = `su.tenant_id = t.tenant_id AND su.status = 'active'
+  AND (su.role::text = ANY($4::text[]) OR EXISTS (SELECT 1 FROM user_branches sub WHERE sub.user_id = su.id AND sub.branch_id = t.branch_id))`;
+
+const THREAD_COLUMNS = `t.id, t.kind, t.submission_id, t.branch_id, t.last_message_at, ${UNREAD} AS unread,
+  rt.name AS template_name, rt.kind AS report_kind, coalesce(rb.name, sb.name) AS branch_name,
   other.id AS other_id, other.full_name AS other_name, other.role AS other_role, other.title AS other_title,
-  (SELECT count(*)::int FROM message_thread_members mc WHERE mc.thread_id = t.id) AS member_count`;
+  CASE WHEN t.kind = 'store' THEN (SELECT count(*)::int FROM users su WHERE ${STORE_MEMBER})
+       ELSE (SELECT count(*)::int FROM message_thread_members mc WHERE mc.thread_id = t.id) END AS member_count`;
 
 const THREAD_JOINS = `
   FROM message_threads t
-  JOIN message_thread_members me ON me.thread_id = t.id AND me.user_id = $2
+  LEFT JOIN message_thread_members me ON me.thread_id = t.id AND me.user_id = $2
+  LEFT JOIN branches sb ON sb.id = t.branch_id
   LEFT JOIN checklist_submissions rs ON rs.id = t.submission_id
   LEFT JOIN checklist_templates rt ON rt.id = rs.template_id
   LEFT JOIN branches rb ON rb.id = rs.branch_id
@@ -32,6 +49,13 @@ const THREAD_JOINS = `
   ) other ON true`;
 
 inboxRouter.get('/threads', requireAuth, async (req, res) => {
+  // Each open store has its team chat; made here the first time it's needed.
+  await query(
+    `INSERT INTO message_threads (tenant_id, kind, branch_id)
+     SELECT $1, 'store', b.id FROM branches b WHERE b.tenant_id = $1 AND b.is_active
+     ON CONFLICT (branch_id) DO NOTHING`,
+    [req.auth.tenantId]
+  );
   const { rows } = await query(
     `SELECT ${THREAD_COLUMNS},
             last.kind AS last_kind, last.body AS last_body, last.data AS last_data,
@@ -41,10 +65,10 @@ inboxRouter.get('/threads', requireAuth, async (req, res) => {
        SELECT kind, body, data, sender_id, created_at FROM messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1
      ) last ON true
      LEFT JOIN users ls ON ls.id = last.sender_id
-     WHERE t.tenant_id = $1
-     ORDER BY t.last_message_at DESC
+     WHERE t.tenant_id = $1 AND ${VISIBLE}
+     ORDER BY (last.created_at IS NULL), t.last_message_at DESC
      LIMIT 100`,
-    [req.auth.tenantId, req.auth.userId]
+    viewer(req)
   );
   res.json({ threads: rows });
 });
@@ -54,10 +78,12 @@ inboxRouter.get('/summary', requireAuth, async (req, res) => {
   const { rows } = await query(
     `SELECT
        (SELECT coalesce(sum(${UNREAD}), 0)::int
-          FROM message_threads t JOIN message_thread_members me ON me.thread_id = t.id AND me.user_id = $2
-          WHERE t.tenant_id = $1) AS unread_messages,
+          FROM message_threads t
+          LEFT JOIN message_thread_members me ON me.thread_id = t.id AND me.user_id = $2
+          LEFT JOIN branches sb ON sb.id = t.branch_id
+          WHERE t.tenant_id = $1 AND ${VISIBLE}) AS unread_messages,
        (SELECT count(*)::int FROM notifications WHERE tenant_id = $1 AND user_id = $2 AND read_at IS NULL) AS unread_notifications`,
-    [req.auth.tenantId, req.auth.userId]
+    viewer(req)
   );
   res.json({ unreadMessages: rows[0].unread_messages, unreadNotifications: rows[0].unread_notifications });
 });
@@ -93,10 +119,19 @@ inboxRouter.post('/threads', requireAuth, async (req, res) => {
 
 async function memberThread(req, res) {
   if (!UUID_RE.test(req.params.id)) { res.status(404).json({ error: 'Not found' }); return null; }
-  const { rows } = await query(`SELECT ${THREAD_COLUMNS} ${THREAD_JOINS} WHERE t.id = $3 AND t.tenant_id = $1`,
-    [req.auth.tenantId, req.auth.userId, req.params.id]);
+  const { rows } = await query(`SELECT ${THREAD_COLUMNS} ${THREAD_JOINS} WHERE t.id = $5 AND t.tenant_id = $1 AND ${VISIBLE}`,
+    [...viewer(req), req.params.id]);
   if (!rows[0]) { res.status(404).json({ error: 'Not found' }); return null; }
   return rows[0];
+}
+
+// Store chats get a member row the first time someone reads or writes there.
+function markRead(client, threadId, userId, at) {
+  return client.query(
+    `INSERT INTO message_thread_members (thread_id, user_id, last_read_at) VALUES ($1, $2, $3)
+     ON CONFLICT (thread_id, user_id) DO UPDATE SET last_read_at = GREATEST(message_thread_members.last_read_at, EXCLUDED.last_read_at)`,
+    [threadId, userId, at]
+  );
 }
 
 inboxRouter.get('/threads/:id', requireAuth, async (req, res) => {
@@ -111,11 +146,17 @@ inboxRouter.get('/threads/:id', requireAuth, async (req, res) => {
      ) x ORDER BY created_at`,
     [thread.id]
   );
-  const { rows: members } = await query(
-    `SELECT u.id, u.full_name, u.role, u.title FROM message_thread_members mm JOIN users u ON u.id = mm.user_id
-     WHERE mm.thread_id = $1 ORDER BY u.full_name`,
-    [thread.id]
-  );
+  const { rows: members } = thread.kind === 'store'
+    ? await query(
+      `SELECT su.id, su.full_name, su.role, su.title FROM message_threads t JOIN users su ON ${STORE_MEMBER.replaceAll('$4', '$2')}
+       WHERE t.id = $1 ORDER BY su.full_name`,
+      [thread.id, ALL_STORE_ROLES]
+    )
+    : await query(
+      `SELECT u.id, u.full_name, u.role, u.title FROM message_thread_members mm JOIN users u ON u.id = mm.user_id
+       WHERE mm.thread_id = $1 ORDER BY u.full_name`,
+      [thread.id]
+    );
   res.json({ thread, messages, members });
 });
 
@@ -132,8 +173,7 @@ inboxRouter.post('/threads/:id/messages', requireAuth, async (req, res) => {
       [thread.id, req.auth.userId, text]
     );
     await client.query('UPDATE message_threads SET last_message_at = $2 WHERE id = $1', [thread.id, rows[0].created_at]);
-    await client.query('UPDATE message_thread_members SET last_read_at = $3 WHERE thread_id = $1 AND user_id = $2',
-      [thread.id, req.auth.userId, rows[0].created_at]);
+    await markRead(client, thread.id, req.auth.userId, rows[0].created_at);
     return rows[0];
   });
   res.status(201).json({ message });
@@ -142,8 +182,7 @@ inboxRouter.post('/threads/:id/messages', requireAuth, async (req, res) => {
 inboxRouter.post('/threads/:id/read', requireAuth, async (req, res) => {
   const thread = await memberThread(req, res);
   if (!thread) return;
-  await query('UPDATE message_thread_members SET last_read_at = now() WHERE thread_id = $1 AND user_id = $2',
-    [thread.id, req.auth.userId]);
+  await markRead({ query }, thread.id, req.auth.userId, new Date());
   res.status(204).end();
 });
 

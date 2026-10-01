@@ -288,6 +288,10 @@ checklistsRouter.post('/assignments', requireAuth, requireRole('business_owner',
   const { templateId, branchId, userId, role, dueTime } = req.body;
   if (!templateId) return res.status(400).json({ error: 'templateId is required' });
   if (role && !isValidRole(role)) return res.status(400).json({ error: 'Invalid role' });
+  // "Due by" is a time of day, like 09:30.
+  if (dueTime != null && dueTime !== '' && (typeof dueTime !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(dueTime))) {
+    return res.status(400).json({ error: 'Enter the due time as hours and minutes' });
+  }
   const { rows: owned } = await query(
     `SELECT
        EXISTS (SELECT 1 FROM checklist_templates WHERE id = $1 AND tenant_id = $4) AS template_ok,

@@ -8,13 +8,13 @@ const STORE_MANAGER_ROLES = ['area_manager', 'store_manager'];
 
 async function storeManagers(client, tenantId, branchId) {
   const { rows } = await client.query(
-    `SELECT DISTINCT u.id FROM users u
+    `SELECT DISTINCT u.id, u.notify_incidents FROM users u
      LEFT JOIN user_branches ub ON ub.user_id = u.id AND ub.branch_id = $2
      WHERE u.tenant_id = $1 AND u.status = 'active'
        AND (u.role::text = ANY($3::text[]) OR (u.role::text = ANY($4::text[]) AND ub.user_id IS NOT NULL))`,
     [tenantId, branchId, ALL_STORE_ROLES, STORE_MANAGER_ROLES]
   );
-  return rows.map((r) => r.id);
+  return rows;
 }
 
 async function reportSummary(client, submissionId) {
@@ -48,8 +48,11 @@ export async function onReportSubmitted(submissionId, { temperatureIssues = 0 } 
     await withTransaction(async (client) => {
       const r = await reportSummary(client, submissionId);
       if (!r) return;
-      const managers = await storeManagers(client, r.tenant_id, r.branch_id);
-      const others = managers.filter((id) => id !== r.submitted_by);
+      const managerRows = await storeManagers(client, r.tenant_id, r.branch_id);
+      const managers = managerRows.map((m) => m.id);
+      // Managers who turned incident alerts off in Profile are still in the
+      // thread; they just aren't sent a notification.
+      const alerted = managerRows.filter((m) => m.id !== r.submitted_by && m.notify_incidents).map((m) => m.id);
       const data = {
         templateName: r.template_name,
         kind: r.kind,
@@ -92,9 +95,9 @@ export async function onReportSubmitted(submissionId, { temperatureIssues = 0 } 
       }
       await client.query(
         `INSERT INTO messages (thread_id, sender_id, kind, data) VALUES ($1, NULL, 'incident', $2)`,
-        [threadId, { ...data, notified: others.length }]
+        [threadId, { ...data, notified: alerted.length }]
       );
-      for (const id of others) {
+      for (const id of alerted) {
         await client.query(
           `INSERT INTO notifications (tenant_id, user_id, kind, data, submission_id, thread_id) VALUES ($1, $2, 'incident', $3, $4, $5)`,
           [r.tenant_id, id, data, r.id, threadId]

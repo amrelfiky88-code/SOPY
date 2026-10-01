@@ -21,7 +21,7 @@ const FIELDS = [
   'pagePath', 'branchCount', 'userCount', 'businessType', 'onboardingStep', 'language', 'phone',
   'currentPassword', 'newPassword', 'inviteToken', 'restaurantName', 'country', 'referralCode',
   'dueTime', 'text', 'description', 'standard', 'isCritical', 'fileName', 'timezone', 'q', 'from',
-  'to', 'before', 'limit', 'period', 'branches', 'users', 'critical', 'group', 'body',
+  'to', 'before', 'limit', 'period', 'branches', 'users', 'critical', 'group', 'body', 'notifyIncidents', 'notifyReminders',
 ];
 const BAD = [null, 12345, -1, 1.5, true, [], ['x'], {}, { $gt: '' }, 'x'.repeat(5000), "' OR 1=1 --", '../../etc/passwd', '', 'NaN'];
 
@@ -54,7 +54,7 @@ const ROUTES = [
 // "missing fields" checks and into the code that uses it. (A store list
 // sent as text used to crash an invite this way.)
 const VALID = {
-  'PATCH /api/auth/me': () => ({ fullName: 'A', title: 'Chef', phone: '123', language: 'en' }),
+  'PATCH /api/auth/me': () => ({ fullName: 'A', title: 'Chef', phone: '123', language: 'en', notifyIncidents: true, notifyReminders: true }),
   'PATCH /api/billing/subscription/quantities': () => ({ branchCount: 50, userCount: 200 }),
   'POST /api/billing/checkout': () => ({ method: 'paymob' }),
   'POST /api/billing/paymob/webhook': () => ({ type: 'TRANSACTION', hmac: 'a'.repeat(128), obj: { id: 1, amount_cents: 100, currency: 'EGP', success: true, order: { id: 1, merchant_order_id: 'x' }, source_data: { pan: '1' } } }),

@@ -29,20 +29,32 @@ export function incidentMessage(t, data) {
 }
 
 export function threadTitle(t, thread) {
+  if (thread.kind === 'store') return t('inbox.storeChat', { store: thread.branch_name || '' });
   if (thread.kind === 'incident') return t('inbox.incidentTitle', { report: reportTitle(t, thread.report_kind, thread.template_name) });
   return thread.other_name || t('inbox.formerMember');
 }
 
 export function threadSub(t, thread) {
+  if (thread.kind === 'store') return t('inbox.memberCount', { n: thread.member_count });
   if (thread.kind === 'incident') return t('inbox.members', { store: thread.branch_name || '', n: thread.member_count });
   return thread.other_title || (thread.other_role ? t(`role.${thread.other_role}`) : '');
 }
 
+// The avatar text: initials of the person, of the store, or "!" for an incident.
+export function threadAvatar(thread) {
+  if (thread.kind === 'incident') return '!';
+  if (thread.kind === 'store') return initials(thread.branch_name);
+  return initials(thread.other_name);
+}
+
 export function lastPreview(t, thread, myId) {
-  if (!thread.last_kind) return '';
+  if (!thread.last_kind) return thread.kind === 'store' ? t('inbox.storeChatEmpty') : '';
   if (thread.last_kind === 'incident') return incidentReason(t, thread.last_data || {});
   const body = thread.last_body || '';
-  return thread.last_sender_id === myId ? t('inbox.you', { text: body }) : body;
+  if (thread.last_sender_id === myId) return t('inbox.you', { text: body });
+  // In a group, say who wrote it.
+  if (thread.kind !== 'direct' && thread.last_sender_name) return `${thread.last_sender_name.split(' ')[0]}: ${body}`;
+  return body;
 }
 
 export function notificationText(t, n) {
@@ -59,6 +71,12 @@ export function notificationText(t, n) {
         tone: 'green',
         title: t('notif.submittedTitle', { report: reportOf(t, d) }),
         body: `${d.submittedByName} · ${d.branchName}`,
+      };
+    case 'checklist_due':
+      return {
+        tone: 'amber',
+        title: t('notif.dueTitle', { report: reportOf(t, d), time: d.dueTime }),
+        body: `${d.branchName || t('common.allStores')} · ${t(d.started ? 'notif.dueStarted' : 'notif.dueNotStarted')}`,
       };
     case 'referral_credit':
       return {

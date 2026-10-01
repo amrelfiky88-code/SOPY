@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { createApp } from './app.js';
+import { startReminderJob } from './reminders.js';
 
 const app = createApp();
 const port = process.env.PORT || 4000;
@@ -12,3 +13,6 @@ const server = app.listen(port, () => console.log(`SOPY API listening on :${port
 // own idle timeout instead (headersTimeout must exceed keepAliveTimeout).
 server.keepAliveTimeout = 65_000;
 server.headersTimeout = 66_000;
+
+// Checklist reminders, checked once a minute (reminders.js).
+startReminderJob();
