@@ -16,9 +16,11 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const viewer = (req) => [req.auth.tenantId, req.auth.userId, req.auth.role, ALL_STORE_ROLES];
 
 // Unread: messages from someone else since the person last opened it.
+// Never opened: since they joined SOPY. A new hire added to a store used to
+// find the store chat's whole history counted as unread.
 const UNREAD = `(SELECT count(*)::int FROM messages um
    WHERE um.thread_id = t.id AND um.sender_id IS DISTINCT FROM $2
-     AND um.created_at > coalesce(me.last_read_at, '-infinity'::timestamptz))`;
+     AND um.created_at > coalesce(me.last_read_at, (SELECT uj.created_at FROM users uj WHERE uj.id = $2)))`;
 
 // Who can see a thread. Incident and direct threads: their members.
 // A store's team chat: everyone linked to that open store, plus the

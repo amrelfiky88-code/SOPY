@@ -164,3 +164,12 @@ test('no reminder once it’s done, or for someone who turned reminders off', as
   await sendDueReminders(at('2030-01-17T04:40:00Z'));
   assert.equal((await reminders(emp.token)).length, before, 'reminders off');
 });
+
+test('someone who joins a store later doesn’t find its whole chat history unread', async () => {
+  const newcomer = await inviteAndAccept('newcomer@example.com', 'employee', { branchIds: [downtown] });
+  assert.ok(await storeChat(newcomer.token, 'Downtown'));
+  assert.equal((await api('GET', '/api/inbox/summary', { token: newcomer.token })).body.unreadMessages, 0);
+  const chat = await storeChat(emp.token, 'Downtown');
+  await api('POST', `/api/inbox/threads/${chat.id}/messages`, { token: emp.token, body: { body: 'Welcome aboard' } });
+  assert.equal((await api('GET', '/api/inbox/summary', { token: newcomer.token })).body.unreadMessages, 1, 'new messages still count');
+});

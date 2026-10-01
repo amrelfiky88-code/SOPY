@@ -11,7 +11,7 @@ import { useI18n } from '../../i18n/index.jsx';
 import { money, egp } from '../../i18n/pageLabels.js';
 import { paymobReturnParams } from '../../lib/paymentRegion.js';
 import JobTitleSelect from '../../components/JobTitleSelect.jsx';
-import { pushState, enablePush, disablePush } from '../../lib/push.js';
+import { pushState, enablePush, disablePush, currentPushEndpoint } from '../../lib/push.js';
 import PageHead from '../../components/PageHead.jsx';
 import FeedbackButton from '../../components/FeedbackButton.jsx';
 import { initials } from '../inbox/format.js';
@@ -235,7 +235,7 @@ function PasswordCard() {
     setError('');
     setStatus('saving');
     try {
-      const { token } = await api.patch('/auth/password', { currentPassword: form.current, newPassword: form.next });
+      const { token } = await api.patch('/auth/password', { currentPassword: form.current, newPassword: form.next, keepPushEndpoint: await currentPushEndpoint() });
       setToken(token);
       setForm({ current: '', next: '', confirm: '' });
       setStatus('saved');

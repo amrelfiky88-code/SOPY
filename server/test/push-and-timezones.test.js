@@ -157,3 +157,22 @@ test('stores take a real time zone, which owners can change later', async () => 
   });
   assert.equal((await api('PATCH', `/api/tenants/branches/${downtown}`, { token: other.body.token, body: { timezone: 'UTC' } })).status, 404);
 });
+
+test('changing a password, a reset link or being disabled stops phone notifications on other devices', async () => {
+  const subs = async (userId) => (await pool.query('SELECT endpoint FROM push_subscriptions WHERE user_id = $1 ORDER BY endpoint', [userId])).rows.map((r) => r.endpoint);
+  for (const name of ['karim-phone', 'karim-tablet']) {
+    await api('POST', '/api/push/subscribe', { token: mgr.token, body: { endpoint: endpoint(name), keys } });
+  }
+  const changed = await api('PATCH', '/api/auth/password', { token: mgr.token, body: { currentPassword: 'Password123', newPassword: 'Password456', keepPushEndpoint: endpoint('karim-phone') } });
+  assert.equal(changed.status, 200, JSON.stringify(changed.body));
+  mgr.token = changed.body.token;
+  assert.deepEqual(await subs(mgr.userId), [endpoint('karim-phone')], 'only the device that changed it keeps them');
+
+  const reset = await api('POST', `/api/tenants/users/${mgr.userId}/reset-link`, { token: owner.token });
+  await api('POST', '/api/auth/accept-invite', { body: { inviteToken: reset.body.resetLink.split('token=')[1], password: 'Password789' } });
+  assert.deepEqual(await subs(mgr.userId), [], 'a reset signs out every device');
+
+  await api('POST', '/api/push/subscribe', { token: emp.token, body: { endpoint: endpoint('omar-2'), keys } });
+  await api('PATCH', `/api/tenants/users/${emp.userId}`, { token: owner.token, body: { status: 'disabled' } });
+  assert.deepEqual(await subs(emp.userId), []);
+});

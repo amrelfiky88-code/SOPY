@@ -362,7 +362,10 @@ async function computeScorecard(submission) {
        WHERE item_id = ci.id AND submission_id = $1
        ORDER BY created_at DESC LIMIT 1
      ) r ON true
-     WHERE ti.template_id = $2`,
+     WHERE ti.template_id = $2
+     -- Sections in the checklist's own order (first appearance); without
+     -- this they came back in whatever order Postgres found the rows.
+     ORDER BY ti.sort_order`,
     [submission.id, submission.template_id]
   );
 

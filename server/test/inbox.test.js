@@ -207,3 +207,11 @@ test('Library “Run now” starts a run of one SOP for anyone, at their own sto
   const weekly = (await api('GET', `/api/checklists/templates/${daily.body.submission.template_id}`, { token: owner.token })).body.template;
   assert.equal(weekly.frequency, 'weekly');
 });
+
+test('a score lists its sections in the checklist’s own order', async () => {
+  const run = await api('POST', '/api/checklists/library/run', { token: emp.token, body: { group: 'SOP 17: Allergen Awareness', branchId } });
+  const card = await api('GET', `/api/submissions/${run.body.submission.id}/scorecard`, { token: emp.token });
+  const names = card.body.sections.map((s) => s.category);
+  assert.equal(names.length, 5);
+  assert.deepEqual(names, [...names].sort(), JSON.stringify(names));
+});

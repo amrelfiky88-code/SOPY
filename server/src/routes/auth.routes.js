@@ -168,6 +168,9 @@ authRouter.post('/accept-invite', async (req, res) => {
     "UPDATE users SET password_hash = $1, status = 'active', invite_token = NULL, invite_expires_at = NULL, tokens_valid_after = $2, language = $3 WHERE id = $4",
     [passwordHash, new Date(), language, user.id]
   );
+  // A reset signs out every device; a lost phone mustn't keep getting
+  // this person's alerts either.
+  await query('DELETE FROM push_subscriptions WHERE user_id = $1', [user.id]);
   clearFailures(`login:${user.email}`);
 
   const token = signToken({ userId: user.id });
@@ -247,6 +250,10 @@ authRouter.patch('/password', requireAuth, async (req, res) => {
     'UPDATE users SET password_hash = $1, tokens_valid_after = $2 WHERE id = $3',
     [await bcrypt.hash(newPassword, 10), new Date(), req.auth.userId]
   );
+  // The other devices are signed out, so their phone notifications stop
+  // too. This device may name its own subscription to keep it.
+  const keep = typeof req.body.keepPushEndpoint === 'string' ? req.body.keepPushEndpoint : '';
+  await query('DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint <> $2', [req.auth.userId, keep]);
   res.json({ token: signToken({ userId: req.auth.userId }) });
 });
 
