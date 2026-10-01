@@ -181,10 +181,11 @@ test('the plan page cannot drop counts below what is already in use either', asy
   const lowUsers = await api('PATCH', '/api/tenants/current', { token: owner.token, body: { userCount: 1 } });
   assert.equal(lowUsers.status, 409);
 
-  // Raising is fine.
+  // Raising a paid plan here would add stores without billing for them;
+  // that goes through Profile & billing.
   const up = await api('PATCH', '/api/tenants/current', { token: owner.token, body: { branchCount: 5, userCount: 6 } });
-  assert.equal(up.status, 200);
-  assert.equal(up.body.tenant.branch_count, 5);
+  assert.equal(up.status, 409);
+  assert.match(up.body.error, /Profile & billing/);
 });
 
 // Evidence photos used to be world-readable at a guessable-shaped URL

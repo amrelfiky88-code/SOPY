@@ -221,3 +221,17 @@ test("a manager can change a team member's job title", async () => {
   const cleared = await api('PATCH', `/api/tenants/users/${A.emp.userId}`, { token: A.token, body: { title: '' } });
   assert.equal(cleared.body.user.title, null);
 });
+
+test('profile details must be text', async () => {
+  for (const body of [{ fullName: {} }, { fullName: ['x'.repeat(500)] }, { fullName: 12345 }, { title: {} }, { phone: ['1'] }]) {
+    const res = await api('PATCH', '/api/auth/me', { token: A.emp.token, body });
+    assert.equal(res.status, 400, `${JSON.stringify(body).slice(0, 40)}: ${JSON.stringify(res.body)}`);
+  }
+  const me = await api('GET', '/api/auth/me', { token: A.emp.token });
+  assert.notEqual(me.body.user.fullName, '[object Object]');
+  const ok = await api('PATCH', '/api/auth/me', { token: A.emp.token, body: { fullName: ' Emp A ', title: null, phone: '' } });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  assert.equal(ok.body.user.fullName, 'Emp A');
+  assert.equal(ok.body.user.title, null);
+  assert.equal(ok.body.user.phone, null);
+});

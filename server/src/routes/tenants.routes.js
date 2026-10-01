@@ -31,7 +31,10 @@ tenantsRouter.patch('/current', requireAuth, requireRole('business_owner', 'oper
   // checkout), so it's refused here just as it is on the billing route.
   const { rows: usage } = await query(
     `SELECT (SELECT count(*)::int FROM branches WHERE tenant_id = $1 AND is_active) AS branches,
-            (SELECT count(*)::int FROM users WHERE tenant_id = $1 AND status != 'disabled') AS users`,
+            (SELECT count(*)::int FROM users WHERE tenant_id = $1 AND status != 'disabled') AS users,
+            t.branch_count, t.user_count,
+            EXISTS (SELECT 1 FROM subscriptions WHERE tenant_id = $1 AND status IN ('active', 'past_due')) AS live
+     FROM tenants t WHERE t.id = $1`,
     [req.auth.tenantId]
   );
 
@@ -51,6 +54,17 @@ tenantsRouter.patch('/current', requireAuth, requireRole('business_owner', 'oper
     }
     fields.push(`user_count = $${i++}`); values.push(n);
   }
+  // (After the usage checks, whose message says what to do first.)
+  // A live subscription changes size through Profile & billing, which
+  // updates the bill too. This endpoint is for pricing a plan before
+  // checkout (or the next one, after a cancel).
+  if (usage[0].live) {
+    const changes = (v, current, limits) => v !== undefined && clampPlanCount(v, limits) !== current;
+    if (changes(branchCount, usage[0].branch_count, PLAN_LIMITS.branches) || changes(userCount, usage[0].user_count, PLAN_LIMITS.users)) {
+      return res.status(409).json({ error: 'Your plan is active. Change it in Profile & billing.' });
+    }
+  }
+
   if (businessType !== undefined) {
     if (!BUSINESS_TYPES.includes(businessType)) return res.status(400).json({ error: 'Unknown business type' });
     fields.push(`business_type = $${i++}`); values.push(businessType);
@@ -116,15 +130,24 @@ tenantsRouter.get('/branches', requireAuth, async (req, res) => {
 // The subscription is billed per store and per user, so the plan's counts
 // are a ceiling: without this a business paying for one store and one
 // user could add any number of either.
+// While a paid period runs, the ceiling is what was paid for (the
+// subscription's counts), not the plan on the Pricing page: raising that
+// mid-period used to open more stores and seats without paying for them.
+const PAID_PLAN = `LEFT JOIN LATERAL (
+    SELECT branch_count, user_count FROM subscriptions
+    WHERE tenant_id = t.id AND (status IN ('active', 'past_due') OR (status = 'canceled' AND current_period_end > now()))
+    ORDER BY created_at DESC LIMIT 1
+  ) paid ON true`;
+
 async function planRoom(tenantId, kind) {
   const { rows } = await query(
     kind === 'branches'
-      ? `SELECT t.branch_count AS allowed, t.onboarding_step,
+      ? `SELECT COALESCE(paid.branch_count, t.branch_count) AS allowed, t.onboarding_step,
                 (SELECT count(*)::int FROM branches WHERE tenant_id = t.id AND is_active) AS used
-         FROM tenants t WHERE t.id = $1`
-      : `SELECT t.user_count AS allowed, t.onboarding_step,
+         FROM tenants t ${PAID_PLAN} WHERE t.id = $1`
+      : `SELECT COALESCE(paid.user_count, t.user_count) AS allowed, t.onboarding_step,
                 (SELECT count(*)::int FROM users WHERE tenant_id = t.id AND status != 'disabled') AS used
-         FROM tenants t WHERE t.id = $1`,
+         FROM tenants t ${PAID_PLAN} WHERE t.id = $1`,
     [tenantId]
   );
   const r = rows[0];

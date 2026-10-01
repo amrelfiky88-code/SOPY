@@ -108,6 +108,11 @@ test('checkout refuses a plan with no branches or no users', async () => {
 // hand-rolled request could set a negative count (priced as $0.00) or
 // NaN (which the integer column rejects with a 500).
 test('tenant PATCH clamps out-of-range plan counts instead of storing them', async () => {
+  // Before checkout: once paid, plan size changes go through billing.
+  const fresh = await api('POST', '/api/auth/signup', {
+    body: { fullName: 'Clamp', email: 'clamp@example.com', password: 'SopyDemo123', restaurantName: 'Clamp Cafe', country: 'Egypt', branchCount: 1, userCount: 1 },
+  });
+  const token = fresh.body.token;
   const res = await api('PATCH', '/api/tenants/current', { token, body: { branchCount: -5, userCount: 99999 } });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(res.body.tenant.branch_count, 1, 'negative branch count should clamp up to the minimum');
@@ -223,4 +228,37 @@ test('changing your mind before the paid period ends resumes the plan without a 
   const late = await api('POST', '/api/billing/subscription/resume', { token: t, body: {}, headers: { 'Accept-Language': 'fr' } });
   assert.equal(late.status, 409);
   assert.match(late.body.error, /abonnez-vous/);
+});
+
+// Security: PATCH /tenants/current (the Pricing page's endpoint) used to
+// change a paying business's store and user limits without billing them,
+// so a one-store plan could open 500 stores for the price of one.
+test('a paying business cannot raise its plan limits without paying for them', async () => {
+  const signup = await api('POST', '/api/auth/signup', {
+    body: { fullName: 'Lim', email: 'limits@example.com', password: 'SopyDemo123', restaurantName: 'Limits Cafe', country: 'Egypt', branchCount: 1, userCount: 2 },
+  });
+  const t = signup.body.token;
+  const id = signup.body.tenant.id;
+  await completeSetup(api, t);
+
+  const raise = await api('PATCH', '/api/tenants/current', { token: t, body: { branchCount: 50, userCount: 50 } });
+  assert.equal(raise.status, 409, JSON.stringify(raise.body));
+  const { rows } = await pool.query('SELECT branch_count, user_count FROM tenants WHERE id = $1', [id]);
+  assert.deepEqual(rows[0], { branch_count: 1, user_count: 2 });
+  assert.equal((await api('PATCH', '/api/tenants/current', { token: t, body: { businessType: 'cafe' } })).status, 200, 'other details still change');
+
+  assert.equal((await api('POST', '/api/tenants/branches', { token: t, body: { name: 'One' } })).status, 201);
+  assert.equal((await api('POST', '/api/tenants/branches', { token: t, body: { name: 'Two' } })).status, 409);
+
+  // Cancelled, paid month still running: a bigger plan can be priced for
+  // the next checkout, but the month already paid for covers one store.
+  assert.equal((await api('POST', '/api/billing/subscription/cancel', { token: t, body: {} })).status, 204);
+  const next = await api('PATCH', '/api/tenants/current', { token: t, body: { branchCount: 5 } });
+  assert.equal(next.status, 200, JSON.stringify(next.body));
+  assert.equal((await api('POST', '/api/tenants/branches', { token: t, body: { name: 'Two' } })).status, 409);
+
+  // Taking the cancel back keeps the plan that's paid for.
+  assert.equal((await api('POST', '/api/billing/subscription/resume', { token: t, body: {} })).status, 200);
+  const after = await pool.query('SELECT branch_count FROM tenants WHERE id = $1', [id]);
+  assert.equal(after.rows[0].branch_count, 1);
 });

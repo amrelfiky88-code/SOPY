@@ -188,6 +188,10 @@ authRouter.get('/me', requireAuth, async (req, res) => {
 // flow rather than a profile edit.
 authRouter.patch('/me', requireAuth, async (req, res) => {
   const { fullName, title, phone, language } = req.body;
+  // Text only (title and phone may be cleared with null). An object was
+  // saved as the name "[object Object]", and a list skipped the length limit.
+  if (fullName !== undefined && typeof fullName !== 'string') return res.status(400).json({ error: 'Enter your details as text' });
+  if ([title, phone].some((v) => v !== undefined && v !== null && typeof v !== 'string')) return res.status(400).json({ error: 'Enter your details as text' });
   if (tooLong({ fullName, title, phone })) return res.status(400).json({ error: 'That text is too long' });
 
   const fields = [];
@@ -200,11 +204,11 @@ authRouter.patch('/me', requireAuth, async (req, res) => {
   }
 
   if (fullName !== undefined) {
-    if (!String(fullName).trim()) return res.status(400).json({ error: 'Name cannot be empty' });
-    fields.push(`full_name = $${i++}`); values.push(String(fullName).trim());
+    if (!fullName.trim()) return res.status(400).json({ error: 'Name cannot be empty' });
+    fields.push(`full_name = $${i++}`); values.push(fullName.trim());
   }
-  if (title !== undefined) { fields.push(`title = $${i++}`); values.push(String(title).trim() || null); }
-  if (phone !== undefined) { fields.push(`phone = $${i++}`); values.push(String(phone).trim() || null); }
+  if (title !== undefined) { fields.push(`title = $${i++}`); values.push(title?.trim() || null); }
+  if (phone !== undefined) { fields.push(`phone = $${i++}`); values.push(phone?.trim() || null); }
 
   if (!fields.length) return res.status(400).json({ error: 'No fields to update' });
 

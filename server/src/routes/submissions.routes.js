@@ -157,6 +157,11 @@ function coordinate(value, max) {
 submissionsRouter.post('/:id/responses', requireAuth, upload.single('photo'), async (req, res) => {
   const { itemId, isCompliant, valueText, gpsLat, gpsLng } = req.body;
   if (!itemId) return res.status(400).json({ error: 'itemId is required' });
+  // Yes or no only. Anything else ("yes", "1") used to be saved as a
+  // failed checkpoint, which on a critical one flagged an incident.
+  if (isCompliant !== undefined && ![true, false, 'true', 'false'].includes(isCompliant)) {
+    return res.status(400).json({ error: 'Answer each checkpoint with yes or no' });
+  }
   if (typeof valueText === 'string' && valueText.length > 2000) {
     return res.status(400).json({ error: 'Keep the note under 2000 characters' });
   }

@@ -282,6 +282,9 @@ billingRouter.post('/subscription/resume', requireAuth, requireRole('business_ow
     "UPDATE subscriptions SET status = 'active', updated_at = now() WHERE id = $1 RETURNING *",
     [sub.id]
   );
+  // Back to the plan that's paid for, in case a different one was priced
+  // up after the cancel.
+  await query('UPDATE tenants SET branch_count = $1, user_count = $2 WHERE id = $3', [sub.branch_count, sub.user_count, req.auth.tenantId]);
   // A checkout opened after the cancel is no longer needed. Dropping it also
   // means paying it later can't start a second plan (the webhook fallback
   // only activates a checkout when nothing else is live).

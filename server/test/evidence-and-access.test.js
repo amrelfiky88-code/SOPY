@@ -382,3 +382,15 @@ test('a temperature outside its safe range flags the report and shows on the KPI
   const after = (await api('GET', '/api/dashboard/kpi?period=monthly', { token: O.token })).body.temperatureDeviations;
   assert.equal(after - before, 2, 'both freezer readings count');
 });
+
+test('a checkpoint answer must be yes or no', async () => {
+  const sub = await start(E1.token);
+  for (const isCompliant of ['yes', '1', 'no', '']) {
+    const res = await respond(E1.token, sub, { itemId: itemIds[0], isCompliant });
+    assert.equal(res.status, 400, `isCompliant=${JSON.stringify(isCompliant)}: ${JSON.stringify(res.body)}`);
+  }
+  const { rows } = await pool.query('SELECT count(*)::int AS n FROM checklist_submission_responses WHERE submission_id = $1', [sub]);
+  assert.equal(rows[0].n, 0, 'nothing was recorded as a failed checkpoint');
+  assert.equal((await respond(E1.token, sub, { itemId: itemIds[0], isCompliant: 'false' })).status, 201);
+  assert.equal((await respond(E1.token, sub, { itemId: itemIds[0], isCompliant: 'true' })).status, 201);
+});
