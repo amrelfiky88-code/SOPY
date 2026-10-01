@@ -454,14 +454,14 @@ def builder_head(c, off_type, crit_on=None):
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 2px 4px" {c.st(c.a("fadeUp",.4,.4))}>{chips}</div>{crit}'''
 
 def scr_builder(c):
-    b = f'<div class="sub" style="display:flex;justify-content:space-between"><span>{c.L("Master library","المكتبة الرئيسية")}</span><span>{counter(c,0,379,.3,1.4)} {c.L("items","بندًا")}</span></div>'
+    b = f'<div class="sub" style="display:flex;justify-content:space-between"><span>{c.L("Master library","المكتبة الرئيسية")}</span><span>{counter(c,0,517,.3,1.4)} {c.L("items","بندًا")}</span></div>'
     b += builder_head(c, 1.4)
     for i,(s,t,cr) in enumerate(LIB(c)):
         b += lib_row(c, s, t, cr, 2.3+i*.35)
     return phone(c, c.L("Checklist builder","منشئ قوائم الفحص"), "", b, tabs=False)
 
 def scr_builderselect(c):
-    b = f'<div class="sub" style="display:flex;justify-content:space-between"><span>{c.L("Master library","المكتبة الرئيسية")}</span><span>379 {c.L("items","بندًا")}</span></div>'
+    b = f'<div class="sub" style="display:flex;justify-content:space-between"><span>{c.L("Master library","المكتبة الرئيسية")}</span><span>517 {c.L("items","بندًا")}</span></div>'
     b += builder_head(c, None, crit_on=.6)
     lib = LIB(c)
     for i,(s,t,cr) in enumerate(lib):

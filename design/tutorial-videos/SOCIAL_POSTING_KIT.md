@@ -59,9 +59,9 @@ Each caption opens with a hook, gives one benefit and ends with a call to action
 
 ### 06 · The manager's view
 
-**EN:** Run every branch from one screen. The KPI dashboard shows which branch needs you first, the checklist builder has 379 ready checkpoints (HACCP, ISO 22000, QC, 20 SOPs), and every report is saved and shareable. Take that day off.
+**EN:** Run every branch from one screen. The KPI dashboard shows which branch needs you first, the checklist builder has 517 ready checkpoints (HACCP, ISO 22000, QC, 20 SOPs, convenience stores), and every report is saved and shareable. Take that day off.
 
-**AR:** أدِر كل فروعك من شاشة واحدة. لوحة المؤشرات بتقولك تبدأ بأنهي فرع، ومنشئ القوائم فيه 379 بند جاهز (HACCP وISO 22000 والجودة و 20 إجراء تشغيل)، وكل تقرير محفوظ وتقدر تشاركه. خد يوم الإجازة بضمير مرتاح.
+**AR:** أدِر كل فروعك من شاشة واحدة. لوحة المؤشرات بتقولك تبدأ بأنهي فرع، ومنشئ القوائم فيه 517 بند جاهز (HACCP وISO 22000 والجودة و 20 إجراء تشغيل والسوبر ماركت)، وكل تقرير محفوظ وتقدر تشاركه. خد يوم الإجازة بضمير مرتاح.
 
 ## Hashtags and covers
 

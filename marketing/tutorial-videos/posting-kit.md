@@ -42,8 +42,8 @@ Post one topic every 2–3 days, with the Arabic and English versions going out 
 **AR:** "والله كان نضيف!" دلوقتي تقدر تشوف بنفسك. في SOPY الصور من الكاميرا مباشرة بس، بالوقت والموقع، ومربوطة ببند الفحص نفسه. مفيش رفع من الاستوديو ولا صور قديمة.
 
 ### 06 · The manager's view
-**EN:** Run every branch from one screen. The KPI dashboard shows which branch needs you first, the checklist builder has 379 ready checkpoints (HACCP, ISO 22000, QC, 20 SOPs), and every report is saved and shareable. Take that day off.
-**AR:** أدِر كل فروعك من شاشة واحدة. لوحة المؤشرات بتقولك تبدأ بأنهي فرع، ومنشئ القوائم فيه 379 بند جاهز (HACCP وISO 22000 والجودة و 20 إجراء تشغيل)، وكل تقرير محفوظ وتقدر تشاركه. خد يوم الإجازة بضمير مرتاح.
+**EN:** Run every branch from one screen. The KPI dashboard shows which branch needs you first, the checklist builder has 517 ready checkpoints (HACCP, ISO 22000, QC, 20 SOPs, convenience stores), and every report is saved and shareable. Take that day off.
+**AR:** أدِر كل فروعك من شاشة واحدة. لوحة المؤشرات بتقولك تبدأ بأنهي فرع، ومنشئ القوائم فيه 517 بند جاهز (HACCP وISO 22000 والجودة و 20 إجراء تشغيل والسوبر ماركت)، وكل تقرير محفوظ وتقدر تشاركه. خد يوم الإجازة بضمير مرتاح.
 
 ## Hashtags
 
