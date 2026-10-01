@@ -115,6 +115,15 @@ export function createApp() {
       if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) return next();
       res.sendFile(path.join(webDist, 'index.html'));
     });
+  } else {
+    // In development the pages come from Vite on :5173, not from here, so
+    // opening this server's address in a browser just said "Not found",
+    // which looked like the app was down. Send the browser to the app
+    // instead, on the same host (localhost, or a LAN IP from a phone).
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || !req.get('accept')?.includes('text/html')) return next();
+      res.redirect(302, `${req.protocol}://${req.hostname}:5173${req.originalUrl}`);
+    });
   }
 
   // eslint-disable-next-line no-unused-vars
