@@ -565,7 +565,12 @@ export const FORM_LABELS = build();
 
 // Title of a pinned report by its kind, falling back to the stored name
 // (the template row keeps the English name it was created with).
+// Library checklist names in the current language (lib/groupNames.js).
+let libraryNames = {};
+export function setLibraryNames(names) { libraryNames = names || {}; }
+
 export function reportTitle(t, kind, storedName) {
   const key = `f.${kind}.title`;
-  return kind && FORM_LABELS.en[key] ? t(key) : storedName;
+  if (kind && FORM_LABELS.en[key]) return t(key);
+  return libraryNames[storedName] || storedName;
 }

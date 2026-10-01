@@ -46,7 +46,7 @@ const ROUTES = [
   ['GET', '/api/tenants/users'], ['PATCH', '/api/tenants/current'], ['PATCH', '/api/tenants/users/:bad'],
   ['PATCH', '/api/tenants/users/:user'], ['POST', '/api/tenants/branches'], ['POST', '/api/tenants/users/:bad/reset-link'],
   ['POST', '/api/tenants/users/invite'], ['DELETE', '/api/tenants/branches/:bad'],
-  ['POST', '/api/checklists/library/run'], ['GET', '/api/inbox/threads'], ['GET', '/api/inbox/summary'], ['POST', '/api/inbox/threads'],
+  ['POST', '/api/checklists/library/run'], ['GET', '/api/checklists/library/groups'], ['GET', '/api/inbox/threads'], ['GET', '/api/inbox/summary'], ['POST', '/api/inbox/threads'],
   ['GET', '/api/inbox/threads/:bad'], ['GET', '/api/inbox/threads/:thread'], ['POST', '/api/inbox/threads/:bad/messages'],
   ['POST', '/api/inbox/threads/:thread/messages'], ['POST', '/api/inbox/threads/:bad/read'], ['GET', '/api/notifications'],
   ['POST', '/api/notifications/read-all'], ['POST', '/api/notifications/:bad/read'],

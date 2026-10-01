@@ -78,6 +78,28 @@ checklistsRouter.post('/library', requireAuth, requireRole('business_owner', 'op
   res.status(201).json({ item: rows[0] });
 });
 
+// Each SOP or audit's name in the reader's language, keyed by its English
+// name (the group key, which is also the name of a checklist started with
+// "Run now"). Small, so lists elsewhere in the app can translate those
+// checklist names without loading the whole library.
+checklistsRouter.get('/library/groups', requireAuth, async (req, res) => {
+  const { rows } = await query(
+    `SELECT DISTINCT ON (standard, category) standard, category FROM checklist_items
+     WHERE (tenant_id IS NULL OR tenant_id = $1) AND category IS NOT NULL
+     ORDER BY standard, category`,
+    [req.auth.tenantId]
+  );
+  const translated = await translateRows(rows, await requestLanguage(req), ['category']);
+  const names = {};
+  for (const row of translated) {
+    const key = libraryGroupKey(row);
+    if (names[key] || key === row.standard) continue;
+    const shown = row.category || '';
+    names[key] = shown.includes(' — ') ? shown.split(' — ')[0] : key;
+  }
+  res.json({ names });
+});
+
 // Library "Run now": start a checklist run of one SOP or audit straight
 // from the library, for anyone on the team. The checklist is made the
 // first time (named after the group, tagged with library_group so later
