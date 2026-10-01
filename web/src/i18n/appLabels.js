@@ -90,6 +90,20 @@ const ROWS = [
   ['inbox.memberCount', '{n} members', '{n} أعضاء', '{n} membres'],
   ['inbox.storeChatEmpty', 'Team chat for everyone at this store.', 'محادثة الفريق لكل العاملين في هذا الفرع.', "Discussion d'équipe pour tout l'établissement."],
 
+  // --- Store time zone ----------------------------------------------
+  ['tz.label', 'Time zone', 'المنطقة الزمنية', 'Fuseau horaire'],
+  ['tz.labelFor', 'Time zone for {store}', 'المنطقة الزمنية لـ {store}', 'Fuseau horaire de {store}'],
+  ['tz.hint', "Checklist due times and reminders follow the store's clock.", 'مواعيد قوائم الفحص وتذكيراتها تتبع توقيت الفرع.', "Les heures limites et les rappels suivent l'heure de l'établissement."],
+
+  // --- Phone notifications ----------------------------------------------
+  ['push.title', 'Phone notifications', 'إشعارات الهاتف', 'Notifications sur le téléphone'],
+  ['push.onHint', 'On for this device. They show even when SOPY is closed.', 'مفعّلة على هذا الجهاز. تظهر حتى عندما يكون SOPY مغلقًا.', 'Activées sur cet appareil. Elles s’affichent même quand SOPY est fermé.'],
+  ['push.offHint', 'Get alerts and reminders on this device even when SOPY is closed.', 'تلقَّ التنبيهات والتذكيرات على هذا الجهاز حتى عندما يكون SOPY مغلقًا.', 'Recevez alertes et rappels sur cet appareil même quand SOPY est fermé.'],
+  ['push.blocked', 'Blocked in this browser. Allow notifications for SOPY in the browser’s site settings, then come back here.', 'محظورة في هذا المتصفح. اسمح بإشعارات SOPY من إعدادات الموقع في المتصفح ثم عُد إلى هنا.', 'Bloquées dans ce navigateur. Autorisez les notifications de SOPY dans les réglages du site, puis revenez ici.'],
+  ['push.homeScreen', 'On iPhone, add SOPY to your Home Screen first (Share › Add to Home Screen), then turn them on from there.', 'على iPhone، أضف SOPY إلى الشاشة الرئيسية أولًا (مشاركة › إضافة إلى الشاشة الرئيسية)، ثم فعّلها من هناك.', "Sur iPhone, ajoutez d'abord SOPY à l'écran d'accueil (Partager › Sur l'écran d'accueil), puis activez-les depuis là."],
+  ['push.failed', "Couldn't turn on notifications on this device. Check that SOPY is allowed to send notifications, then try again.", 'تعذّر تفعيل الإشعارات على هذا الجهاز. تأكد من السماح لـ SOPY بإرسال الإشعارات ثم حاول مجددًا.', "Impossible d'activer les notifications sur cet appareil. Vérifiez que SOPY est autorisé à en envoyer, puis réessayez."],
+  ['push.unsupported', "This browser can't show phone notifications.", 'لا يدعم هذا المتصفح إشعارات الهاتف.', 'Ce navigateur ne peut pas afficher de notifications.'],
+
   // --- Notifications --------------------------------------------------
   ['notif.markAll', 'Mark all read', 'تعليم الكل كمقروء', 'Tout marquer comme lu'],
   ['notif.today', 'Today', 'اليوم', "Aujourd'hui"],

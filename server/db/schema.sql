@@ -354,3 +354,18 @@ ALTER TABLE users ADD COLUMN notify_reminders BOOLEAN NOT NULL DEFAULT true;
 -- One reminder per person, assignment and due day (reminders.js).
 CREATE UNIQUE INDEX idx_notifications_one_reminder
   ON notifications (user_id, (data->>'assignmentId'), (data->>'dueDate')) WHERE kind = 'checklist_due';
+
+-- Web Push: one row per browser that turned on phone notifications.
+-- The endpoint is the push service's address for that browser; signing
+-- out on a shared phone removes it, so the next person's alerts don't
+-- reach the last one's pocket.
+CREATE TABLE push_subscriptions (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint    TEXT NOT NULL UNIQUE,
+  p256dh      TEXT NOT NULL,
+  auth        TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_push_subscriptions_user ON push_subscriptions(user_id);

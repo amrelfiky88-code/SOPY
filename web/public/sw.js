@@ -1,5 +1,5 @@
 // Bump on any change to this file's caching rules.
-const CACHE_NAME = 'sopy-cache-v3'; // v3: new brand icons
+const CACHE_NAME = 'sopy-cache-v4'; // v4: phone notifications
 const APP_SHELL = ['/', '/manifest.json', '/icons/icon.svg', '/icons/icon-192.png'];
 
 self.addEventListener('install', (event) => {
@@ -57,6 +57,38 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => offline());
+    })
+  );
+});
+
+// Phone notifications (server/src/push.js). The server sends the wording
+// already in the person's language; tapping opens the page it points to,
+// reusing an open SOPY window when there is one.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = { title: 'SOPY', body: event.data && event.data.text() }; }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'SOPY', {
+      body: data.body || '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: data.tag,
+      renotify: !!data.tag,
+      lang: data.lang,
+      dir: data.dir || 'auto',
+      data: { url: data.url || '/app/notifications' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || '/app/notifications', self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      const open = windows.find((w) => new URL(w.url).origin === self.location.origin);
+      if (open) return open.focus().then(() => open.navigate(target));
+      return self.clients.openWindow(target);
     })
   );
 });

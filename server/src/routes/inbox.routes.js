@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
 import { ALL_STORE_ROLES } from '../assignments.js';
+import { pushToUsers } from '../push.js';
 
 // Inbox: incident threads (opened by inbox.js when a report with an
 // incident is submitted) and direct conversations between two people in
@@ -176,6 +177,27 @@ inboxRouter.post('/threads/:id/messages', requireAuth, async (req, res) => {
     await markRead(client, thread.id, req.auth.userId, rows[0].created_at);
     return rows[0];
   });
+  // A phone push for the other people in the conversation. Pushes share a
+  // tag per conversation, so a busy store chat replaces its last alert on
+  // the phone rather than stacking one per message. Incident pushes follow
+  // the incident-alerts setting.
+  const { rows: others } = thread.kind === 'store'
+    ? await query(
+      `SELECT su.id AS user_id FROM message_threads t JOIN users su ON ${STORE_MEMBER.replaceAll('$4', '$3')}
+       WHERE t.id = $1 AND su.id <> $2`,
+      [thread.id, req.auth.userId, ALL_STORE_ROLES]
+    )
+    : await query(
+      `SELECT m.user_id FROM message_thread_members m JOIN users u ON u.id = m.user_id
+       WHERE m.thread_id = $1 AND m.user_id <> $2 AND ($3 = 'direct' OR u.notify_incidents)`,
+      [thread.id, req.auth.userId, thread.kind]
+    );
+  const { rows: me } = await query('SELECT full_name FROM users WHERE id = $1', [req.auth.userId]);
+  pushToUsers(others.map((o) => o.user_id), 'message', {
+    senderName: me[0]?.full_name || '', body: message.body, incident: thread.kind === 'incident',
+    store: thread.kind === 'store' ? thread.branch_name : null,
+    kind: thread.report_kind, templateName: thread.template_name,
+  }, { url: `/app/inbox/${thread.id}`, tag: `thread-${thread.id}` });
   res.status(201).json({ message });
 });
 

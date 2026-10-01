@@ -7,14 +7,17 @@ import { canAssignRole, canManageUser } from '../../../../shared/roles.js';
 import { StorefrontIcon } from '../../components/icons.jsx';
 import InviteLink from '../../components/InviteLink.jsx';
 import CityField from '../../components/CityField.jsx';
+import TimeZoneField, { TimeZoneOptions, deviceTimeZone, zoneLabel } from '../../components/TimeZoneField.jsx';
 import JobTitleSelect, { withRole, titleForRole, jobTitleLabel } from '../../components/JobTitleSelect.jsx';
 
 export default function Team() {
   const t = useT();
   const { user: me } = useAuth();
+  // Store details are for owners and operations managers (the server agrees).
+  const canEditStores = ['business_owner', 'operations_manager'].includes(me?.role);
   const [branches, setBranches] = useState([]);
   const [users, setUsers] = useState([]);
-  const [branchForm, setBranchForm] = useState({ name: '', city: '' });
+  const [branchForm, setBranchForm] = useState({ name: '', city: '', timezone: deviceTimeZone() });
   const [inviteForm, setInviteForm] = useState({ fullName: '', email: '', role: 'employee', title: titleForRole('employee'), branchIds: [] });
   const [lastInvite, setLastInvite] = useState(null);
   const [confirmingRemove, setConfirmingRemove] = useState(null);
@@ -48,9 +51,21 @@ export default function Team() {
     setBusy('branch');
     try {
       await api.post('/tenants/branches', branchForm);
-      setBranchForm({ name: '', city: '' });
+      setBranchForm({ name: '', city: '', timezone: deviceTimeZone() });
       await load();
     } catch (err) { setError(err.message); } finally { setBusy(''); }
+  };
+
+  // Changes save straight away, like the language in Profile.
+  const setBranchZone = async (id, timezone) => {
+    setError('');
+    setBranches((list) => list.map((b) => (b.id === id ? { ...b, timezone } : b)));
+    try {
+      await api.patch(`/tenants/branches/${id}`, { timezone });
+    } catch (err) {
+      setError(err.message);
+      await load();
+    }
   };
 
   const removeBranch = async (id) => {
@@ -135,7 +150,22 @@ export default function Team() {
           <div className="card">
             {branches.map((b) => (
               <div className="checklist-row" key={b.id}>
-                <div><strong>{b.name}</strong>{b.city ? ` — ${b.city}` : ''}</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <strong>{b.name}</strong>{b.city ? ` — ${b.city}` : ''}
+                  {canEditStores ? (
+                    <select
+                      aria-label={t('tz.labelFor', { store: b.name })}
+                      value={b.timezone || 'UTC'}
+                      onChange={(e) => setBranchZone(b.id, e.target.value)}
+                      dir="ltr"
+                      style={{ display: 'block', marginTop: 6, maxWidth: '100%', minHeight: 40 }}
+                    >
+                      <TimeZoneOptions current={b.timezone} />
+                    </select>
+                  ) : (
+                    <div className="hint" dir="ltr" style={{ textAlign: 'start' }}>{zoneLabel(b.timezone || 'UTC')}</div>
+                  )}
+                </div>
                 {confirmingRemove === b.id ? (
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     <button className="btn btn-small btn-danger" onClick={() => removeBranch(b.id)}>{t('team.removeStore')}</button>
@@ -160,6 +190,7 @@ export default function Team() {
               <input id="bname" required value={branchForm.name} onChange={(e) => setBranchForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
             <CityField id="bcity" label={t('page.city')} value={branchForm.city} onChange={(v) => setBranchForm((f) => ({ ...f, city: v }))} />
+            <TimeZoneField id="btz" value={branchForm.timezone} onChange={(v) => setBranchForm((f) => ({ ...f, timezone: v }))} />
             <button className="btn btn-secondary" type="submit" disabled={busy === 'branch'}>
               {busy === 'branch' ? t('page.adding') : t('page.addBranch')}
             </button>

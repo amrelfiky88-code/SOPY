@@ -3,6 +3,7 @@ import { api } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { useT } from '../../i18n/index.jsx';
 import CityField from '../../components/CityField.jsx';
+import TimeZoneField, { deviceTimeZone, zoneLabel } from '../../components/TimeZoneField.jsx';
 
 export default function StepStores({ onNext, onBack }) {
   const t = useT();
@@ -10,6 +11,7 @@ export default function StepStores({ onNext, onBack }) {
   const [branches, setBranches] = useState([]);
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
+  const [timezone, setTimezone] = useState(deviceTimeZone);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -28,7 +30,7 @@ export default function StepStores({ onNext, onBack }) {
     setError('');
     setSubmitting(true);
     try {
-      await api.post('/tenants/branches', { name, city });
+      await api.post('/tenants/branches', { name, city, timezone });
       setName('');
       setCity('');
       await load();
@@ -58,7 +60,7 @@ export default function StepStores({ onNext, onBack }) {
 
       {branches.map((b) => (
         <div className="checklist-row" key={b.id}>
-          <div><strong>{b.name}</strong>{b.city ? ` — ${b.city}` : ''}</div>
+          <div><strong>{b.name}</strong>{b.city ? ` — ${b.city}` : ''}<div className="hint" dir="ltr" style={{ textAlign: 'start', margin: 0 }}>{zoneLabel(b.timezone || 'UTC')}</div></div>
           <button className="btn btn-small btn-danger" onClick={() => removeBranch(b.id)}>{t('page.remove')}</button>
         </div>
       ))}
@@ -69,6 +71,7 @@ export default function StepStores({ onNext, onBack }) {
           <input id="branchName" required value={name} onChange={(e) => setName(e.target.value)} placeholder={t('onb.stores.placeholder')} />
         </div>
         <CityField id="branchCity" label={t('page.city')} value={city} onChange={setCity} />
+        <TimeZoneField id="branchTz" value={timezone} onChange={setTimezone} />
         <button className="btn btn-secondary" type="submit" disabled={submitting}>{t('page.addBranch')}</button>
       </form>
 

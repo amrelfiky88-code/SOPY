@@ -11,6 +11,7 @@ import { useI18n } from '../../i18n/index.jsx';
 import { money, egp } from '../../i18n/pageLabels.js';
 import { paymobReturnParams } from '../../lib/paymentRegion.js';
 import JobTitleSelect from '../../components/JobTitleSelect.jsx';
+import { pushState, enablePush, disablePush } from '../../lib/push.js';
 import PageHead from '../../components/PageHead.jsx';
 import FeedbackButton from '../../components/FeedbackButton.jsx';
 import { initials } from '../inbox/format.js';
@@ -159,6 +160,7 @@ function NotificationPrefs({ user, setUser }) {
   };
   return (
     <div className="list-card" style={{ marginBottom: 16, padding: '4px 16px' }}>
+      <PhonePushRow />
       {rows.map(([key, label, hint]) => {
         const on = user?.[key] !== false;
         return (
@@ -170,6 +172,48 @@ function NotificationPrefs({ user, setUser }) {
       })}
       {error && <div className="error-banner" style={{ margin: '8px 0' }}>{error}</div>}
     </div>
+  );
+}
+
+// Phone notifications for this browser. Hidden when the server has no
+// push keys; otherwise explains what's in the way (blocked, or an iPhone
+// that needs SOPY on the Home Screen first).
+function PhonePushRow() {
+  const { t } = useI18n();
+  const [state, setState] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    pushState().then(setState).catch(() => setState('unsupported'));
+  }, []);
+
+  if (!state || state === 'off-server') return null;
+  const canToggle = state === 'on' || state === 'off';
+  const toggle = async () => {
+    if (busy || !canToggle) return;
+    setBusy(true);
+    setError('');
+    try {
+      setState(state === 'on' ? await disablePush() : await enablePush());
+    } catch (err) {
+      // The browser's own reasons ("Registration failed - …") are in English
+      // and not actionable; the server's come translated.
+      setError(err.status ? err.message : t('push.failed'));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const hint = { on: 'push.onHint', off: 'push.offHint', blocked: 'push.blocked', 'home-screen': 'push.homeScreen', unsupported: 'push.unsupported' }[state];
+
+  return (
+    <>
+      <button type="button" role="switch" aria-checked={state === 'on'} className="list-row" onClick={toggle} disabled={busy || !canToggle}>
+        <span className="row-text"><span className="row-title">{t('push.title')}</span><span className="row-meta">{t(hint)}</span></span>
+        {canToggle && <span className={`switch${state === 'on' ? ' on' : ''}`} aria-hidden="true"><span /></span>}
+      </button>
+      {error && <div className="error-banner" style={{ margin: '0 0 8px' }}>{error}</div>}
+    </>
   );
 }
 
