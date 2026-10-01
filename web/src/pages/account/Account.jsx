@@ -201,6 +201,10 @@ function ProfileCard({ user, tenant, setUser }) {
 
 function SubscriptionCard({ user, tenant }) {
   const { t, lang } = useI18n();
+  // The 'subscription has ended' banner comes from the signed-in state;
+  // refreshed after anything here that changes the plan, or it stayed up
+  // after paying until the app was reloaded.
+  const { refresh } = useAuth();
   const isOwner = user?.role === 'business_owner';
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -244,6 +248,7 @@ function SubscriptionCard({ user, tenant }) {
         setError(err.message);
       }
       await load();
+      refresh();
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -268,6 +273,7 @@ function SubscriptionCard({ user, tenant }) {
       if (res.paymentRequired && res.paymob) { setUpgradePay(res.paymob); return; }
       setSubscription(res.subscription);
       setEditing(false);
+      refresh();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -285,6 +291,7 @@ function SubscriptionCard({ user, tenant }) {
       if (res.paymob) { window.location.assign(res.paymob.checkoutUrl); return; }
       setNotice(t('account.paymobPaid'));
       await load();
+      refresh();
     } catch (err) {
       setError(err.message);
     }
@@ -298,6 +305,7 @@ function SubscriptionCard({ user, tenant }) {
       await api.post('/billing/subscription/cancel', {});
       setConfirmingCancel(false);
       await load();
+      refresh();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -311,6 +319,7 @@ function SubscriptionCard({ user, tenant }) {
     try {
       await api.post('/billing/subscription/resume', {});
       await load();
+      refresh();
     } catch (err) {
       setError(err.message);
       // The period ran out meanwhile: show the checkout route instead.
