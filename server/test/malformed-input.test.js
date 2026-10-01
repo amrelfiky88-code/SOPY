@@ -21,7 +21,7 @@ const FIELDS = [
   'pagePath', 'branchCount', 'userCount', 'businessType', 'onboardingStep', 'language', 'phone',
   'currentPassword', 'newPassword', 'inviteToken', 'restaurantName', 'country', 'referralCode',
   'dueTime', 'text', 'description', 'standard', 'isCritical', 'fileName', 'timezone', 'q', 'from',
-  'to', 'before', 'limit', 'period', 'branches', 'users', 'critical',
+  'to', 'before', 'limit', 'period', 'branches', 'users', 'critical', 'group', 'body',
 ];
 const BAD = [null, 12345, -1, 1.5, true, [], ['x'], {}, { $gt: '' }, 'x'.repeat(5000), "' OR 1=1 --", '../../etc/passwd', '', 'NaN'];
 
@@ -44,6 +44,10 @@ const ROUTES = [
   ['GET', '/api/tenants/users'], ['PATCH', '/api/tenants/current'], ['PATCH', '/api/tenants/users/:bad'],
   ['PATCH', '/api/tenants/users/:user'], ['POST', '/api/tenants/branches'], ['POST', '/api/tenants/users/:bad/reset-link'],
   ['POST', '/api/tenants/users/invite'], ['DELETE', '/api/tenants/branches/:bad'],
+  ['POST', '/api/checklists/library/run'], ['GET', '/api/inbox/threads'], ['GET', '/api/inbox/summary'], ['POST', '/api/inbox/threads'],
+  ['GET', '/api/inbox/threads/:bad'], ['GET', '/api/inbox/threads/:thread'], ['POST', '/api/inbox/threads/:bad/messages'],
+  ['POST', '/api/inbox/threads/:thread/messages'], ['POST', '/api/inbox/threads/:bad/read'], ['GET', '/api/notifications'],
+  ['POST', '/api/notifications/read-all'], ['POST', '/api/notifications/:bad/read'],
 ];
 // A valid body for each write endpoint. The deep pass below swaps one of
 // its fields at a time for a wrong shape, so the bad value gets past the
@@ -66,6 +70,9 @@ const VALID = {
   'PATCH /api/tenants/current': () => ({ branchCount: 50, userCount: 200, businessType: 'restaurant' }),
   'PATCH /api/tenants/users/:user': () => ({ role: 'employee', status: 'active', branchIds: [ids.branch], title: 'Chef' }),
   'POST /api/tenants/branches': () => ({ name: 'S', address: 'a', city: 'c', timezone: 'UTC' }),
+  'POST /api/checklists/library/run': () => ({ group: 'SOP 1: Opening', branchId: ids.branch }),
+  'POST /api/inbox/threads': () => ({ userId: ids.user }),
+  'POST /api/inbox/threads/:thread/messages': () => ({ body: 'Hello' }),
   'POST /api/tenants/users/invite': () => ({ fullName: 'I', email: `deep${++deepInvites}@example.com`, role: 'employee', branchIds: [ids.branch], title: 'Chef' }),
 };
 let deepInvites = 0;
@@ -123,6 +130,9 @@ before(async () => {
   ids.done = done;
   const invite = await api('POST', '/api/tenants/users/invite', { fullName: 'Staff', email: 'fuzz-staff@example.com', role: 'employee' });
   ids.user = invite.user.id;
+  // An active teammate to message, for the inbox routes.
+  const accepted = await api('POST', '/api/auth/accept-invite', { inviteToken: invite.inviteLink.split('token=')[1], password: 'StaffPass123' });
+  ids.thread = (await fetch(baseUrl + '/api/inbox/threads', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accepted.token}` }, body: JSON.stringify({ userId: signup.user.id }) }).then((r) => r.json())).threadId;
 });
 
 after(async () => {
@@ -138,7 +148,7 @@ test('no endpoint crashes on malformed input', async () => {
   for (const [method, pattern] of ROUTES) {
     const paths = pattern.includes(':bad')
       ? (FULL ? BAD_IDS : BAD_IDS.slice(0, 3)).map((b) => pattern.replace(':bad', encodeURIComponent(b)))
-      : [pattern.replace(':template', ids.template).replace(':submission', ids.submission).replace(':done', ids.done).replace(':user', ids.user)];
+      : [pattern.replace(':template', ids.template).replace(':submission', ids.submission).replace(':done', ids.done).replace(':user', ids.user).replace(':thread', ids.thread)];
     for (const path of paths) {
       const label = `${method} ${path.slice(0, 80)}`;
       if (method === 'GET' || method === 'DELETE') {

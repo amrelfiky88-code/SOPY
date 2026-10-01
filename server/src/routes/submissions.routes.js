@@ -10,6 +10,7 @@ import { signPhotos } from '../uploads.js';
 import { SHARE_ROOT, SHARE_DAYS, sweepSoon } from '../shares.js';
 import { visibleBranchIds, canSeeSubmission, SEES_OWN_ONLY } from '../auth/scope.js';
 import { temperatureDeviations } from '../../../shared/temperatures.js';
+import { onReportSubmitted } from '../inbox.js';
 
 export const submissionsRouter = Router();
 
@@ -294,7 +295,8 @@ submissionsRouter.post('/:id/submit', requireAuth, async (req, res) => {
     `SELECT s.form_data, t.kind FROM checklist_submissions s JOIN checklist_templates t ON t.id = s.template_id WHERE s.id = $1`,
     [open.id]
   );
-  const tempIncident = temperatureDeviations(current[0]?.kind, current[0]?.form_data?.temperatureLog).length > 0;
+  const temperatureIssues = temperatureDeviations(current[0]?.kind, current[0]?.form_data?.temperatureLog).length;
+  const tempIncident = temperatureIssues > 0;
 
   const { rows } = await query(
     `UPDATE checklist_submissions
@@ -304,6 +306,9 @@ submissionsRouter.post('/:id/submit', requireAuth, async (req, res) => {
     [coordinate(gpsLat, 90), coordinate(gpsLng, 180), req.auth.userId, req.params.id, req.auth.tenantId, tempIncident]
   );
   if (!rows[0]) return res.status(404).json({ error: 'Not found' });
+  // An incident opens a thread with the store's managers (Inbox) and
+  // notifies them; it's done before answering so the app sees it at once.
+  await onReportSubmitted(rows[0].id, { temperatureIssues });
   res.json({ submission: rows[0] });
 });
 

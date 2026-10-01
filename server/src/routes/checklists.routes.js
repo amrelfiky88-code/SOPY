@@ -4,7 +4,8 @@ import { requireAuth, requireRole } from '../auth/middleware.js';
 import { translateRows, requestLanguage } from '../i18n/translateContent.js';
 import { isValidRole } from '../auth/roles.js';
 
-import { MY_ASSIGNMENTS_FROM, myAssignmentParams } from '../assignments.js';
+import { MY_ASSIGNMENTS_FROM, myAssignmentParams, ALL_STORE_ROLES } from '../assignments.js';
+import { libraryGroupKey, libraryGroupFrequency } from '../../../shared/libraryGroups.js';
 
 const TRANSLATABLE_ITEM_FIELDS = ['text', 'description', 'category'];
 
@@ -75,6 +76,80 @@ checklistsRouter.post('/library', requireAuth, requireRole('business_owner', 'op
 
   );
   res.status(201).json({ item: rows[0] });
+});
+
+// Library "Run now": start a checklist run of one SOP or audit straight
+// from the library, for anyone on the team. The checklist is made the
+// first time (named after the group, tagged with library_group so later
+// runs reuse it) and holds every checkpoint of that group, global and
+// this business's own. The run is for the caller, at one of their stores.
+checklistsRouter.post('/library/run', requireAuth, requireOnboardingComplete, async (req, res) => {
+  const { group, branchId } = req.body;
+  if (typeof group !== 'string' || !group.trim() || group.length > 200) return res.status(400).json({ error: 'Choose a procedure to run' });
+  if (typeof branchId !== 'string' || !/^[0-9a-f-]{36}$/i.test(branchId)) return res.status(400).json({ error: 'Choose a store' });
+
+  const { rows: stores } = await query(
+    `SELECT b.id, EXISTS (SELECT 1 FROM user_branches ub WHERE ub.user_id = $3 AND ub.branch_id = b.id) AS mine,
+            EXISTS (SELECT 1 FROM user_branches ub JOIN branches ob ON ob.id = ub.branch_id AND ob.is_active WHERE ub.user_id = $3) AS has_stores
+     FROM branches b WHERE b.id = $1 AND b.tenant_id = $2 AND b.is_active`,
+    [branchId, req.auth.tenantId, req.auth.userId]
+  );
+  const store = stores[0];
+  // Your own stores; owners and operations managers run anywhere, and so
+  // does someone not tied to any store (as "All stores" checklists do).
+  if (!store || !(ALL_STORE_ROLES.includes(req.auth.role) || store.mine || !store.has_stores)) {
+    return res.status(404).json({ error: 'Checklist or store not found' });
+  }
+
+  const { rows: library } = await query(
+    `SELECT id, standard, category FROM checklist_items
+     WHERE (tenant_id IS NULL OR tenant_id = $1) AND standard = ANY($2::text[])
+     ORDER BY array_position($2::text[], standard::text), category, sort_order`,
+    [req.auth.tenantId, STANDARDS]
+  );
+  const itemIds = library.filter((item) => libraryGroupKey(item) === group).map((item) => item.id);
+  if (!itemIds.length) return res.status(404).json({ error: 'Not found' });
+
+  const submission = await withTransaction(async (client) => {
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`library:${req.auth.tenantId}:${group}`]);
+    let { rows: [template] } = await client.query(
+      'SELECT * FROM checklist_templates WHERE tenant_id = $1 AND library_group = $2',
+      [req.auth.tenantId, group]
+    );
+    if (!template) {
+      ({ rows: [template] } = await client.query(
+        `INSERT INTO checklist_templates (tenant_id, name, kind, frequency, created_by, library_group)
+         VALUES ($1, $2, 'custom', $3, $4, $2) RETURNING *`,
+        [req.auth.tenantId, group, libraryGroupFrequency(group), req.auth.userId]
+      ));
+    }
+    // Keep it in step with the library: checkpoints added since last time
+    // join the end. Old ones stay, so past runs still score the same.
+    await client.query(
+      `INSERT INTO checklist_template_items (template_id, item_id, sort_order)
+       SELECT $1, x.id, coalesce((SELECT max(sort_order) FROM checklist_template_items WHERE template_id = $1), -1) + x.n
+       FROM unnest($2::uuid[]) WITH ORDINALITY AS x(id, n)
+       WHERE NOT EXISTS (SELECT 1 FROM checklist_template_items WHERE template_id = $1 AND item_id = x.id)`,
+      [template.id, itemIds]
+    );
+    // Tapping Run now again during the shift carries on the same run.
+    const { rows: open } = await client.query(
+      `SELECT * FROM checklist_submissions
+       WHERE tenant_id = $1 AND template_id = $2 AND branch_id = $3 AND submitted_by = $4 AND assignment_id IS NULL
+         AND status = 'in_progress' AND started_at >= now() - interval '16 hours'
+       ORDER BY started_at DESC LIMIT 1`,
+      [req.auth.tenantId, template.id, branchId, req.auth.userId]
+    );
+    if (open[0]) return { ...open[0], resumed: true };
+    const { rows } = await client.query(
+      `INSERT INTO checklist_submissions (tenant_id, template_id, branch_id, submitted_by)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [req.auth.tenantId, template.id, branchId, req.auth.userId]
+    );
+    return rows[0];
+  });
+  const { resumed, ...row } = submission;
+  res.status(resumed ? 200 : 201).json({ submission: row, resumed: !!resumed });
 });
 
 // --- Templates ---

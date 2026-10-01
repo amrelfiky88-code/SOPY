@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { query, withTransaction } from './db.js';
+import { notifyReferralCredit } from './inbox.js';
 import { REFERRAL_REWARD_USD, REFERRAL_CODE_ALPHABET, REFERRAL_CODE_LENGTH, isReferralCodeShape } from '../../shared/referrals.js';
 import { createCreditDiscount, applyDiscountToNextRenewal } from './paddle/client.js';
 
@@ -130,6 +131,7 @@ export async function grantReferralReward(refereeTenantId) {
     [referrerId, REFERRAL_REWARD_USD, refereeTenantId]
   );
   if (!inserted[0]) return null;
+  await notifyReferralCredit(referrerId, inserted[0].amount, refereeTenantId);
   await scheduleCreditOnRenewal(referrerId);
   return inserted[0];
 }

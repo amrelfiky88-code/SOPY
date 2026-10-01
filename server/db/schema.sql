@@ -281,3 +281,61 @@ CREATE TABLE account_credits (
 CREATE INDEX idx_account_credits_tenant ON account_credits(tenant_id);
 -- A business gets at most one welcome discount.
 CREATE UNIQUE INDEX idx_account_credits_one_welcome ON account_credits(tenant_id) WHERE source = 'welcome';
+-- Inbox. A thread is either an incident (opened automatically when a
+-- report with an incident is submitted, one per report, with the people
+-- who have to act on it) or a direct conversation between two people.
+-- Membership is fixed when the thread is made; last_read_at drives the
+-- unread counts.
+CREATE TABLE message_threads (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  kind            TEXT NOT NULL,              -- incident | direct
+  submission_id   UUID UNIQUE REFERENCES checklist_submissions(id) ON DELETE CASCADE, -- incident threads
+  direct_key      TEXT UNIQUE,                -- direct threads: the two user ids, sorted, joined by ':'
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_message_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_message_threads_tenant ON message_threads(tenant_id);
+
+CREATE TABLE message_thread_members (
+  thread_id    UUID NOT NULL REFERENCES message_threads(id) ON DELETE CASCADE,
+  user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  last_read_at TIMESTAMPTZ,
+  PRIMARY KEY (thread_id, user_id)
+);
+CREATE INDEX idx_thread_members_user ON message_thread_members(user_id);
+
+-- sender_id NULL is SOPY itself: the incident summary that opens an
+-- incident thread. Its wording is built in the reader's language from
+-- `data`, so body stays empty for those.
+CREATE TABLE messages (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  thread_id   UUID NOT NULL REFERENCES message_threads(id) ON DELETE CASCADE,
+  sender_id   UUID REFERENCES users(id) ON DELETE SET NULL,
+  kind        TEXT NOT NULL DEFAULT 'text',   -- text | incident
+  body        TEXT,
+  data        JSONB NOT NULL DEFAULT '{}',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_messages_thread ON messages(thread_id, created_at);
+
+-- Per-person notifications. Like incident messages, the text is built in
+-- the app from kind + data, so it shows in each reader's language.
+CREATE TABLE notifications (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id      UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind           TEXT NOT NULL,              -- incident | report_submitted | referral_credit
+  data           JSONB NOT NULL DEFAULT '{}',
+  submission_id  UUID REFERENCES checklist_submissions(id) ON DELETE CASCADE,
+  thread_id      UUID REFERENCES message_threads(id) ON DELETE SET NULL,
+  read_at        TIMESTAMPTZ,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_notifications_user ON notifications(user_id, created_at DESC);
+
+-- Library "Run now": a checklist made from one SOP or audit of the
+-- library carries the library group it came from, so running the same
+-- SOP again reuses it instead of piling up copies in the Builder.
+ALTER TABLE checklist_templates ADD COLUMN library_group TEXT;
+CREATE UNIQUE INDEX idx_templates_library_group ON checklist_templates(tenant_id, library_group) WHERE library_group IS NOT NULL;

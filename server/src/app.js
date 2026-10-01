@@ -18,6 +18,7 @@ import { dashboardRouter } from './routes/dashboard.routes.js';
 import { feedbackRouter } from './routes/feedback.routes.js';
 import { sharedRouter } from './routes/shared.routes.js';
 import { referralsRouter } from './routes/referrals.routes.js';
+import { inboxRouter, notificationsRouter } from './routes/inbox.routes.js';
 import { requireSignedUpload } from './uploads.js';
 import { blockWritesWhenPlanEnded } from './auth/plan.js';
 import { translateErrorResponses } from './i18n/errorMessages.js';
@@ -86,6 +87,8 @@ export function createApp() {
   app.use('/api/feedback', feedbackRouter);
   app.use('/api/shared', sharedRouter);
   app.use('/api/referrals', referralsRouter);
+  app.use('/api/inbox', inboxRouter);
+  app.use('/api/notifications', notificationsRouter);
 
   // Unknown API address: answer in JSON. Express's default HTML 404 made
   // the app think the connection had failed ("Couldn't reach SOPY") and
