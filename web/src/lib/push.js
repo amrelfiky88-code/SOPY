@@ -32,6 +32,11 @@ async function currentSubscription() {
   return reg ? reg.pushManager.getSubscription() : null;
 }
 
+// This browser's push address, if it has one (kept on a password change).
+export async function currentPushEndpoint() {
+  try { return (await currentSubscription())?.endpoint || undefined; } catch { return undefined; }
+}
+
 // 'unsupported' | 'home-screen' | 'off-server' | 'blocked' | 'on' | 'off'
 export async function pushState() {
   if (!pushSupported()) return needsHomeScreen() ? 'home-screen' : 'unsupported';

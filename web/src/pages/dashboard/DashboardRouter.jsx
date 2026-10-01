@@ -185,7 +185,7 @@ export default function DashboardRouter() {
                       aria-label={t('common.store')}
                       value={choices.some((b) => b.id === store) ? store : choices[0].id}
                       onChange={(e) => setStore(e.target.value)}
-                      style={{ marginTop: 6, minHeight: 40, maxWidth: '100%' }}
+                      style={{ marginTop: 6, minHeight: 40, maxWidth: 'min(100%, 280px)' }}
                     >
                       {choices.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>

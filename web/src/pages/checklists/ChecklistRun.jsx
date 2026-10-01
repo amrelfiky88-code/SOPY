@@ -412,7 +412,8 @@ function Scorecard({ scorecard, submissionId, onDone }) {
         {scorecard.sections.map((s) => (
           <div key={s.category} className="section-score">
             <div className="section-score-row">
-              <span>{s.category}</span>
+              {/* "SOP 17: Allergen Awareness — 1. Staff Training": the SOP's name is the page title already. */}
+              <span>{librarySection(s)}</span>
               <span className="hint" style={{ margin: 0, whiteSpace: 'nowrap' }}>
                 {s.total ? `${s.compliant}/${s.total} · ${s.percentage}%` : '—'}
                 {s.criticalFails ? ` · ${t('run.colCritical')}: ${s.criticalFails}` : ''}

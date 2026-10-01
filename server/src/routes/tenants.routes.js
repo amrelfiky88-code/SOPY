@@ -432,6 +432,8 @@ tenantsRouter.patch('/users/:id', requireAuth, requireRole('business_owner', 'op
       values.push(target.id);
       await client.query(`UPDATE users SET ${fields.join(', ')} WHERE id = $${i}`, values);
     }
+    // Someone disabled gets no more phone notifications on any device.
+    if (status === 'disabled') await client.query('DELETE FROM push_subscriptions WHERE user_id = $1', [target.id]);
     if (branches) {
       await client.query('DELETE FROM user_branches WHERE user_id = $1', [target.id]);
       if (branches.length) {
