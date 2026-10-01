@@ -350,6 +350,9 @@ function SubscriptionCard({ user, tenant }) {
 
   const renewal = formatDate(subscription.current_period_end, lang);
   const stillPaid = subscription.current_period_end && new Date(subscription.current_period_end) > new Date();
+  // A Paymob plan is paid a month at a time: once the paid month is over it's
+  // overdue, not 'Active' (the app is already saying it has ended).
+  const shownStatus = subscription.provider === 'paymob' && subscription.status === 'active' && !stillPaid ? 'past_due' : subscription.status;
   // The tapered subtotals, as billed. count × rounded average rate drifted
   // from the total by a few cents (7 stores: 7 × $8.43 = $59.01 vs $59.00).
   const today = calculatePricing({ branches: subscription.branch_count, users: subscription.user_count });
@@ -367,8 +370,8 @@ function SubscriptionCard({ user, tenant }) {
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12 }}>
         <h3 style={{ fontSize: 16, margin: 0 }}>{t('account.subscription')}</h3>
-        <span className={`pill ${STATUS_PILL[subscription.status] || ''}`}>
-          {STATUS_LABEL[subscription.status] ? t(STATUS_LABEL[subscription.status]) : subscription.status}
+        <span className={`pill ${STATUS_PILL[shownStatus] || ''}`}>
+          {STATUS_LABEL[shownStatus] ? t(STATUS_LABEL[shownStatus]) : shownStatus}
         </span>
       </div>
 

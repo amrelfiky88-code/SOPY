@@ -117,6 +117,17 @@ test('checkout in Egypt asks Paymob for the exact plan price in EGP', async () =
   assert.equal(rows[0].n, 1);
 });
 
+test('an old unpaid Paymob payment is replaced rather than reused', async () => {
+  await pool.query("UPDATE paymob_payments SET created_at = now() - interval '1 hour' WHERE tenant_id = $1", [A.tenantId]);
+  const res = await api('POST', '/api/billing/checkout', { token: A.token, body: { method: 'paymob' } });
+  assert.equal(intentions.length, 2, 'a fresh payment');
+  assert.match(res.body.paymob.checkoutUrl, new RegExp(`clientSecret=${intentions[1].clientSecret}$`));
+  // Paying the old one later (its Paymob page was still open) still counts:
+  // checked in the next tests through the newest payment, and here by its row.
+  const { rows } = await pool.query("SELECT count(*)::int AS n FROM paymob_payments WHERE tenant_id = $1 AND status = 'pending'", [A.tenantId]);
+  assert.equal(rows[0].n, 2);
+});
+
 test('a forged, failed, wrong-amount or unknown result unlocks nothing', async () => {
   const intention = intentions.at(-1);
   const obj = transaction(intention);
@@ -147,8 +158,11 @@ test("Paymob's signed result unlocks the business, once", async () => {
   assert.ok(days > 29.9 && days < 30.1, `a month paid (${days} days)`);
   const me = await api('GET', '/api/tenants/current', { token: A.token });
   assert.equal(me.body.tenant.onboarding_step, 'onboarding', 'on to setup');
-  const paid = await pool.query("SELECT status, paymob_transaction_id FROM paymob_payments WHERE tenant_id = $1", [A.tenantId]);
-  assert.deepEqual(paid.rows, [{ status: 'paid', paymob_transaction_id: String(obj.id) }]);
+  const paid = await pool.query("SELECT status, paymob_transaction_id FROM paymob_payments WHERE tenant_id = $1 ORDER BY created_at", [A.tenantId]);
+  assert.deepEqual(paid.rows, [
+    { status: 'pending', paymob_transaction_id: null }, // the one it replaced
+    { status: 'paid', paymob_transaction_id: String(obj.id) },
+  ]);
 
   const check = await api('POST', '/api/billing/checkout', { token: A.token, body: { method: 'paymob' } });
   assert.equal(check.body.alreadyActive, true, 'no second checkout');

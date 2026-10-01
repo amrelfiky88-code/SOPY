@@ -207,7 +207,8 @@ const paymobView = (payment, url) => ({ checkoutUrl: url, amountEgp: Number(paym
 
 // Starts a Paymob payment, or hands back the same one if it's still
 // waiting to be paid (a refresh, the back button), as Paddle checkout
-// does. Under 1 EGP left to pay (credit covered it, or a plan change at
+// does. Only a recent one: a Paymob payment link doesn't last for ever, and
+// an unpaid row is never applied, so starting a fresh one is harmless. Under 1 EGP left to pay (credit covered it, or a plan change at
 // the very end of a month) there's nothing to charge: it's settled at once.
 async function startPaymobPayment(req, { subscriptionId, purpose, branchCount, userCount, amountUsd, creditApplied = 0, returnPath }) {
   let amountCents = egpCents(amountUsd);
@@ -215,7 +216,7 @@ async function startPaymobPayment(req, { subscriptionId, purpose, branchCount, u
   const { rows: same } = await query(
     `SELECT * FROM paymob_payments
      WHERE subscription_id = $1 AND purpose = $2 AND status = 'pending' AND branch_count = $3 AND user_count = $4
-       AND amount_egp_cents = $5 AND credit_applied = $6 AND client_secret IS NOT NULL AND created_at > now() - interval '12 hours'
+       AND amount_egp_cents = $5 AND credit_applied = $6 AND client_secret IS NOT NULL AND created_at > now() - interval '45 minutes'
      ORDER BY created_at DESC LIMIT 1`,
     [subscriptionId, purpose, branchCount, userCount, amountCents, creditApplied]
   );
