@@ -12,6 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { COUNTRY_GROUPS, ARABIC_NAMED_COUNTRIES } from '../../shared/countries.js';
+import { ARABIC_CITY_NAMES } from './arabic-city-names.js';
 
 const source = process.argv[2];
 if (!source) {
@@ -41,8 +42,8 @@ function score(name) {
   return s;
 }
 
-// Where the rules above still pick a colloquial spelling.
-const ARABIC_OVERRIDES = { Ajman: 'عجمان', 'Ras Al Khaimah': 'رأس الخيمة' };
+// Where GeoNames has no Arabic name or the rules above pick a colloquial
+// spelling: scripts/arabic-city-names.js.
 
 function arabicName(alternates) {
   const candidates = [...new Set(alternates.split(',')
@@ -60,7 +61,7 @@ for (const line of fs.readFileSync(source, 'utf8').split('\n')) {
   const code = cols[8];
   const population = Number(cols[14]) || 0;
   if (!wanted.has(code) || !name) continue;
-  const ar = ARABIC_NAMED_COUNTRIES.has(code) ? ARABIC_OVERRIDES[name] || arabicName(alternates) : null;
+  const ar = ARABIC_NAMED_COUNTRIES.has(code) ? ARABIC_CITY_NAMES[name] || arabicName(alternates) : null;
   (byCountry[code] ||= []).push({ name, ar, population });
 }
 

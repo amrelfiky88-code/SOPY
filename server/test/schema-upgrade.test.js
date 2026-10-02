@@ -30,8 +30,31 @@ const columnExists = async (table, column) =>
 const tableExists = async (table) => (await pool.query('SELECT to_regclass($1) AS t', [table])).rows[0].t !== null;
 
 test('on an up-to-date database the upgrade changes nothing and reports nothing', async () => {
-  const { failed } = await upgradeSchema({ log: quiet });
+  const { failed, applied } = await upgradeSchema({ log: quiet });
   assert.deepEqual(failed, []);
+  assert.equal(applied, 0);
+});
+
+test('an up-to-date database is checked without locking its tables, so a busy live database never stalls start-up', async () => {
+  // Another connection mid-query holds an ordinary lock on users. An
+  // ALTER TABLE, even ADD COLUMN IF NOT EXISTS for a column that's there,
+  // waits for an exclusive lock and makes every later query queue behind it.
+  const busy = await pool.connect();
+  try {
+    await busy.query('BEGIN');
+    await busy.query('LOCK TABLE users IN ACCESS SHARE MODE');
+    const started = Date.now();
+    const result = await Promise.race([
+      upgradeSchema({ log: quiet }),
+      new Promise((resolve) => setTimeout(() => resolve('stalled'), 5000)),
+    ]);
+    assert.notEqual(result, 'stalled', 'the upgrade waited on a table lock');
+    assert.deepEqual(result.failed, []);
+    assert.ok(Date.now() - started < 5000);
+  } finally {
+    await busy.query('ROLLBACK');
+    busy.release();
+  }
 });
 
 test('a database missing newer columns and tables is brought up to date, and login works again', async () => {

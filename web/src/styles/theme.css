@@ -232,6 +232,26 @@ input[type="range"] {
 .password-toggle[aria-pressed='true'] { color: var(--green); }
 .password-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--green-tint); }
 
+/* City box: the business's country's cities, listed under the box. */
+.city-field { position: relative; }
+.city-options {
+  position: absolute;
+  inset-inline: 0;
+  z-index: 30;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--paper-white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(28, 61, 46, 0.14);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.city-options li { padding: 11px 14px; font-size: 16px; cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.city-options li + li { border-top: 1px solid var(--line); }
+.city-options li.active, .city-options li:hover { background: var(--green-tint); }
+
 /* Phone number: country code list, then the number. Always left to right. */
 .phone-field { display: flex; gap: 8px; }
 .field .phone-field select { flex: 0 0 auto; width: 8.5rem; text-overflow: ellipsis; }

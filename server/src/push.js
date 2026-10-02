@@ -68,7 +68,22 @@ function say(lang, key, vars = {}) {
   for (const [k, v] of Object.entries(vars)) out = out.replaceAll(`{${k}}`, v ?? '');
   return out;
 }
-const report = (lang, d) => REPORT_NAMES[d.kind]?.[LANG_INDEX[lang] ?? 0] || d.templateName || '';
+const report = (lang, d) => REPORT_NAMES[d.kind]?.[LANG_INDEX[lang] ?? 0] || d.templateNames?.[lang] || d.templateName || '';
+
+// A checklist started from the Library is named after its SOP or audit in
+// English ("NFSA Site Visit"). Its name in each language is the part before
+// " — " of its sections' translated category, as the app shows it
+// (GET /checklists/library/groups); pushes used to give the English name to everyone.
+async function libraryNames(templateName, langs) {
+  const out = {};
+  const like = `${templateName.replace(/[\\%_]/g, (c) => `\\${c}`)} — %`;
+  for (const lang of langs) {
+    if (lang === 'en') continue;
+    const { rows } = await query('SELECT translated FROM content_translations WHERE lang = $1 AND source_text LIKE $2 LIMIT 1', [lang, like]);
+    if (rows[0]) out[lang] = rows[0].translated.split(' — ')[0];
+  }
+  return out;
+}
 const clip = (s, n = 140) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
 // kind + data (as stored on a notification) → { title, body } in `lang`.
@@ -110,6 +125,9 @@ export function pushToUsers(userIds, kind, data, { url = '/app/notifications', t
        WHERE ps.user_id = ANY($1::uuid[])`,
       [userIds]
     );
+    const named = !REPORT_NAMES[data.kind] && data.templateName
+      ? { ...data, templateNames: await libraryNames(data.templateName, [...new Set(rows.map((s) => s.language || DEFAULT_LANGUAGE))]) }
+      : data;
     const vapidDetails = {
       subject: process.env.VAPID_SUBJECT || 'mailto:support@example.com',
       publicKey: process.env.VAPID_PUBLIC_KEY,
@@ -117,7 +135,7 @@ export function pushToUsers(userIds, kind, data, { url = '/app/notifications', t
     };
     await Promise.all(rows.map(async (s) => {
       const lang = s.language || DEFAULT_LANGUAGE;
-      const payload = JSON.stringify({ ...pushText(kind, data, lang), url, tag, lang, dir: lang === 'ar' ? 'rtl' : 'ltr' });
+      const payload = JSON.stringify({ ...pushText(kind, named, lang), url, tag, lang, dir: lang === 'ar' ? 'rtl' : 'ltr' });
       try {
         await sender({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { vapidDetails, TTL: 6 * 3600 });
       } catch (err) {

@@ -73,25 +73,95 @@ export function upgradeStatements(stmt) {
   return [stmt]; // CREATE EXTENSION IF NOT EXISTS, and anything already repeat-safe
 }
 
+// What the database already has, read from the catalogue (no table locks).
+async function currentSchema(db) {
+  const [tables, columns, indexes, enums] = await Promise.all([
+    db.query("SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema()"),
+    db.query("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = current_schema()"),
+    db.query('SELECT indexname FROM pg_indexes WHERE schemaname = current_schema()'),
+    db.query('SELECT t.typname, e.enumlabel FROM pg_type t LEFT JOIN pg_enum e ON e.enumtypid = t.oid WHERE t.typtype = $1', ['e']),
+  ]);
+  const enumLabels = new Map();
+  for (const r of enums.rows) {
+    if (!enumLabels.has(r.typname)) enumLabels.set(r.typname, new Set());
+    if (r.enumlabel) enumLabels.get(r.typname).add(r.enumlabel);
+  }
+  return {
+    tables: new Set(tables.rows.map((r) => r.table_name)),
+    columns: new Set(columns.rows.map((r) => `${r.table_name}.${r.column_name}`)),
+    indexes: new Set(indexes.rows.map((r) => r.indexname)),
+    enumLabels,
+  };
+}
+
+// Whether a step is already in place. Only missing things are run: even
+// ADD COLUMN IF NOT EXISTS for a column that's there takes an exclusive
+// lock on the table first, so on a busy database every start-up queued
+// behind running queries, and every later query queued behind it.
+function alreadyThere(step, have) {
+  let m = step.match(/^CREATE TABLE IF NOT EXISTS (\w+)/i);
+  if (m) return have.tables.has(m[1]);
+  m = step.match(/^ALTER TABLE (\w+) ADD COLUMN IF NOT EXISTS (\w+)/i);
+  if (m) return have.columns.has(`${m[1]}.${m[2]}`);
+  m = step.match(/^CREATE (?:UNIQUE )?INDEX IF NOT EXISTS (\w+)/i);
+  if (m) return have.indexes.has(m[1]);
+  return false; // CREATE EXTENSION IF NOT EXISTS: cheap, and no table lock
+}
+
 export async function upgradeSchema({ db = pool, log = console } = {}) {
   const failed = [];
-  for (const stmt of schemaStatements()) {
-    for (const step of upgradeStatements(stmt)) {
-      try {
-        if (typeof step === 'string') {
-          await db.query(step);
-        } else {
-          const { rows } = await db.query('SELECT 1 FROM pg_type WHERE typname = $1', [step.type]);
-          if (!rows[0]) await db.query(`CREATE TYPE ${step.type} AS ENUM (${step.values.join(', ')})`);
-          else for (const value of step.values) await db.query(`ALTER TYPE ${step.type} ADD VALUE IF NOT EXISTS ${value}`);
+  let applied = 0;
+  // One connection, so the lock timeout holds for every statement: a change
+  // that does need a lock gives up after 10s (logged) rather than hanging.
+  const client = db.connect ? await db.connect() : db;
+  try {
+    await client.query("SET lock_timeout = '10s'");
+    const have = await currentSchema(client);
+    for (const stmt of schemaStatements()) {
+      for (const step of upgradeStatements(stmt)) {
+        try {
+          if (typeof step === 'string') {
+            if (alreadyThere(step, have)) continue;
+            await client.query(step);
+            if (!/^CREATE EXTENSION/i.test(step)) applied++;
+            // A table just made has the columns its CREATE lists (not ones a
+            // later ALTER in schema.sql adds): note them, so they aren't re-added.
+            const created = step.match(/^CREATE TABLE IF NOT EXISTS (\w+)/i);
+            const added = step.match(/^ALTER TABLE (\w+) ADD COLUMN IF NOT EXISTS (\w+)/i);
+            if (created) {
+              have.tables.add(created[1]);
+              const { rows } = await client.query(
+                'SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1', [created[1]]);
+              for (const r of rows) have.columns.add(`${created[1]}.${r.column_name}`);
+            } else if (added) {
+              have.columns.add(`${added[1]}.${added[2]}`);
+            }
+          } else {
+            const labels = have.enumLabels.get(step.type);
+            if (!labels) {
+              await client.query(`CREATE TYPE ${step.type} AS ENUM (${step.values.join(', ')})`);
+              applied++;
+            } else {
+              for (const value of step.values) {
+                if (labels.has(value.replace(/^'|'$/g, ''))) continue;
+                await client.query(`ALTER TYPE ${step.type} ADD VALUE IF NOT EXISTS ${value}`);
+                applied++;
+              }
+            }
+          }
+        } catch (err) {
+          failed.push({ statement: typeof step === 'string' ? step : `enum ${step.type}`, error: err.message });
         }
-      } catch (err) {
-        failed.push({ statement: typeof step === 'string' ? step : `enum ${step.type}`, error: err.message });
       }
+    }
+  } finally {
+    if (client !== db) {
+      await client.query('RESET lock_timeout').catch(() => {});
+      client.release();
     }
   }
   for (const f of failed) log.warn(`Schema upgrade: could not apply "${f.statement.slice(0, 120)}": ${f.error}`);
-  return { failed };
+  return { failed, applied };
 }
 
 // Library content added after launch, in seed files written to be safe to

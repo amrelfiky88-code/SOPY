@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import webpush from 'web-push';
 import { resetTestDb, closeDb } from '../test-utils/db.js';
 import { startTestServer, makeClient, completeSetup } from '../test-utils/server.js';
-import { setPushSender, pushesSettled } from '../src/push.js';
+import { setPushSender, pushesSettled, pushToUsers } from '../src/push.js';
 import { sendDueReminders } from '../src/reminders.js';
 import { pool } from '../src/db.js';
 
@@ -117,6 +117,14 @@ test('a reminder is pushed too', async () => {
   await sendDueReminders(new Date('2030-01-15T06:40:00Z'));
   await pushesSettled();
   assert.equal(pushesTo('omar')[0].title, 'Line check due at 09:00');
+});
+
+test('a checklist started from the Library is named in each person’s language', async () => {
+  // Library runs are named after their SOP or audit in English.
+  pushToUsers([owner.userId, mgr.userId], 'checklist_due', { kind: 'custom', templateName: 'NFSA Site Visit', dueTime: '09:00', branchName: 'Downtown', started: false });
+  await pushesSettled();
+  assert.equal(pushesTo('layla').at(-1).title, 'زيارة هيئة سلامة الغذاء مستحق الساعة 09:00', 'Arabic for the owner');
+  assert.equal(pushesTo('karim').at(-1).title, 'NFSA Site Visit due at 09:00');
 });
 
 test('a subscription the push service has dropped is removed; signing out removes this browser’s', async () => {

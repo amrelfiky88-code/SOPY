@@ -201,6 +201,10 @@ test("the city list follows the business's country", async () => {
   assert.equal(egypt.body.country, 'Egypt');
   assert.deepEqual(egypt.body.cities[0], ['Cairo', 'القاهرة'], 'biggest first, with its Arabic name');
   assert.ok(egypt.body.cities.length > 100);
+  // Every Egyptian city reads in Arabic on an Arabic page (40 used to show
+  // their Latin GeoNames spelling, such as "Madīnat an Naşr" for مدينة نصر).
+  assert.deepEqual(egypt.body.cities.filter((c) => !c[1]).map((c) => c[0]), []);
+  assert.ok(egypt.body.cities.some(([en, ar]) => en === 'Madīnat an Naşr' && ar === 'مدينة نصر'));
 
   const other = await api('POST', '/api/auth/signup', {
     body: { fullName: 'Elsewhere', email: 'other-country@example.com', password: 'OwnerPass123', restaurantName: 'Elsewhere', country: 'Other', branchCount: 1, userCount: 1 },
