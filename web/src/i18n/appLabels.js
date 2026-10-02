@@ -125,6 +125,7 @@ const ROWS = [
   ['app.dueAt', 'Due {time}', 'مستحق {time}', 'Avant {time}'],
   ['notif.referralTitle', 'Referral credit earned', 'حصلت على رصيد إحالة', 'Crédit de parrainage obtenu'],
   // --- NFSA site visit (pages/nfsa/NfsaVisit.jsx) -----------------------
+  ['account.endedOn', 'Your plan ended on {date}.', 'انتهى اشتراكك في {date}.', 'Votre abonnement a pris fin le {date}.'],
   ['nfsa.title', 'NFSA site visit', 'زيارة هيئة سلامة الغذاء', "Visite d'inspection NFSA"],
   ['nfsa.menu', 'NFSA visit', 'زيارة هيئة سلامة الغذاء', 'Visite NFSA'],
   ['nfsa.rowMeta', 'Self-inspection before an inspection visit', 'تفتيش ذاتي قبل زيارة التفتيش', "Auto-inspection avant une visite d'inspection"],

@@ -186,7 +186,7 @@ function AppShell({ user, tenant, t, canManage, seesKpi, sidebarOpen, setSidebar
           <div className="error-banner plan-ended-banner" role="status">
             {t('plan.ended')}{' '}
             {user?.role === 'business_owner'
-              ? <NavLink to="/app/account" className="link-btn">{t('plan.resubscribe')}</NavLink>
+              ? <NavLink to="/app/account#billing" className="link-btn">{t('plan.resubscribe')}</NavLink>
               : t('plan.askOwner')}
           </div>
         )}

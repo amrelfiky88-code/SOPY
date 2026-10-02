@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api, setToken } from '../../api.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { calculatePricing, PLAN_LIMITS, clampPlanCount } from '../../../../shared/pricing.js';
@@ -393,6 +393,13 @@ function SubscriptionCard({ user, tenant }) {
   }), [branches, users]);
   // A changed plan needs a fresh Paymob amount.
   useEffect(() => { setUpgradePay(null); }, [branches, users]);
+
+  // The "subscription has ended" banner links here (#billing). Already on
+  // this page, following it did nothing visible; it brings the plan into view.
+  const location = useLocation();
+  useEffect(() => {
+    if (location.hash === '#billing' && !loading) document.getElementById('billing')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [location.key, location.hash, loading]);
   const currentTotal = Number(subscription?.monthly_total || 0);
   const difference = preview.monthlyTotal - currentTotal;
 
@@ -464,11 +471,11 @@ function SubscriptionCard({ user, tenant }) {
     }
   };
 
-  if (loading) return <div className="card"><p style={{ margin: 0 }}>{t('account.loadingPlan')}</p></div>;
+  if (loading) return <div className="card" id="billing"><p style={{ margin: 0 }}>{t('account.loadingPlan')}</p></div>;
 
   if (!subscription) {
     return (
-      <div className="card">
+      <div className="card" id="billing">
         <h3 style={{ fontSize: 16, marginBottom: 8 }}>{t('account.subscription')}</h3>
         <p style={{ margin: 0 }}>{t('account.noSubscription')}</p>
         {error && <div className="error-banner" style={{ marginTop: 12 }}>{error}</div>}
@@ -502,7 +509,7 @@ function SubscriptionCard({ user, tenant }) {
   };
 
   return (
-    <div className="card">
+    <div className="card" id="billing">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12 }}>
         <h3 style={{ fontSize: 16, margin: 0 }}>{t('account.subscription')}</h3>
         <span className={`pill ${STATUS_PILL[shownStatus] || ''}`}>
@@ -594,7 +601,7 @@ function SubscriptionCard({ user, tenant }) {
 
           <p className="hint">
             {subscription.status === 'canceled'
-              ? (renewal ? t('account.canceledUntil', { date: renewal }) : t('account.isCanceled'))
+              ? (renewal ? t(stillPaid ? 'account.canceledUntil' : 'account.endedOn', { date: renewal }) : t('account.isCanceled'))
               : subscription.status === 'pending'
                 ? t('account.pendingNote')
                 : subscription.status === 'past_due'
