@@ -16,6 +16,8 @@ import PageHead from '../../components/PageHead.jsx';
 import FeedbackButton from '../../components/FeedbackButton.jsx';
 import { initials } from '../inbox/format.js';
 import { StorefrontIcon, ClipboardCheckIcon, BarChartIcon, LockIcon, MessageIcon, LogOutIcon, ChevronEndIcon, ChevronDownIcon } from '../../components/icons.jsx';
+import PasswordInput from '../../components/PasswordInput.jsx';
+import PhoneField from '../../components/PhoneField.jsx';
 
 const MANAGERS = ['business_owner', 'operations_manager', 'area_manager'];
 
@@ -251,16 +253,16 @@ function PasswordCard() {
       {status === 'saved' && <div className="success-banner" role="status">{t('account.passwordChanged')}</div>}
       <div className="field">
         <label htmlFor="pw-current">{t('account.currentPassword')}</label>
-        <input id="pw-current" type="password" autoComplete="current-password" value={form.current} onChange={set('current')} />
+        <PasswordInput id="pw-current" autoComplete="current-password" value={form.current} onChange={set('current')} />
       </div>
       <div className="field">
         <label htmlFor="pw-new">{t('account.newPassword')}</label>
-        <input id="pw-new" type="password" autoComplete="new-password" minLength={8} value={form.next} onChange={set('next')} />
+        <PasswordInput id="pw-new" autoComplete="new-password" minLength={8} value={form.next} onChange={set('next')} />
         <div className="hint">{t('account.passwordHint')}</div>
       </div>
       <div className="field">
         <label htmlFor="pw-confirm">{t('account.confirmPassword')}</label>
-        <input id="pw-confirm" type="password" autoComplete="new-password" value={form.confirm} onChange={set('confirm')} />
+        <PasswordInput id="pw-confirm" autoComplete="new-password" value={form.confirm} onChange={set('confirm')} />
         {mismatch && <div className="error">{t('account.passwordMismatch')}</div>}
       </div>
       <button className="btn btn-primary" type="submit" disabled={!canSave}>
@@ -306,7 +308,7 @@ function ProfileCard({ user, tenant, setUser }) {
           <label htmlFor="profile-title">{t('account.jobTitle')}</label>
           <JobTitleSelect id="profile-title" value={form.title} onChange={(v) => set('title', v)} />
         </div>
-        <LabeledInput label={t('account.phone')} type="tel" value={form.phone} onChange={(v) => set('phone', v)} />
+        <PhoneField id="profile-phone" label={t('account.phone')} value={form.phone} country={tenant?.country} onChange={(v) => set('phone', v)} />
       </div>
 
       <div className="summary-row">

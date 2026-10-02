@@ -5,6 +5,8 @@ import { useI18n } from '../i18n/index.jsx';
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
 import { REFERRAL_WELCOME_USD } from '../../../shared/referrals.js';
 import { countryOptions } from '../../../shared/countries.js';
+import PasswordInput from '../components/PasswordInput.jsx';
+import PhoneField from '../components/PhoneField.jsx';
 import JobTitleSelect from '../components/JobTitleSelect.jsx';
 import Logo from '../components/Logo.jsx';
 
@@ -86,13 +88,10 @@ export default function WhoAreYou() {
           <label htmlFor="email">{t('page.email')}</label>
           <input id="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required value={form.email} onChange={set('email')} />
         </div>
-        <div className="field">
-          <label htmlFor="phone">{t('page.phone')}</label>
-          <input id="phone" type="tel" autoComplete="tel" value={form.phone} onChange={set('phone')} />
-        </div>
+        <PhoneField id="phone" label={t('page.phone')} value={form.phone} country={form.country} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} />
         <div className="field">
           <label htmlFor="password">{t('signup.password')}</label>
-          <input id="password" type="password" autoComplete="new-password" minLength={8} required value={form.password} onChange={set('password')} />
+          <PasswordInput id="password" autoComplete="new-password" minLength={8} required value={form.password} onChange={set('password')} />
           <div className="hint">{t('signup.passwordHint')}</div>
         </div>
         <div className="field">

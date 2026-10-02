@@ -124,6 +124,11 @@ const ROWS = [
   ['builder.dueByHint', 'Optional. People get a reminder 30 minutes before, in the store\'s time zone.', 'اختياري. يصل تذكير قبل 30 دقيقة، بتوقيت الفرع.', "Facultatif. Un rappel est envoyé 30 minutes avant, à l'heure de l'établissement."],
   ['app.dueAt', 'Due {time}', 'مستحق {time}', 'Avant {time}'],
   ['notif.referralTitle', 'Referral credit earned', 'حصلت على رصيد إحالة', 'Crédit de parrainage obtenu'],
+  // --- Password and phone boxes ------------------------------------------
+  ['field.showPassword', 'Show password', 'إظهار كلمة المرور', 'Afficher le mot de passe'],
+  ['field.hidePassword', 'Hide password', 'إخفاء كلمة المرور', 'Masquer le mot de passe'],
+  ['field.countryCode', 'Country code', 'رمز الدولة', 'Indicatif du pays'],
+  ['field.phoneNumber', 'Phone number', 'رقم الهاتف', 'Numéro de téléphone'],
   ['notif.referralBody', '{name} made its first payment. {amount} comes off your next SOPY payment.', 'سدّد {name} أول دفعة. سيُخصم {amount} من دفعتك القادمة في SOPY.', '{name} a effectué son premier paiement. {amount} seront déduits de votre prochain paiement SOPY.'],
 ];
 

@@ -209,6 +209,34 @@ input[type="range"] {
 .hint { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
 .field .error { font-size: 13px; color: var(--red); margin-top: 4px; }
 
+/* Password box with its show/hide eye button inside, at the end edge. */
+.password-input { position: relative; }
+.field .password-input input { padding-inline-end: 50px; }
+.password-toggle {
+  position: absolute;
+  inset-inline-end: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.password-toggle[aria-pressed='true'] { color: var(--green); }
+.password-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--green-tint); }
+
+/* Phone number: country code list, then the number. Always left to right. */
+.phone-field { display: flex; gap: 8px; }
+.field .phone-field select { flex: 0 0 auto; width: 8.5rem; text-overflow: ellipsis; }
+.field .phone-field input { flex: 1 1 auto; min-width: 0; }
+
 .btn {
   display: inline-flex;
   align-items: center;

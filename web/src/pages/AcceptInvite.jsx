@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext.jsx';
 import { useI18n } from '../i18n/index.jsx';
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
 import Logo from '../components/Logo.jsx';
+import PasswordInput from '../components/PasswordInput.jsx';
 
 export default function AcceptInvite() {
   const { t, lang } = useI18n();
@@ -13,7 +14,6 @@ export default function AcceptInvite() {
   const navigate = useNavigate();
   const { refresh } = useAuth();
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   // Who the link is for, checked before they type anything: a dead link
@@ -74,16 +74,9 @@ export default function AcceptInvite() {
           <form onSubmit={handleSubmit}>
             <div className="field">
               <label htmlFor="password">{reset ? t('accept.newPassword') : t('page.password')}</label>
-              <input id="password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <PasswordInput id="password" autoComplete="new-password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} />
               <div className="hint">{t('signup.passwordHint')}</div>
             </div>
-            {/* On a phone keyboard a typo here locked people out until a
-                manager sent a new link. (Outside .field, whose input styles
-                would stretch the checkbox full width.) */}
-            <label className="inline-check" htmlFor="showPassword" style={{ margin: '-8px 0 18px' }}>
-              <input id="showPassword" type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} />
-              {t('accept.showPassword')}
-            </label>
             <button className="btn btn-primary" type="submit" disabled={submitting}>
               {submitting ? t('common.saving') : t('accept.submit')}
             </button>

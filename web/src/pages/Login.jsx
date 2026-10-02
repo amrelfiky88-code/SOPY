@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext.jsx';
 import { useT } from '../i18n/index.jsx';
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx';
 import Logo from '../components/Logo.jsx';
+import PasswordInput from '../components/PasswordInput.jsx';
 
 export default function Login() {
   const t = useT();
@@ -55,7 +56,7 @@ export default function Login() {
         </div>
         <div className="field">
           <label htmlFor="password">{t('login.password')}</label>
-          <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          <PasswordInput id="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
         <button className="btn btn-primary" type="submit" disabled={submitting} style={{ width: '100%' }}>
           {submitting ? t('login.signingIn') : t('login.submit')}

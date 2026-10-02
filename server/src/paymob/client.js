@@ -45,7 +45,7 @@ function billingData({ fullName, email, phone }) {
   const [first, ...rest] = String(fullName || 'SOPY customer').trim().split(/\s+/);
   return {
     first_name: first || 'SOPY', last_name: rest.join(' ') || first || 'Customer',
-    email, phone_number: phone || 'NA', country: 'EG',
+    email, phone_number: String(phone || '').replace(/[^\d+]/g, '') || 'NA', country: 'EG',
     apartment: 'NA', floor: 'NA', street: 'NA', building: 'NA', city: 'NA', state: 'NA',
   };
 }

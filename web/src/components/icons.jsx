@@ -25,6 +25,23 @@ function Base({ size = 20, children, ...rest }) {
   );
 }
 
+// An eye (almond outline and pupil) for showing a password, and the same
+// eye struck through for hiding it again.
+export const EyeIcon = (props) => (
+  <Base {...props}>
+    <polygon points="2,12 5,8 9,5.8 12,5.4 15,5.8 19,8 22,12 19,16 15,18.2 12,18.6 9,18.2 5,16" />
+    <circle cx="12" cy="12" r="3.2" />
+  </Base>
+);
+
+export const EyeOffIcon = (props) => (
+  <Base {...props}>
+    <polygon points="2,12 5,8 9,5.8 12,5.4 15,5.8 19,8 22,12 19,16 15,18.2 12,18.6 9,18.2 5,16" />
+    <circle cx="12" cy="12" r="3.2" />
+    <line x1="4" y1="3.5" x2="20" y2="20.5" />
+  </Base>
+);
+
 // Chat bubble with a tail and a handset — reads as WhatsApp on its green tile.
 export const WhatsAppIcon = (props) => (
   <Base strokeWidth="1.8" {...props}>
