@@ -125,6 +125,9 @@ const ROWS = [
   ['app.dueAt', 'Due {time}', 'مستحق {time}', 'Avant {time}'],
   ['notif.referralTitle', 'Referral credit earned', 'حصلت على رصيد إحالة', 'Crédit de parrainage obtenu'],
   // --- NFSA site visit (pages/nfsa/NfsaVisit.jsx) -----------------------
+  ['invite.shareText', 'You’re invited to join our team on SOPY. Open this link to set your password: {url}', 'أنت مدعو للانضمام إلى فريقنا على SOPY. افتح هذا الرابط لتعيين كلمة المرور: {url}', 'Vous êtes invité à rejoindre notre équipe sur SOPY. Ouvrez ce lien pour définir votre mot de passe : {url}'],
+  ['invite.resetShareText', 'Here’s your SOPY password reset link. It works once, for 48 hours: {url}', 'هذا رابط إعادة تعيين كلمة المرور في SOPY. يعمل مرة واحدة خلال 48 ساعة: {url}', 'Voici votre lien de réinitialisation du mot de passe SOPY. Il fonctionne une fois, pendant 48 heures : {url}'],
+  ['invite.copyByHand', 'Your browser didn’t allow copying. The link is selected: press and hold it to copy.', 'لم يسمح المتصفح بالنسخ. الرابط محدد: اضغط عليه مطولًا لنسخه.', "Votre navigateur n'a pas autorisé la copie. Le lien est sélectionné : appuyez longuement dessus pour le copier."],
   ['account.endedOn', 'Your plan ended on {date}.', 'انتهى اشتراكك في {date}.', 'Votre abonnement a pris fin le {date}.'],
   ['nfsa.title', 'NFSA site visit', 'زيارة هيئة سلامة الغذاء', "Visite d'inspection NFSA"],
   ['nfsa.menu', 'NFSA visit', 'زيارة هيئة سلامة الغذاء', 'Visite NFSA'],

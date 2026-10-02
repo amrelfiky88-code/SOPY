@@ -93,7 +93,7 @@ async function call(method, path, { body, query, raw } = {}) {
   let res;
   try {
     res = await fetch(url, {
-    signal: AbortSignal.timeout(5000),
+    signal: AbortSignal.timeout(15000),
     method,
     headers: { Authorization: `Bearer ${token}`, ...(body !== undefined || raw !== undefined ? { 'Content-Type': 'application/json' } : {}) },
     body: raw !== undefined ? raw : body !== undefined ? JSON.stringify(body) : undefined,

@@ -147,6 +147,15 @@ test('a store list that is not a list is refused, not a server error', async () 
 
 // --- Branch removal --------------------------------------------------
 
+test("a store's city and address must be text", async () => {
+  for (const body of [{ name: 'Odd', address: 12345 }, { name: 'Odd', address: { street: 'x' } }, { name: 'Odd', city: ['Cairo'] }, { name: 'Odd', city: 7 }]) {
+    const res = await api('POST', '/api/tenants/branches', { token: A.token, body });
+    assert.equal(res.status, 400, JSON.stringify(body));
+  }
+  const { rows } = await pool.query("SELECT count(*)::int AS n FROM branches WHERE name = 'Odd'");
+  assert.equal(rows[0].n, 0);
+});
+
 test('a removed store disappears from the store list', async () => {
   const created = await api('POST', '/api/tenants/branches', { token: A.token, body: { name: 'Temporary' } });
   const before = await api('GET', '/api/tenants/branches', { token: A.token });

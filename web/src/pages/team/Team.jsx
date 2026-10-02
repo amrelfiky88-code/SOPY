@@ -141,8 +141,8 @@ export default function Team() {
       {error && <div className="error-banner">{error}</div>}
 
       <div className="filter-row">
-        <button className={tab === 'stores' ? 'active' : ''} onClick={() => setTab('stores')}>{t('team.storesTab', { n: branches.length })}</button>
-        <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}>{t('team.usersTab', { n: users.length })}</button>
+        <button type="button" aria-pressed={tab === 'stores'} className={tab === 'stores' ? 'active' : ''} onClick={() => setTab('stores')}>{t('team.storesTab', { n: branches.length })}</button>
+        <button type="button" aria-pressed={tab === 'users'} className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}>{t('team.usersTab', { n: users.length })}</button>
       </div>
 
       {tab === 'stores' && (

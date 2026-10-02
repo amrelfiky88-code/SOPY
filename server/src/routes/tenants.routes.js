@@ -176,6 +176,11 @@ tenantsRouter.post('/branches', requireAuth, requireRole('business_owner', 'oper
   const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
   if (!name) return res.status(400).json({ error: 'Branch name is required' });
   if (name.length > 120) return res.status(400).json({ error: 'That store name is too long' });
+  // Text or nothing, as when editing a store: an address sent as a number
+  // or an object used to be saved as text, and a city like that was dropped.
+  if ([city, address].some((v) => v !== undefined && v !== null && typeof v !== 'string')) {
+    return res.status(400).json({ error: 'Enter your details as text' });
+  }
   if ((typeof city === 'string' && city.trim().length > 120) || (typeof address === 'string' && address.length > 300)) {
     return res.status(400).json({ error: 'That text is too long' });
   }
