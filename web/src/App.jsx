@@ -20,6 +20,7 @@ import BarDailyForm from './pages/forms/BarDailyForm.jsx';
 import OpeningDailyForm from './pages/forms/OpeningDailyForm.jsx';
 import ClosingDailyForm from './pages/forms/ClosingDailyForm.jsx';
 import QcVisitForm from './pages/forms/QcVisitForm.jsx';
+import NfsaVisit from './pages/nfsa/NfsaVisit.jsx';
 import AreaManagerVisitForm from './pages/forms/AreaManagerVisitForm.jsx';
 import OpsManagerVisitForm from './pages/forms/OpsManagerVisitForm.jsx';
 import Team from './pages/team/Team.jsx';
@@ -136,6 +137,7 @@ export default function App() {
         <Route path="forms/opening" element={<OpeningDailyForm />} />
         <Route path="forms/closing" element={<ClosingDailyForm />} />
         <Route path="forms/qc-visit" element={<ManagerOnly><QcVisitForm /></ManagerOnly>} />
+        <Route path="nfsa" element={<StaffRedirect><NfsaVisit /></StaffRedirect>} />
         <Route path="forms/area-manager-visit" element={<ManagerOnly><AreaManagerVisitForm /></ManagerOnly>} />
         <Route path="forms/ops-manager-visit" element={<ManagerOnly><OpsManagerVisitForm /></ManagerOnly>} />
         <Route path="team" element={<ManagerOnly><Team /></ManagerOnly>} />

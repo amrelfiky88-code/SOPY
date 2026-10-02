@@ -9,7 +9,7 @@
 // have bare categories ("hygiene"), so each of those standards is one group.
 // Always decided from the English category (category_en once translated).
 
-const SECTIONED = new Set(['SOP', 'INTERNAL_QC', 'C_STORE']);
+const SECTIONED = new Set(['SOP', 'INTERNAL_QC', 'NFSA', 'C_STORE']);
 const SEP = ' — ';
 
 export function libraryGroupKey(item) {
@@ -28,15 +28,18 @@ export function librarySection(item) {
 
 // How often a group is meant to be run, from its name.
 export function libraryGroupFrequency(key) {
+  // A self-inspection before an NFSA visit: monthly, like the QC audits.
+  if (/^NFSA/.test(key)) return 'monthly';
   if (/^Weekly/i.test(key)) return 'weekly';
   if (/^Monthly/i.test(key)) return 'monthly';
   if (/^Quarterly/i.test(key)) return 'quarterly';
   return 'daily';
 }
 
-// Library order: the client's own QC audits first, then SOPs in number
-// order, then the starter standards and the convenience-store section.
-const STANDARD_ORDER = ['INTERNAL_QC', 'SOP', 'HACCP', 'ISO_22000', 'LOCAL_CODE', 'C_STORE', 'CUSTOM'];
+// Library order: the client's own QC audits first, then the NFSA site
+// visit, SOPs in number order, the starter standards and the
+// convenience-store section.
+const STANDARD_ORDER = ['INTERNAL_QC', 'NFSA', 'SOP', 'HACCP', 'ISO_22000', 'LOCAL_CODE', 'C_STORE', 'CUSTOM'];
 const QC_ORDER = ['Daily QC', 'Weekly Audit', 'Monthly Audit', 'Quarterly Audit'];
 
 function sortKey(group) {

@@ -239,6 +239,7 @@ const ROWS = [
   ['std.INTERNAL_QC', 'Internal QC', 'مراقبة الجودة الداخلية', 'Contrôle qualité interne'],
   ['std.SOP', 'SOP procedures', 'إجراءات التشغيل القياسية', 'Procédures (SOP)'],
   ['std.C_STORE', 'Convenience store', 'متجر صغير', 'Supérette'],
+  ['std.NFSA', 'NFSA (Egypt)', 'هيئة سلامة الغذاء (مصر)', 'NFSA (Égypte)'],
   ['std.CUSTOM', 'Custom', 'مخصص', 'Personnalisé'],
   ['builder.needNameAndItems', 'Give the checklist a name and pick at least one checkpoint.', 'أعطِ قائمة الفحص اسمًا واختر نقطة فحص واحدة على الأقل.', 'Donnez un nom à la check-list et choisissez au moins un point de contrôle.'],
   ['builder.savedNotice', 'Saved “{name}”. Assign it below.', 'تم حفظ «{name}». كلّف بها أدناه.', '« {name} » enregistrée. Attribuez-la ci-dessous.'],

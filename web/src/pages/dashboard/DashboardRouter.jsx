@@ -6,7 +6,7 @@ import { BellButton } from '../../components/PageHead.jsx';
 import {
   ClipboardCheckIcon, ClipboardEmptyIcon, CheckIcon, PlayIcon, StoveIcon, CoffeeIcon, DoorOpenIcon, DoorClosedIcon,
   SearchIcon, MapPinIcon, BriefcaseIcon, ChevronEndIcon, ChevronDownIcon, StorefrontIcon,
-  CheckCircleIcon, ThermometerIcon, TrashIcon, AlertTriangleIcon,
+  CheckCircleIcon, ThermometerIcon, TrashIcon, AlertTriangleIcon, ShieldIcon,
 } from '../../components/icons.jsx';
 import { useI18n } from '../../i18n/index.jsx';
 import { reportTitle } from '../../i18n/formLabels.js';
@@ -215,11 +215,17 @@ export default function DashboardRouter() {
           </div>
         </div>
 
-        {isManager && (
+        {seesKpi && (
           <div>
             <div className="section-label">{t('app.visitReports')}</div>
             <div className="list-card">
-              {VISIT_REPORTS.map(({ to, label, icon: Icon }) => (
+              {/* Store managers too: inspectors visit their store. */}
+              <Link to="/app/nfsa" className="list-row">
+                <span className="icon-tile icon-tile-sm"><ShieldIcon size={18} /></span>
+                <span className="row-text"><span className="row-title">{t('nfsa.title')}</span><span className="row-meta">{t('nfsa.rowMeta')}</span></span>
+                <span className="row-chev"><ChevronEndIcon size={16} /></span>
+              </Link>
+              {isManager && VISIT_REPORTS.map(({ to, label, icon: Icon }) => (
                 <Link key={to} to={to} className="list-row">
                   <span className="icon-tile icon-tile-sm"><Icon size={18} /></span>
                   <span className="row-text"><span className="row-title">{t(label)}</span></span>

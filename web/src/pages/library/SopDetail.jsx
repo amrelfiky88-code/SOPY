@@ -88,7 +88,7 @@ export default function SopDetail() {
         <div className="stat-box"><div className="stat-value" style={{ fontSize: 16 }}>{t(`kpi.${group.frequency}`)}</div><div className="stat-label">{t('library.statFrequency')}</div></div>
       </div>
       <div className={`source-note${group.researched ? ' researched' : ''}`}>
-        {t(group.researched ? 'library.sourceResearched' : group.clientOwn ? 'library.sourceClient' : 'library.sourceCustom')}
+        {t(group.researched ? 'library.sourceResearched' : group.official ? 'library.sourceNfsa' : group.clientOwn ? 'library.sourceClient' : 'library.sourceCustom')}
       </div>
 
       <div className="section-label">{t('library.statCheckpoints')}</div>

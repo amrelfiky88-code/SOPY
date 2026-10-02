@@ -26,7 +26,7 @@ function groupCode(key, standard) {
   const qc = { 'Daily QC': 'QC-D', 'Weekly Audit': 'QC-W', 'Monthly Audit': 'QC-M', 'Quarterly Audit': 'QC-Q' }[key];
   if (qc) return qc;
   if (key === 'Health Code Compliance') return 'HEALTH';
-  return { HACCP: 'HACCP', ISO_22000: 'ISO 22000', LOCAL_CODE: 'LOCAL', C_STORE: 'C-STORE', CUSTOM: 'CUSTOM' }[standard] || standard;
+  return { HACCP: 'HACCP', ISO_22000: 'ISO 22000', LOCAL_CODE: 'LOCAL', C_STORE: 'C-STORE', NFSA: 'NFSA', CUSTOM: 'CUSTOM' }[standard] || standard;
 }
 
 // Library filter a group belongs to.
@@ -35,6 +35,7 @@ function groupFilter(key, standard) {
   if (key === 'Health Code Compliance') return 'health';
   if (standard === 'SOP') return 'sop';
   if (standard === 'C_STORE') return 'cstore';
+  if (standard === 'NFSA') return 'nfsa';
   if (standard === 'CUSTOM') return 'custom';
   return 'starter';
 }
@@ -60,7 +61,9 @@ function describeGroup(group) {
     title: sectioned && shown.includes(SEP) ? shown.split(SEP)[0] : null,
     filter: groupFilter(group.key, group.standard),
     researched: isResearched(group.key, group.standard),
-    clientOwn: group.standard !== 'CUSTOM' && !isResearched(group.key, group.standard),
+    // The NFSA site visit follows the authority's own inspection form.
+    official: group.standard === 'NFSA',
+    clientOwn: !['CUSTOM', 'NFSA'].includes(group.standard) && !isResearched(group.key, group.standard),
     frequency: libraryGroupFrequency(group.key),
     critical: group.items.filter((i) => i.is_critical).length,
   };

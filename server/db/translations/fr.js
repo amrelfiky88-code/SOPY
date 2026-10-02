@@ -9,6 +9,7 @@ import { qcItems } from './qcItems.js';
 import { sopItems } from './sopItems.js';
 import { sopResearchedItems } from './sopResearchedItems.js';
 import { starterDescriptions } from './starterDescriptions.js';
+import { nfsaCategories, nfsaItems } from './nfsa.js';
 
 export default {
   ...sopCategoryTranslations().fr,
@@ -19,6 +20,8 @@ export default {
   ...sopItems.fr,
   ...sopResearchedItems.fr,
   ...starterDescriptions.fr,
+  ...nfsaCategories.fr,
+  ...nfsaItems.fr,
 
   // --- QC audit system categories -----------------------------------
   // The A/B/C and W1/M1/Q1 letters are kept as-is: they're the client's

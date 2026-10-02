@@ -5,8 +5,8 @@ import { ClipboardCheckIcon, ClipboardEmptyIcon, SearchIcon, ChevronEndIcon, Shi
 import { useI18n } from '../../i18n/index.jsx';
 import { loadLibrary, groupTitle } from './libraryData.js';
 
-const FILTERS = ['all', 'qc', 'sop', 'health', 'starter', 'cstore', 'custom'];
-const FILTER_ICONS = { qc: ClipboardCheckIcon, sop: LayersIcon, health: AlertTriangleIcon, starter: ShieldIcon, cstore: StorefrontIcon, custom: ClipboardCheckIcon };
+const FILTERS = ['all', 'qc', 'nfsa', 'sop', 'health', 'starter', 'cstore', 'custom'];
+const FILTER_ICONS = { qc: ClipboardCheckIcon, nfsa: ShieldIcon, sop: LayersIcon, health: AlertTriangleIcon, starter: ShieldIcon, cstore: StorefrontIcon, custom: ClipboardCheckIcon };
 
 // Library: every SOP and audit in the checkpoint library, searchable by
 // name or by any checkpoint's wording (in the language shown or English).

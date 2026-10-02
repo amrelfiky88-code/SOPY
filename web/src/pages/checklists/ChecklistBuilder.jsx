@@ -7,7 +7,7 @@ import { useT } from '../../i18n/index.jsx';
 import { reportTitle } from '../../i18n/formLabels.js';
 
 // Filter chips; names are std.* in i18n/pageLabels.js ('' = all).
-const STANDARDS = ['', 'HACCP', 'ISO_22000', 'LOCAL_CODE', 'INTERNAL_QC', 'SOP', 'C_STORE', 'CUSTOM'];
+const STANDARDS = ['', 'HACCP', 'ISO_22000', 'LOCAL_CODE', 'INTERNAL_QC', 'NFSA', 'SOP', 'C_STORE', 'CUSTOM'];
 const FREQUENCIES = ['daily', 'weekly', 'monthly', 'quarterly'];
 
 export default function ChecklistBuilder() {

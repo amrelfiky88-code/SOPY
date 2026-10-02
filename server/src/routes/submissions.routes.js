@@ -526,6 +526,12 @@ submissionsRouter.get('/', requireAuth, async (req, res) => {
   if (from) { clauses.push(`s.started_at >= $${i++}`); params.push(from); }
   if (to) { clauses.push(`s.started_at <= $${i++}`); params.push(to); }
   if (status) { clauses.push(`s.status = $${i++}`); params.push(status); }
+  // One library SOP or audit's runs, e.g. ?libraryGroup=NFSA Site Visit for
+  // the NFSA visit page's past self-inspections.
+  if (req.query.libraryGroup !== undefined) {
+    if (typeof req.query.libraryGroup !== 'string') return res.status(400).json({ error: 'Unknown checklist' });
+    clauses.push(`t.library_group = $${i++}`); params.push(req.query.libraryGroup);
+  }
   if (before) {
     const [at, id] = String(before).split('|');
     if (!at || !id) return res.status(400).json({ error: 'Invalid id' });

@@ -93,3 +93,17 @@ export async function upgradeSchema({ db = pool, log = console } = {}) {
   for (const f of failed) log.warn(`Schema upgrade: could not apply "${f.statement.slice(0, 120)}": ${f.error}`);
   return { failed };
 }
+
+// Library content added after launch, in seed files written to be safe to
+// run again (each inserts only if its rows aren't there yet), plus the
+// Arabic and French for all of it. Without this a live database only got
+// new library sections from a hand-run seed, and new translations never.
+const REPEATABLE_SEEDS = ['seed_nfsa.sql'];
+
+export async function upgradeContent({ db = pool } = {}) {
+  for (const file of REPEATABLE_SEEDS) {
+    await db.query(fs.readFileSync(path.resolve(__dirname, '../../db', file), 'utf8'));
+  }
+  const { loadTranslations } = await import('./loadTranslations.js');
+  return loadTranslations();
+}

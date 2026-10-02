@@ -77,6 +77,7 @@ const MESSAGES = [
   ['This payment result could not be checked', 'تعذّر التحقق من نتيجة الدفع', 'Le résultat du paiement n’a pas pu être vérifié'],
   ['Paying in EGP is not available right now', 'الدفع بالجنيه المصري غير متاح حاليًا', 'Le paiement en livres égyptiennes n’est pas disponible pour le moment'],
   ['Paymob is not set up', 'لم يتم إعداد Paymob', 'Paymob n’est pas configuré'],
+  ['Unknown checklist', 'قائمة فحص غير معروفة', 'Check-list inconnue'],
   ['Enter your details as text', 'أدخل بياناتك كنص', 'Saisissez vos informations sous forme de texte'],
   ['Answer each checkpoint with yes or no', 'أجب عن كل نقطة تفتيش بنعم أو لا', 'Répondez à chaque point de contrôle par oui ou non'],
   ['Name cannot be empty', 'لا يمكن ترك الاسم فارغًا', 'Le nom ne peut pas être vide'],

@@ -14,6 +14,7 @@ import {
   StoveIcon,
   CoffeeIcon,
   ClipboardCheckIcon,
+  ShieldIcon,
   StorefrontIcon,
   LogOutIcon,
   DoorOpenIcon,
@@ -163,12 +164,14 @@ function AppShell({ user, tenant, t, canManage, seesKpi, sidebarOpen, setSidebar
           <NavLink to="/app/forms/opening" className={({ isActive }) => (isActive ? 'active' : '')}><DoorOpenIcon size={18} /> {t('nav.opening')}</NavLink>
           <NavLink to="/app/forms/closing" className={({ isActive }) => (isActive ? 'active' : '')}><DoorClosedIcon size={18} /> {t('nav.closing')}</NavLink>
           {/* Staff have no manager links; one divider, not two around nothing. */}
-          {canManage && <div className="sidebar-divider" />}
+          {/* Every manager role, store managers included, runs the NFSA self-inspection. */}
+          {user?.role !== 'employee' && <div className="sidebar-divider" />}
           {canManage && <NavLink to="/app/checklists" className={({ isActive }) => (isActive ? 'active' : '')}><ClipboardCheckIcon size={18} /> {t('nav.builder')}</NavLink>}
           {canManage && <NavLink to="/app/team" className={({ isActive }) => (isActive ? 'active' : '')}><StorefrontIcon size={18} /> {t('nav.team')}</NavLink>}
           {canManage && <NavLink to="/app/forms/qc-visit" className={({ isActive }) => (isActive ? 'active' : '')}><SearchIcon size={18} /> {t('nav.qcVisit')}</NavLink>}
           {canManage && <NavLink to="/app/forms/area-manager-visit" className={({ isActive }) => (isActive ? 'active' : '')}><MapPinIcon size={18} /> {t('nav.areaVisit')}</NavLink>}
           {canManage && <NavLink to="/app/forms/ops-manager-visit" className={({ isActive }) => (isActive ? 'active' : '')}><BriefcaseIcon size={18} /> {t('nav.opsVisit')}</NavLink>}
+          {user?.role !== 'employee' && <NavLink to="/app/nfsa" className={({ isActive }) => (isActive ? 'active' : '')}><ShieldIcon size={18} /> {t('nfsa.menu')}</NavLink>}
           <div className="sidebar-divider" />
           <NavLink to="/app/account" className={({ isActive }) => (isActive ? 'active' : '')}><UserIcon size={18} /> {t('nav.account')}</NavLink>
           <FeedbackButton onOpen={() => setSidebarOpen(false)} />

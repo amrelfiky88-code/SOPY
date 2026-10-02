@@ -214,7 +214,7 @@ const MANAGER_VISIT_REPORT_ROLES = ['business_owner', 'operations_manager', 'are
 const MANAGER_VISIT_REPORT_KINDS = new Set(['qc_visit', 'area_manager_visit', 'ops_manager_visit']);
 const FREQUENCIES = ['daily', 'weekly', 'monthly', 'quarterly'];
 // Same set the builder's filter row offers.
-const STANDARDS = ['HACCP', 'ISO_22000', 'LOCAL_CODE', 'INTERNAL_QC', 'SOP', 'C_STORE', 'CUSTOM'];
+const STANDARDS = ['HACCP', 'ISO_22000', 'LOCAL_CODE', 'INTERNAL_QC', 'NFSA', 'SOP', 'C_STORE', 'CUSTOM'];
 const trimmed = (v) => (typeof v === 'string' ? v.trim() : '');
 
 function requireManagerUnlessBuiltinDailyReport(req, res, next) {
