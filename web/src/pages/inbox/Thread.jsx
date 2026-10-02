@@ -21,7 +21,10 @@ export default function Thread() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [missing, setMissing] = useState(false);
+  // A failed send, and a failed load or 15-second check, kept apart: a
+  // dropped check used to leave its banner up after the next one worked.
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const endRef = useRef(null);
@@ -34,12 +37,13 @@ export default function Thread() {
         const d = await api.get(`/inbox/threads/${threadId}`);
         if (!current) return;
         setData(d);
+        setLoadError('');
         await api.post(`/inbox/threads/${threadId}/read`, {});
         refreshBadges();
       } catch (err) {
         if (!current) return;
         if (err.status === 404 || err.status === 400) setMissing(true);
-        else setError(err.message);
+        else setLoadError(err.message);
       }
     };
     load();
@@ -112,7 +116,7 @@ export default function Thread() {
       </div>
 
       <div className="thread-messages" aria-live="polite">
-        {!data && !error && <p className="hint">{t('common.loading')}</p>}
+        {!data && !loadError && <p className="hint">{t('common.loading')}</p>}
         {data?.messages.map((m, i) => {
           const mine = m.sender_id && m.sender_id === user?.id;
           const system = !m.sender_id && m.kind === 'incident';
@@ -141,7 +145,7 @@ export default function Thread() {
         <div ref={endRef} />
       </div>
 
-      {error && <div className="error-banner" style={{ marginBottom: 8 }}>{error}</div>}
+      {(error || loadError) && <div className="error-banner" style={{ marginBottom: 8 }}>{error || loadError}</div>}
       <div className="composer">
         <textarea
           rows={1}

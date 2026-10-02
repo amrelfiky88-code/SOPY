@@ -24,10 +24,12 @@ export default function Notifications() {
   const { refresh: refreshBadges } = useInboxBadges();
   const [items, setItems] = useState(null);
   const [error, setError] = useState('');
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
+    setError('');
     api.get('/notifications').then((d) => setItems(d.notifications)).catch((err) => setError(err.message));
-  }, []);
+  }, [reload]);
 
   const open = async (n) => {
     if (!n.read_at) {
@@ -60,7 +62,12 @@ export default function Notifications() {
           <button type="button" className="link-btn" style={{ textDecoration: 'none', fontWeight: 600, fontSize: 14 }} onClick={markAll}>{t('notif.markAll')}</button>
         )}
       </div>
-      {error && <div className="error-banner">{error}</div>}
+      {error && (
+        <div className="error-banner">
+          {error}{' '}
+          {!items && <button type="button" className="link-btn" onClick={() => setReload((n) => n + 1)}>{t('common.tryAgain')}</button>}
+        </div>
+      )}
       {!items && !error && <p className="hint">{t('common.loading')}</p>}
       {items && items.length === 0 && <div className="empty-state"><BellIcon size={32} /><span>{t('notif.empty')}</span></div>}
       {groups.map(([key, list]) => (
