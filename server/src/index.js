@@ -1,6 +1,18 @@
 import 'dotenv/config';
 import { createApp } from './app.js';
 import { startReminderJob } from './reminders.js';
+import { upgradeSchema } from './db/upgrade.js';
+
+// Bring the database up to schema.sql before taking requests, so a deploy
+// with new columns or tables doesn't fail on a database made before them.
+// A database that can't be reached is logged, not fatal: the requests will
+// say so themselves.
+try {
+  const { failed } = await upgradeSchema();
+  console.log(failed.length ? `Database checked: ${failed.length} change(s) could not be applied (see above)` : 'Database is up to date');
+} catch (err) {
+  console.error('Could not check the database schema:', err.message);
+}
 
 const app = createApp();
 const port = process.env.PORT || 4000;
