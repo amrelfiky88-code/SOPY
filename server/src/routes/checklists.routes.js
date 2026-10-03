@@ -6,6 +6,7 @@ import { isValidRole } from '../auth/roles.js';
 
 import { MY_ASSIGNMENTS_FROM, myAssignmentParams, ALL_STORE_ROLES } from '../assignments.js';
 import { libraryGroupKey, libraryGroupFrequency } from '../../../shared/libraryGroups.js';
+import { foldText, foldSql, FOLD_MARKS, FOLD_FROM, FOLD_TO } from '../../../shared/searchText.js';
 
 const TRANSLATABLE_ITEM_FIELDS = ['text', 'description', 'category'];
 
@@ -27,13 +28,16 @@ checklistsRouter.get('/library', requireAuth, requireOnboardingComplete, async (
   let i = 2;
 
   // Search the English text and its translations, so someone using the
-  // app in Arabic or French can search in their own language.
-  if (q) {
-    clauses.push(`(text ILIKE $${i} OR EXISTS (
+  // app in Arabic or French can search in their own language. Both sides
+  // are folded (shared/searchText.js): "معقم" finds مُعقّم and "5" finds ٥,
+  // which a plain ILIKE missed in a third of the Arabic library.
+  if (typeof q === 'string' && foldText(q).trim()) {
+    const [m, f, t] = [i + 1, i + 2, i + 3];
+    clauses.push(`(${foldSql('text', `$${m}`, `$${f}`, `$${t}`)} LIKE $${i} OR EXISTS (
       SELECT 1 FROM content_translations ct
-      WHERE ct.source_text = checklist_items.text AND ct.translated ILIKE $${i}))`);
-    i += 1;
-    params.push(`%${String(q).replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+      WHERE ct.source_text = checklist_items.text AND ${foldSql('ct.translated', `$${m}`, `$${f}`, `$${t}`)} LIKE $${i}))`);
+    i += 4;
+    params.push(`%${foldText(q).trim().replace(/[\\%_]/g, (c) => `\\${c}`)}%`, FOLD_MARKS, FOLD_FROM, FOLD_TO);
   }
   if (standard) { clauses.push(`standard = $${i++}`); params.push(standard); }
   if (category) { clauses.push(`category = $${i++}`); params.push(category); }

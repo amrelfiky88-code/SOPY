@@ -87,7 +87,22 @@ export default function PhoneField({ id, label, value, onChange, country }) {
           inputMode="tel"
           autoComplete="tel-national"
           value={national}
-          onChange={(e) => { setNational(e.target.value); send(iso, e.target.value); }}
+          onChange={(e) => {
+            // A whole number pasted from contacts ("+20 100 123 4567" or
+            // "0020…") brings its own code: pick it in the list rather than
+            // saving "+20 20100…".
+            const typed = e.target.value;
+            const intl = /^\s*(\+|00)/.test(typed) ? parsePhone(typed.trim().replace(/^00/, '+')) : null;
+            if (intl?.iso && intl.national.replace(/\D/g, '')) {
+              pickedCode.current = true;
+              setIso(intl.iso);
+              setNational(intl.national);
+              send(intl.iso, intl.national);
+              return;
+            }
+            setNational(typed);
+            send(iso, typed);
+          }}
         />
       </div>
     </div>

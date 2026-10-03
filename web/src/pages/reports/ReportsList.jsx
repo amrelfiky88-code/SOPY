@@ -6,6 +6,7 @@ import { formatDateTime } from '../../lib/reportModel.js';
 import { reportTitle } from '../../i18n/formLabels.js';
 import { FileTextIcon, ClipboardEmptyIcon, ClipboardCheckIcon, SearchIcon, StoveIcon, CoffeeIcon, DoorOpenIcon, DoorClosedIcon, MapPinIcon, BriefcaseIcon } from '../../components/icons.jsx';
 import PageHead from '../../components/PageHead.jsx';
+import { foldText } from '../../../../shared/searchText.js';
 
 const DAILY = ['kitchen_daily', 'bar_daily', 'opening_daily', 'closing_daily'];
 const VISITS = ['qc_visit', 'area_manager_visit', 'ops_manager_visit'];
@@ -47,9 +48,9 @@ export default function ReportsList() {
   const [filter, setFilter] = useState('all');
   // Searches and filters the reports loaded so far; "Load more" brings older ones in.
   const shown = useMemo(() => {
-    const needle = q.trim().toLocaleLowerCase(lang);
+    const needle = foldText(q).trim();
     return (submissions || []).filter((s) => FILTERS[filter](s) && (!needle
-      || [reportTitle(t, s.kind, s.template_name), s.branch_name, s.submitted_by_name].some((v) => (v || '').toLocaleLowerCase(lang).includes(needle))));
+      || [reportTitle(t, s.kind, s.template_name), s.branch_name, s.submitted_by_name].some((v) => foldText(v).includes(needle))));
   }, [submissions, q, filter, lang, t]);
 
   return (

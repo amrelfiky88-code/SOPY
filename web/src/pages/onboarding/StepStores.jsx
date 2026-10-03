@@ -60,7 +60,7 @@ export default function StepStores({ onNext, onBack }) {
 
       {branches.map((b) => (
         <div className="checklist-row" key={b.id}>
-          <div><strong>{b.name}</strong>{b.city ? ` — ${b.city}` : ''}<div className="hint" dir="ltr" style={{ textAlign: 'start', margin: 0 }}>{zoneLabel(b.timezone || 'UTC')}</div></div>
+          <div><strong><bdi>{b.name}</bdi></strong>{b.city && <> — <bdi>{b.city}</bdi></>}<div className="hint" style={{ margin: 0 }}><bdi dir="ltr">{zoneLabel(b.timezone || 'UTC')}</bdi></div></div>
           <button className="btn btn-small btn-danger" onClick={() => removeBranch(b.id)}>{t('page.remove')}</button>
         </div>
       ))}

@@ -107,3 +107,33 @@ test('translated checkpoints keep their English category, so the app treats them
   assert.equal(observation.category, 'الجودة اليومية — H. سلوك المستهلك والرؤى');
   assert.ok(!/^[A-Za-z]/.test(observation.text), 'and the text itself is Arabic');
 });
+
+test('library search finds Arabic and French however they are typed', async () => {
+  const owner = await api('POST', '/api/auth/signup', {
+    body: { fullName: 'O', email: 'search-owner@example.com', password: 'OwnerPass123', restaurantName: 'Search', country: 'Egypt' },
+  });
+  await completeSetup(api, owner.body.token);
+  const search = async (q) => (await api('GET', `/api/checklists/library?lang=ar&q=${encodeURIComponent(q)}`, { token: owner.body.token })).body.items;
+
+  // A stored Arabic text with vowel marks, ة and Arabic-Indic digits, and
+  // the same words typed plainly.
+  const { rows } = await pool.query(
+    `SELECT ct.source_text, ct.translated FROM content_translations ct
+     JOIN checklist_items ci ON ci.text = ct.source_text AND ci.tenant_id IS NULL
+     WHERE ct.lang = 'ar' AND ct.translated ~ '[ً-ْ]' ORDER BY length(ct.translated) LIMIT 1`
+  );
+  const marked = rows[0].translated;
+  const plain = marked.normalize('NFD').replace(/[ً-ٰٟـ]/g, '').replace(/ة/g, 'ه');
+  assert.notEqual(plain, marked);
+  assert.ok((await search(plain)).some((i) => i.text_en === rows[0].source_text || i.text === marked), `"${plain}" finds "${marked}"`);
+  assert.ok((await search(marked)).length > 0, 'typing the marks still works');
+
+  // French without accents.
+  const fr = await pool.query("SELECT translated FROM content_translations WHERE lang = 'fr' AND translated ILIKE '%sécurité%' LIMIT 1");
+  assert.ok(fr.rows[0]);
+  assert.ok((await api('GET', '/api/checklists/library?lang=fr&q=securite', { token: owner.body.token })).body.items.length > 0);
+
+  // Search characters are literal, and a list instead of text is ignored.
+  assert.equal((await search('%')).length < (await search('')).length, true);
+  assert.equal((await api('GET', '/api/checklists/library?q[]=x', { token: owner.body.token })).status, 200);
+});

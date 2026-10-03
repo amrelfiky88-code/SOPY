@@ -63,7 +63,7 @@ export default function StepInvites({ onNext, onBack, finishing }) {
       {users.map((u) => (
         <div className="checklist-row" key={u.id}>
           <div>
-            <strong>{u.full_name}</strong> — {u.email}
+            <strong><bdi>{u.full_name}</bdi></strong> — <bdi>{u.email}</bdi>
             <div className="hint">{roleName(t, u.role)} · {t(`userStatus.${u.status}`)}</div>
           </div>
         </div>

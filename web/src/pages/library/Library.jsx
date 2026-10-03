@@ -4,6 +4,7 @@ import PageHead from '../../components/PageHead.jsx';
 import { ClipboardCheckIcon, ClipboardEmptyIcon, SearchIcon, ChevronEndIcon, ShieldIcon, StorefrontIcon, LayersIcon, AlertTriangleIcon } from '../../components/icons.jsx';
 import { useI18n } from '../../i18n/index.jsx';
 import { loadLibrary, groupTitle } from './libraryData.js';
+import { foldText } from '../../../../shared/searchText.js';
 
 const FILTERS = ['all', 'qc', 'nfsa', 'sop', 'health', 'starter', 'cstore', 'custom'];
 const FILTER_ICONS = { qc: ClipboardCheckIcon, nfsa: ShieldIcon, sop: LayersIcon, health: AlertTriangleIcon, starter: ShieldIcon, cstore: StorefrontIcon, custom: ClipboardCheckIcon };
@@ -27,8 +28,9 @@ export default function Library() {
 
   const shown = useMemo(() => {
     if (!groups) return [];
-    const needle = q.trim().toLocaleLowerCase(lang);
-    const has = (s) => !!s && s.toLocaleLowerCase(lang).includes(needle);
+    // Folded, so "معقم" finds مُعقّم and "5" finds ٥ (shared/searchText.js).
+    const needle = foldText(q).trim();
+    const has = (s) => !!s && foldText(s).includes(needle);
     return groups.filter((g) => {
       if (filter !== 'all' && g.filter !== filter) return false;
       if (!needle) return true;

@@ -2,6 +2,7 @@ import React, { useEffect, useId, useMemo, useState } from 'react';
 import { api, getToken } from '../api.js';
 import { useI18n } from '../i18n/index.jsx';
 import { countryOptions } from '../../../shared/countries.js';
+import { foldText } from '../../../shared/searchText.js';
 
 // A business's country doesn't change while it's signed in, so its city
 // list is fetched once and shared by every City box. Kept per session:
@@ -24,8 +25,7 @@ function loadCities() {
 // For matching what's typed: no accents or Arabic diacritics, and one form
 // of the Arabic letters people type interchangeably (أ إ آ → ا, ة → ه, ى → ي),
 // so "الاسكندرية" finds الإسكندرية and "Shubra" finds Shubrā.
-const fold = (s) => String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
-  .replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').trim();
+const fold = (s) => foldText(s).trim();
 
 const SHOWN = 8;
 

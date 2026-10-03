@@ -151,7 +151,7 @@ export default function Team() {
             {branches.map((b) => (
               <div className="checklist-row" key={b.id}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <strong>{b.name}</strong>{b.city ? ` — ${b.city}` : ''}
+                  <strong><bdi>{b.name}</bdi></strong>{b.city && <> — <bdi>{b.city}</bdi></>}
                   {canEditStores ? (
                     <select
                       aria-label={t('tz.labelFor', { store: b.name })}
@@ -163,10 +163,12 @@ export default function Team() {
                       <TimeZoneOptions current={b.timezone} />
                     </select>
                   ) : (
-                    <div className="hint" dir="ltr" style={{ textAlign: 'start' }}>{zoneLabel(b.timezone || 'UTC')}</div>
+                    <div className="hint"><bdi dir="ltr">{zoneLabel(b.timezone || 'UTC')}</bdi></div>
                   )}
                 </div>
-                {confirmingRemove === b.id ? (
+                {/* Adding and removing stores is for owners and operations
+                    managers, like the time zone (the server refuses anyone else). */}
+                {!canEditStores ? null : confirmingRemove === b.id ? (
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     <button className="btn btn-small btn-danger" onClick={() => removeBranch(b.id)}>{t('team.removeStore')}</button>
                     <button className="btn btn-small btn-secondary" onClick={() => setConfirmingRemove(null)}>{t('page.keep')}</button>
@@ -184,7 +186,7 @@ export default function Team() {
             )}
             {confirmingRemove && <p className="hint">{t('team.removeHint')}</p>}
           </div>
-          <form onSubmit={addBranch} className="card">
+          {canEditStores && <form onSubmit={addBranch} className="card">
             <div className="field">
               <label htmlFor="bname">{t('page.branchName')}</label>
               <input id="bname" required value={branchForm.name} onChange={(e) => setBranchForm((f) => ({ ...f, name: e.target.value }))} />
@@ -194,7 +196,7 @@ export default function Team() {
             <button className="btn btn-secondary" type="submit" disabled={busy === 'branch'}>
               {busy === 'branch' ? t('page.adding') : t('page.addBranch')}
             </button>
-          </form>
+          </form>}
         </div>
       )}
 

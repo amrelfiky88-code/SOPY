@@ -38,7 +38,10 @@ export default function ForgotPassword() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
-  const [wait, setWait] = useState(0); // seconds before another code may be asked for
+  // Seconds before another code may go to the address in waitFor. The
+  // server counts per address, so a different email or number isn't held up.
+  const [wait, setWait] = useState(0);
+  const [waitFor, setWaitFor] = useState('');
 
   const loadOptions = () => {
     setOptionsFailed(false);
@@ -55,6 +58,8 @@ export default function ForgotPassword() {
   }, [wait]);
 
   const who = method === 'email' ? { email: email.trim() } : { phone };
+  const address = method === 'email' ? `email:${email.trim().toLowerCase()}` : `sms:${phone}`;
+  const held = wait > 0 && waitFor === address;
   // Isolated, so an email or "+20 …" reads left to right inside Arabic.
   const shownTo = `⁦${method === 'email' ? email.trim() : phone}⁩`;
 
@@ -67,9 +72,10 @@ export default function ForgotPassword() {
       setStep('code');
       setCode('');
       setWait(RESEND_SECONDS);
+      setWaitFor(address);
       if (again) setNotice(t('forgot.resent'));
     } catch (err) {
-      if (err.status === 429) setWait(RESEND_SECONDS);
+      if (err.status === 429) { setWait(RESEND_SECONDS); setWaitFor(address); }
       setError(err.message);
     } finally {
       setBusy(false);
@@ -163,8 +169,8 @@ export default function ForgotPassword() {
               <div className="hint" style={{ marginTop: -8, marginBottom: 14 }}>{t('forgot.phoneHint')}</div>
             </>
           )}
-          <button className="btn btn-primary" type="submit" disabled={busy || wait > 0 || (method === 'sms' && !phone)} style={{ width: '100%' }}>
-            {busy ? t('forgot.sending') : wait > 0 ? t('forgot.resendIn', { s: wait }) : t('forgot.send')}
+          <button className="btn btn-primary" type="submit" disabled={busy || held || (method === 'sms' && !phone)} style={{ width: '100%' }}>
+            {busy ? t('forgot.sending') : held ? t('forgot.resendIn', { s: wait }) : t('forgot.send')}
           </button>
         </form>
       )}
@@ -192,8 +198,8 @@ export default function ForgotPassword() {
             {busy ? t('forgot.checking') : t('forgot.verify')}
           </button>
           <div className="forgot-actions">
-            <button type="button" className="link-btn" disabled={busy || wait > 0} onClick={() => sendCode(true)}>
-              {wait > 0 ? t('forgot.resendIn', { s: wait }) : t('forgot.resend')}
+            <button type="button" className="link-btn" disabled={busy || held} onClick={() => sendCode(true)}>
+              {held ? t('forgot.resendIn', { s: wait }) : t('forgot.resend')}
             </button>
             <button type="button" className="link-btn" onClick={startOver}>{t('forgot.change')}</button>
           </div>
