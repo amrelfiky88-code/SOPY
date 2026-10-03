@@ -86,7 +86,6 @@ const ROWS = [
 
   // --- Log in / set password -----------------------------------------
   ['login.submit', 'Log in', 'تسجيل الدخول', 'Se connecter'],
-  ['login.forgot', 'Forgot your password? Ask your manager for a reset link from Team & stores. Business owners: contact SOPY support.', 'نسيت كلمة المرور؟ اطلب من مديرك رابط إعادة تعيين من صفحة الفريق والفروع. أصحاب المنشآت: تواصلوا مع دعم SOPY.', 'Mot de passe oublié ? Demandez à votre manager un lien de réinitialisation depuis Équipe et établissements. Propriétaires : contactez le support SOPY.'],
   // Forgot password: a code by email or text message (ForgotPassword.jsx).
   ['forgot.link', 'Forgot your password?', 'نسيت كلمة المرور؟', 'Mot de passe oublié ?'],
   ['forgot.title', 'Reset your password', 'إعادة تعيين كلمة المرور', 'Réinitialiser le mot de passe'],
@@ -114,6 +113,8 @@ const ROWS = [
   ['forgot.signsOut', 'This signs you out on your other devices.', 'سيؤدي ذلك إلى تسجيل خروجك من أجهزتك الأخرى.', 'Cela vous déconnecte de vos autres appareils.'],
   ['forgot.timedOut', 'That took too long. Ask for a new code.', 'استغرق ذلك وقتًا طويلًا. اطلب رمزًا جديدًا.', 'Le délai est dépassé. Demandez un nouveau code.'],
   ['forgot.back', 'Back to log in', 'العودة إلى تسجيل الدخول', 'Retour à la connexion'],
+  ['forgot.unavailable', 'Password reset is unavailable right now. Please try again later.', 'إعادة تعيين كلمة المرور غير متاحة الآن. يُرجى المحاولة لاحقًا.', 'La réinitialisation du mot de passe est indisponible pour le moment. Réessayez plus tard.'],
+  ['forgot.loadFailed', 'This page couldn’t load. Check your connection.', 'تعذّر تحميل هذه الصفحة. تحقّق من اتصالك.', 'Cette page n’a pas pu se charger. Vérifiez votre connexion.'],
   ['accept.missingToken', 'This invite link is missing its token.', 'رابط الدعوة هذا ينقصه الرمز.', "Ce lien d'invitation ne contient pas de jeton."],
   ['accept.title', 'Set your password', 'عيّن كلمة المرور', 'Choisissez votre mot de passe'],
   ['accept.intro', 'Finish setting up your SOPY account.', 'أكمل إعداد حسابك في SOPY.', 'Terminez la configuration de votre compte SOPY.'],

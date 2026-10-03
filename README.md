@@ -158,6 +158,13 @@ isolation.
    one Node app is all you need — no separate static host.
 5. Point your Paddle webhook endpoint at
    `https://<your-domain>/api/billing/webhook`.
+6. Email for "Forgot your password?" codes. Without it nobody can reset
+   their own password (the page says reset is unavailable, and the server
+   log warns at start-up). In hPanel > Emails, create a mailbox such as
+   `no-reply@<your-domain>`, then add to the Node.js app's environment:
+   `SMTP_HOST=smtp.hostinger.com`, `SMTP_PORT=465`, `SMTP_USER` = that
+   address, `SMTP_PASS` = its password, `SMTP_FROM=SOPY <that address>`.
+   Restart the app; the log says whether it could log in to the mail server.
 
 ## PWA
 

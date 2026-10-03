@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { createApp } from './app.js';
 import { startReminderJob } from './reminders.js';
 import { upgradeSchema, upgradeContent } from './db/upgrade.js';
+import { reportDeliverySetup } from './delivery.js';
 
 // Bring the database up to schema.sql before taking requests, so a deploy
 // with new columns or tables doesn't fail on a database made before them.
@@ -18,6 +19,8 @@ try {
 const app = createApp();
 const port = process.env.PORT || 4000;
 const server = app.listen(port, () => console.log(`SOPY API listening on :${port}`));
+// Whether people can reset their own password (email / text service).
+reportDeliverySetup().catch(() => {});
 
 // Node closes idle keep-alive sockets after 5s. A proxy in front (Vite in
 // dev, the host's load balancer in production) can reuse a socket at the

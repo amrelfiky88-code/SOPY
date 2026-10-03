@@ -47,6 +47,28 @@ function mailer() {
   return transport;
 }
 
+// Said once at start-up, so whoever runs the server sees it in the log: no
+// email or text service means nobody can reset their own password (the
+// Forgot password page then says reset is unavailable). With SMTP set, it
+// also logs in to the mail server, so a wrong password shows up now rather
+// than when a customer asks for a code.
+export async function reportDeliverySetup(log = console) {
+  if (process.env.NODE_ENV !== 'production') return;
+  if (!emailConfigured() && !smsConfigured()) {
+    log.warn('Forgot password: no email or text message service is set up (SMTP_HOST/SMTP_FROM, or TWILIO_*). People cannot reset their own password until one is.');
+    return;
+  }
+  if (emailConfigured()) {
+    try {
+      await mailer().verify();
+      log.log(`Forgot password: email codes will be sent through ${env('SMTP_HOST')} as ${env('SMTP_FROM')}`);
+    } catch (err) {
+      log.warn(`Forgot password: could not log in to the mail server ${env('SMTP_HOST')}: ${err.message}`);
+    }
+  }
+  if (smsConfigured()) log.log('Forgot password: text message codes will be sent through Twilio');
+}
+
 // { to, subject, text, html } → sent, or throws.
 export async function sendEmail(message) {
   if (testSender) return testSender({ channel: 'email', ...message });

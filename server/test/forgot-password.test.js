@@ -188,7 +188,8 @@ test('in production, a way of sending that is not set up is not offered', async 
     assert.deepEqual((await api('GET', '/api/auth/forgot/options')).body, { email: false, sms: false });
     const off = await api('POST', '/api/auth/forgot', { body: { email: 'anyone@example.com' }, headers: { 'Accept-Language': 'fr' } });
     assert.equal(off.status, 503);
-    assert.match(off.body.error, /manager/);
+    assert.match(off.body.error, /indisponible/); // in French, and no longer sends anyone to a manager
+    assert.doesNotMatch(off.body.error, /manager/i);
   } finally {
     for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
   }

@@ -27,10 +27,10 @@ test.describe('signing in', () => {
     await page.getByLabel('Email').fill('someone@example.com');
     await page.getByRole('link', { name: 'Forgot your password?' }).click();
     await expect(page).toHaveURL(/\/forgot-password$/);
-    // With no email or SMS settings on the server it falls back to the manager reset link.
+    // With no email or SMS service on the server, the page says reset is unavailable.
     const emailBox = page.locator('#forgot-email');
     if (await emailBox.count()) await expect(emailBox).toHaveValue('someone@example.com');
-    else await expect(page.getByText(/Ask your manager for a reset link/)).toBeVisible();
+    else await expect(page.getByText('Password reset is unavailable right now.', { exact: false })).toBeVisible();
   });
 
   test('a password can be shown while typing', async ({ page }) => {

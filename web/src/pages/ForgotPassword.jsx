@@ -19,8 +19,8 @@ const westernDigits = (s) => s
 
 // Forgot password: a 6-digit code to the email they log in with or the
 // mobile number in their profile (server: routes/forgot.routes.js), then a
-// new password. Where neither way of sending is set up, it says to ask a
-// manager for a reset link, as the login page used to.
+// new password. Where neither way of sending is set up on the server, it
+// says reset is unavailable for now.
 export default function ForgotPassword() {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
@@ -136,12 +136,15 @@ export default function ForgotPassword() {
 
       {optionsFailed && (
         <div className="error-banner">
-          {t('login.forgot')}{' '}
+          {t('forgot.loadFailed')}{' '}
           <button type="button" className="link-btn" onClick={loadOptions}>{t('common.tryAgain')}</button>
         </div>
       )}
       {!options && !optionsFailed && <p>{t('common.loading')}</p>}
-      {none && <p>{t('login.forgot')}</p>}
+      {/* Only when the server has no email or SMS service set up (it logs a
+          warning at start-up). People reset their own password; this used to
+          send them to a manager. */}
+      {none && <p>{t('forgot.unavailable')}</p>}
 
       {options && !none && step === 'ask' && (
         <form onSubmit={(e) => { e.preventDefault(); sendCode(); }}>

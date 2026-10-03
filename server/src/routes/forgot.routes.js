@@ -132,8 +132,8 @@ forgotRouter.post('/', async (req, res) => {
   if (!deliveryChannels()[found.channel]) {
     return res.status(503).json({
       error: found.channel === 'email'
-        ? "Codes by email aren't set up yet. Ask your manager for a reset link."
-        : "Codes by text message aren't set up yet. Use your email, or ask your manager for a reset link.",
+        ? 'Password reset by email is unavailable right now. Please try again later.'
+        : 'Password reset by text message is unavailable right now. Use your email instead.',
     });
   }
   const refusal = sendRefusal(found.key);
