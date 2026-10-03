@@ -7,6 +7,7 @@ import { isValidRole, canAssignRole, canManageUser, EDITABLE_STATUSES } from '..
 import { PLAN_LIMITS, clampPlanCount } from '../../../shared/pricing.js';
 import { countryCode } from '../../../shared/countries.js';
 import { isEmail } from '../validation.js';
+import { reminderScheduleChanged } from '../reminders.js';
 import fs from 'node:fs/promises';
 
 export const tenantsRouter = Router();
@@ -208,6 +209,7 @@ tenantsRouter.post('/branches', requireAuth, requireRole('business_owner', 'oper
     );
     return rows[0];
   });
+  reminderScheduleChanged(); // its time zone may be new to the reminder job
   res.status(201).json({ branch });
 });
 
@@ -238,6 +240,7 @@ tenantsRouter.patch('/branches/:id', requireAuth, requireRole('business_owner', 
     values
   );
   if (!rows[0]) return res.status(404).json({ error: 'Not found' });
+  if (timezone !== undefined) reminderScheduleChanged();
   res.json({ branch: rows[0] });
 });
 

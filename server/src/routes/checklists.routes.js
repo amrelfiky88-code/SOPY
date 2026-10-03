@@ -7,6 +7,7 @@ import { isValidRole } from '../auth/roles.js';
 import { MY_ASSIGNMENTS_FROM, myAssignmentParams, ALL_STORE_ROLES } from '../assignments.js';
 import { libraryGroupKey, libraryGroupFrequency } from '../../../shared/libraryGroups.js';
 import { foldText, foldSql, FOLD_MARKS, FOLD_FROM, FOLD_TO } from '../../../shared/searchText.js';
+import { reminderScheduleChanged } from '../reminders.js';
 
 const TRANSLATABLE_ITEM_FIELDS = ['text', 'description', 'category'];
 
@@ -354,11 +355,13 @@ checklistsRouter.post('/assignments', requireAuth, requireRole('business_owner',
     );
     return { assignment: rows[0], existing: false };
   });
+  if (!result.existing && result.assignment.due_time) reminderScheduleChanged();
   res.status(result.existing ? 200 : 201).json(result);
 });
 
 checklistsRouter.delete('/assignments/:id', requireAuth, requireRole('business_owner', 'operations_manager', 'area_manager'), async (req, res) => {
   await query('DELETE FROM checklist_assignments WHERE id = $1 AND tenant_id = $2', [req.params.id, req.auth.tenantId]);
+  reminderScheduleChanged();
   res.status(204).end();
 });
 

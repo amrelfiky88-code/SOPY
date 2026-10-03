@@ -89,9 +89,81 @@ export async function sendDueReminders(at = new Date()) {
   return sent;
 }
 
+// --- When to ask the database at all ---
+// The live database (Neon) sleeps after 5 idle minutes and bills compute
+// while awake. Asking it every minute kept it awake around the clock:
+// 0.25 CU × 24 h × 30 days ≈ 180 compute-hours a month, past the free
+// plan's 100, after which Neon suspends it and the app stops. So the job
+// keeps the due times and store time zones in memory and only queries
+// inside a reminder window. The list is refreshed while the database is
+// awake anyway (after an API request, at most every 10 minutes), straight
+// after an assignment or a store changes here, and every 6 hours otherwise.
+const FRESH_WHILE_AWAKE_MS = 10 * 60_000;
+const MAX_AGE_MS = 6 * 60 * 60_000;
+const schedule = { loadedAt: 0, dues: [], zones: ['UTC'], loading: null };
+
+export function refreshReminderSchedule() {
+  if (!schedule.loading) {
+    schedule.loading = query(
+      `SELECT ARRAY(SELECT DISTINCT to_char(due_time, 'HH24:MI') FROM checklist_assignments
+                    WHERE active AND due_time IS NOT NULL) AS dues,
+              ARRAY(SELECT DISTINCT timezone FROM branches WHERE is_active AND timezone IS NOT NULL) AS zones`
+    )
+      .then(({ rows }) => {
+        schedule.dues = rows[0].dues;
+        // UTC too: "All stores" checklists for someone with no store use it.
+        schedule.zones = [...new Set(['UTC', ...rows[0].zones])];
+        schedule.loadedAt = Date.now();
+      })
+      .finally(() => { schedule.loading = null; });
+  }
+  return schedule.loading;
+}
+// After an API request: the database is awake, so refreshing costs nothing.
+export function noteDatabaseAwake() {
+  if (Date.now() - schedule.loadedAt > FRESH_WHILE_AWAKE_MS) refreshReminderSchedule().catch(() => {});
+}
+// An assignment or a store's time zone changed in this process.
+export function reminderScheduleChanged() {
+  schedule.loadedAt = 0;
+  refreshReminderSchedule().catch(() => {});
+}
+
+function minuteOfDay(at, timeZone) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(at);
+    const get = (type) => Number(parts.find((p) => p.type === type)?.value);
+    return get('hour') * 60 + get('minute');
+  } catch {
+    return null; // a zone this runtime doesn't know (the SQL treats it as UTC, and UTC is checked too)
+  }
+}
+
+// Whether any due time, in any store's zone, is up to REMINDER_MINUTES away:
+// the same window as DUE_SQL, in whole minutes, and never narrower.
+export function inReminderWindow(at = new Date()) {
+  for (const zone of schedule.zones) {
+    const now = minuteOfDay(at, zone);
+    if (now === null) continue;
+    for (const due of schedule.dues) {
+      const [h, m] = due.split(':').map(Number);
+      const ahead = (h * 60 + m - now + 1440) % 1440;
+      if (ahead > 0 && ahead <= REMINDER_MINUTES) return true;
+    }
+  }
+  return false;
+}
+
 // Started by index.js (not by createApp, so tests run it by hand).
 export function startReminderJob(everyMs = 60_000) {
-  const run = () => sendDueReminders().catch((err) => console.error('Checklist reminders failed:', err.message));
+  const run = async () => {
+    try {
+      if (Date.now() - schedule.loadedAt > MAX_AGE_MS) await refreshReminderSchedule();
+      if (inReminderWindow()) await sendDueReminders();
+    } catch (err) {
+      console.error('Checklist reminders failed:', err.message);
+    }
+  };
   const first = setTimeout(run, 10_000);
   const timer = setInterval(run, everyMs);
   first.unref();
