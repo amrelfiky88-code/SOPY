@@ -229,7 +229,10 @@ export function buildReportModel(report, t, lang) {
     });
   }
 
-  const dateForName = when ? new Date(when).toISOString().slice(0, 10) : '';
+  // The phone's own date, like the share text (toISOString is UTC: a report
+  // sent just after midnight in Cairo was named after the day before).
+  const d = when ? new Date(when) : null;
+  const dateForName = d ? [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-') : '';
   const fileName = `${title} - ${s.branch_name}${dateForName ? ` - ${dateForName}` : ''}.pdf`.replace(/[\\/:*?"<>|]/g, '-');
   const score = scorecard && scorecard.totalScored ? ` · ${t('report.score')} ${scorecard.percentage}%` : '';
   const shareText = `${title} — ${s.branch_name}, ${formatDateTime(when, lang)}${score}`;

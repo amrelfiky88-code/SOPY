@@ -36,7 +36,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put('/', response.clone()));
+          // Copy before handing it back: once the page starts reading the
+          // body, a later clone() throws and the offline copy never updates.
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/', copy));
+          }
           return response;
         })
         .catch(() => caches.match('/').then((cached) => cached || offline()))
@@ -87,7 +92,9 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
       const open = windows.find((w) => new URL(w.url).origin === self.location.origin);
-      if (open) return open.focus().then(() => open.navigate(target));
+      // navigate() only works on a window this worker controls (not one
+      // opened before it took over), so fall back to a new window.
+      if (open) return open.focus().then(() => open.navigate(target)).catch(() => self.clients.openWindow(target));
       return self.clients.openWindow(target);
     })
   );

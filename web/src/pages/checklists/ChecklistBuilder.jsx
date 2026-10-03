@@ -249,7 +249,10 @@ export default function ChecklistBuilder() {
                           type="button"
                           className="link-btn"
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleExpanded(item.id); }}
-                          style={{ marginLeft: 8 }}
+                          aria-expanded={expanded.has(item.id)}
+                          // A finger-sized target (it was 20px tall), spaced on the
+                          // reading side in Arabic too.
+                          style={{ marginInlineStart: 4, minHeight: 36, padding: '0 6px' }}
                         >
                           {expanded.has(item.id) ? t('builder.hideDetail') : t('builder.showDetail')}
                         </button>
