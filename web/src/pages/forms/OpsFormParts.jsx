@@ -184,7 +184,11 @@ export function ReportActions({ report, form, hasIncident, signerName, needNameH
           {t('f.submitSignOff')}
         </button>
       </div>
-      <p className="hint" style={{ marginBottom: 0 }}>{report.autosaved ? t('f.autosaved') : t('f.autosaves')}</p>
+      {report.autosaveFailed ? (
+        <p className="hint" role="status" style={{ marginBottom: 0, color: 'var(--amber-text)', fontWeight: 600 }}>{t('f.autosaveFailed')}</p>
+      ) : (
+        <p className="hint" style={{ marginBottom: 0 }}>{report.autosaved ? t('f.autosaved') : t('f.autosaves')}</p>
+      )}
       {!signed && <p className="hint">{needNameHint}</p>}
     </>
   );

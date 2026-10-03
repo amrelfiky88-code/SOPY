@@ -60,6 +60,36 @@ export function useOpsReport({ kind, onResume }) {
     saveChain.current = run.catch(() => {});
     return run;
   };
+  // Changes that couldn't be saved (no signal) are kept on the phone too,
+  // so closing the app offline doesn't lose them: the report picks them up
+  // the next time it's opened. Removed once a save gets through.
+  const backupKey = (id) => `sopy_unsaved_${id}`;
+  const keepBackup = (id, formData) => { try { localStorage.setItem(backupKey(id), JSON.stringify({ formData, at: Date.now() })); } catch { /* storage full or blocked */ } };
+  const dropBackup = (id) => { try { localStorage.removeItem(backupKey(id)); } catch { /* blocked */ } };
+  const readBackup = (id) => { try { return JSON.parse(localStorage.getItem(backupKey(id)) || 'null'); } catch { return null; } };
+
+  // An autosave that failed used to be dropped without a word ("Changes save
+  // automatically" stayed on screen) and wasn't tried again until the next
+  // edit. Now the page says so, and it's retried when the signal returns
+  // and every 20 seconds meanwhile.
+  const [autosaveFailed, setAutosaveFailed] = useState(false);
+  const failedSave = useRef(null); // { formData, hasIncident } that didn't get through
+  const saveWorked = () => { failedSave.current = null; setAutosaveFailed(false); dropBackup(submissionId); };
+  const saveFailed = (formData, hasIncident) => { failedSave.current = { formData, hasIncident }; setAutosaveFailed(true); keepBackup(submissionId, formData); };
+  const retryFailed = () => {
+    const failed = failedSave.current;
+    if (!failed || pendingAutosave.current) return;
+    queueSave(failed.formData, failed.hasIncident)
+      .then(() => { if (failedSave.current === failed) { saveWorked(); setAutosaved(true); } })
+      .catch(() => {});
+  };
+  useReconnect(retryFailed);
+  useEffect(() => {
+    if (!autosaveFailed) return undefined;
+    const timer = setInterval(retryFailed, 20_000);
+    return () => clearInterval(timer);
+  }, [autosaveFailed]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const flushAutosave = () => {
     clearTimeout(autosaveTimer.current);
     const pending = pendingAutosave.current;
@@ -71,8 +101,8 @@ export function useOpsReport({ kind, onResume }) {
     clearTimeout(autosaveTimer.current);
     setAutosaved(false);
     pendingAutosave.current = () => queueSave(formData, hasIncident)
-      .then(() => { if (!pendingAutosave.current) setAutosaved(true); })
-      .catch(() => {});
+      .then(() => { saveWorked(); if (!pendingAutosave.current) setAutosaved(true); })
+      .catch(() => saveFailed(formData, hasIncident));
     autosaveTimer.current = setTimeout(flushAutosave, 2000);
   }, [submissionId, status]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -148,7 +178,10 @@ export function useOpsReport({ kind, onResume }) {
     }
     if (existing) {
       setSubmissionId(existing.id);
-      onResume?.(existing.form_data || {});
+      // Changes kept on this phone because they couldn't be saved are newer
+      // than the server's copy (a save that gets through removes them).
+      const backup = readBackup(existing.id);
+      onResume?.(backup?.formData || existing.form_data || {});
       setStatus('started');
       startingRef.current = false;
       setStarting(false);
@@ -174,12 +207,14 @@ export function useOpsReport({ kind, onResume }) {
       clearTimeout(autosaveTimer.current);
       pendingAutosave.current = null;
       await queueSave(formData, hasIncident);
+      saveWorked();
       setStatus('started');
       // Brief confirmation — without it a successful save looked like nothing happened.
       setJustSaved(true);
       clearTimeout(savedTimer.current);
       savedTimer.current = setTimeout(() => setJustSaved(false), 2500);
     } catch (err) {
+      saveFailed(formData, hasIncident);
       setError(err.message);
       setStatus('started');
     }
@@ -191,7 +226,13 @@ export function useOpsReport({ kind, onResume }) {
     try {
       clearTimeout(autosaveTimer.current);
       pendingAutosave.current = null;
-      await queueSave(formData, hasIncident);
+      try {
+        await queueSave(formData, hasIncident);
+        saveWorked();
+      } catch (err) {
+        saveFailed(formData, hasIncident); // kept on the phone until it can be saved
+        throw err;
+      }
       const { lat, lng } = await bestEffortPosition();
       await api.post(`/submissions/${submissionId}/submit`, { gpsLat: lat, gpsLng: lng });
       setStatus('submitted');
@@ -201,5 +242,5 @@ export function useOpsReport({ kind, onResume }) {
     }
   };
 
-  return { branches, branchesFailed, branchId, setBranchId, status, error, setError, start, starting, save, submit, hasDraft: !!draft, justSaved, submissionId, autosave, autosaved };
+  return { branches, branchesFailed, branchId, setBranchId, status, error, setError, start, starting, save, submit, hasDraft: !!draft, justSaved, submissionId, autosave, autosaved, autosaveFailed };
 }

@@ -18,7 +18,11 @@ export function InboxBadgeProvider({ children }) {
   useEffect(() => { refresh(); }, [pathname, refresh]);
   useEffect(() => {
     const id = setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 60_000);
-    return () => clearInterval(id);
+    // Back to the app (say, after a phone notification): the bell used to
+    // show the old count until the next minute's check.
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
   }, [refresh]);
 
   return <BadgeContext.Provider value={{ ...counts, refresh }}>{children}</BadgeContext.Provider>;

@@ -64,3 +64,16 @@ test.describe('bad connections and impatient fingers', () => {
     expect(statuses.sort()).toEqual([200, 409, 409]);
   });
 });
+
+test('coming back to the app refreshes the unread counts and an open chat at once', async ({ page, context, request }) => {
+  const biz = await createBusiness(request);
+  const mate = await addTeammate(request, biz.auth);
+  const { threadId } = await (await request.post('/api/inbox/threads', { headers: biz.auth, data: { userId: mate.id } })).json();
+  await signIn(context, biz.token);
+  await page.goto(`/app/inbox/${threadId}`);
+  await page.waitForLoadState('networkidle');
+  const summary = page.waitForRequest((r) => r.url().includes('/api/inbox/summary'), { timeout: 3000 });
+  const thread = page.waitForRequest((r) => r.url().endsWith(`/api/inbox/threads/${threadId}`), { timeout: 3000 });
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await Promise.all([summary, thread]);
+});

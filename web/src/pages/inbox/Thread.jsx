@@ -60,7 +60,11 @@ export default function Thread() {
     };
     load();
     const id = setInterval(() => { if (document.visibilityState === 'visible') load(); }, POLL_MS);
-    return () => { current = false; clearInterval(id); };
+    // Back to the app with the chat open: new messages at once, not after
+    // the next 15-second check.
+    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { current = false; clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
   }, [threadId, refreshBadges]);
 
   // Keep the newest message in view when one arrives.

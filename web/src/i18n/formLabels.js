@@ -17,6 +17,7 @@ const COMMON = [
   ['f.savedTick', 'Saved ✓', 'تم الحفظ ✓', 'Enregistré ✓'],
   ['f.autosaves', 'Changes save automatically as you go.', 'تُحفظ التغييرات تلقائيًا أثناء العمل.', 'Les modifications sont enregistrées automatiquement.'],
   ['f.autosaved', 'All changes saved.', 'تم حفظ كل التغييرات.', 'Toutes les modifications sont enregistrées.'],
+  ['f.autosaveFailed', 'Not saved yet: no connection. Your changes are kept on this phone and save by themselves when the signal is back.', 'لم يُحفظ بعد: لا يوجد اتصال. تغييراتك محفوظة على هذا الهاتف وستُحفظ تلقائيًا عند عودة الإشارة.', 'Pas encore enregistré : pas de connexion. Vos modifications sont gardées sur ce téléphone et s’enregistreront d’elles-mêmes au retour du réseau.'],
   ['f.submitSignOff', 'Submit & sign off', 'إرسال واعتماد', 'Envoyer et signer'],
   ['f.addRow', '+ Add row', '+ إضافة صف', '+ Ajouter une ligne'],
   ['f.removeRow', 'Remove row', 'حذف الصف', 'Supprimer la ligne'],

@@ -42,3 +42,43 @@ test.describe('phone ergonomics', () => {
     expect(size).toBeGreaterThanOrEqual(16);
   });
 });
+
+test.describe('saving without a signal', () => {
+  test('an autosave that fails says so, and saves by itself when the signal returns', async ({ page, context, request }) => {
+    const biz = await createBusiness(request);
+    await signIn(context, biz.token);
+    await page.goto('/app/forms/kitchen');
+    await page.getByRole('button', { name: /Start today/ }).click();
+    const fridge = page.getByRole('spinbutton', { name: /Walk-in Refrigerator #1.*Start/ });
+    await expect(fridge).toBeVisible();
+
+    await context.setOffline(true);
+    await fridge.fill('4');
+    await expect(page.getByText(/Not saved yet: no connection/)).toBeVisible({ timeout: 8000 });
+
+    await context.setOffline(false);
+    await expect(page.getByText('All changes saved.')).toBeVisible({ timeout: 15_000 });
+    const drafts = await (await request.get('/api/submissions/draft?kind=kitchen_daily&branchId=' + biz.branchId, { headers: biz.auth })).json();
+    expect(drafts.submission.form_data.temperatureLog.fridge1.s).toBe('4');
+  });
+
+  test('changes made offline survive closing the app', async ({ page, context, request }) => {
+    const biz = await createBusiness(request);
+    await signIn(context, biz.token);
+    await page.goto('/app/forms/kitchen');
+    await page.getByRole('button', { name: /Start today/ }).click();
+    await expect(page.getByRole('spinbutton', { name: /Walk-in Refrigerator #1.*Start/ })).toBeVisible();
+
+    await context.setOffline(true);
+    await page.getByRole('spinbutton', { name: /Walk-in Refrigerator #1.*Start/ }).fill('3');
+    await expect(page.getByText(/Not saved yet/)).toBeVisible({ timeout: 8000 });
+    await page.close(); // the app is closed before the signal returns
+
+    await context.setOffline(false);
+    const again = await context.newPage();
+    await again.goto('/app/forms/kitchen');
+    await again.getByRole('button', { name: /Continue/ }).click();
+    await expect(again.getByRole('spinbutton', { name: /Walk-in Refrigerator #1.*Start/ })).toHaveValue('3');
+    await expect(again.getByText('All changes saved.')).toBeVisible({ timeout: 15_000 });
+  });
+});
