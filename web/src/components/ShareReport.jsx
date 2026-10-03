@@ -54,11 +54,17 @@ export default function ShareReport({ submissionId, model }) {
       const form = new FormData();
       form.append('pdf', pdf.blob, model.fileName);
       form.append('fileName', model.fileName);
+      // A stalled upload fails after 2 minutes (a few MB on a weak uplink)
+      // instead of leaving the share buttons busy for good.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 120_000);
       linkPromise.current = fetch(`/api/submissions/${submissionId}/share`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${getToken()}`, 'Accept-Language': localStorage.getItem('sopy_lang') || 'en' },
         body: form,
+        signal: controller.signal,
       })
+        .finally(() => clearTimeout(timer))
         // No signal: say so, rather than the browser's own "Failed to fetch".
         .catch(() => { throw new Error(t('api.offline')); })
         .then(async (res) => {

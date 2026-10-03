@@ -202,8 +202,10 @@ export function TemperatureLogTable({ rows, values, onChange, kind }) {
   const out = (row, field) => isOutOfRange(readingValue(values[row.key]?.[field]), ranges[row.range]);
   const cell = (row, field) => (
     <input
+      // No inputMode="decimal": on iPhone that keypad has no minus key, so a
+      // freezer reading of -18 couldn't be typed (and "18" was flagged).
       type="number"
-      inputMode="decimal"
+      step="any"
       className={`mono${out(row, field) ? ' temp-out' : ''}`}
       aria-invalid={out(row, field) || undefined}
       aria-label={`${row.label} — ${t(`f.col.${field}`)}`}
@@ -298,6 +300,7 @@ export function RepeatableTable({ columns, rows, onChangeRow, onAddRow, onRemove
                     ) : (
                       <input
                         type={c.type || 'text'}
+                        step={c.type === 'number' ? 'any' : undefined}
                         aria-label={c.label}
                         style={{ minWidth: c.width || 90 }}
                         value={row[c.key] ?? ''}

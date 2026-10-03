@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, getToken } from '../../api.js';
+import { bestEffortPosition } from '../../lib/location.js';
 import CameraCapture from '../../components/CameraCapture.jsx';
 import ReportLink from '../../components/ReportLink.jsx';
 import { CameraIcon, CheckIcon, XIcon, ThermometerIcon, AlertTriangleIcon } from '../../components/icons.jsx';
@@ -90,15 +91,23 @@ export default function ChecklistRun() {
       if (value !== undefined && value !== null) form.append(key, value);
     }
     let res;
+    // A stalled upload (signal gone, no error) used to sit on "Uploading"
+    // for good, holding this checkpoint's later saves. After 90s (time for
+    // a photo on a weak uplink) it fails like any other and can be retried.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 90_000);
     try {
       res = await fetch(`/api/submissions/${submissionId}/responses`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${getToken()}`, 'Accept-Language': localStorage.getItem('sopy_lang') || 'en' },
         body: form,
+        signal: controller.signal,
       });
     } catch {
       // No signal: the browser's own "Failed to fetch" meant nothing to anyone.
       throw new Error(t('api.offline'));
+    } finally {
+      clearTimeout(timer);
     }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -163,15 +172,9 @@ export default function ChecklistRun() {
 
   // Location is best-effort. Chained with .then so a failure inside fn
   // reaches the caller — before, a failed upload left the promise pending forever.
-  const withGps = (fn) =>
-    new Promise((resolve) => {
-      if (!navigator.geolocation) return resolve({});
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => resolve({}),
-        { timeout: 4000 }
-      );
-    }).then(({ lat, lng }) => fn(lat, lng));
+  // (bestEffortPosition also settles when the permission question is
+  // left unanswered, which used to leave saves waiting forever.)
+  const withGps = (fn) => bestEffortPosition().then(({ lat, lng }) => fn(lat, lng));
 
   // Photo evidence is mandatory for every checkpoint, not just the ones
   // the library flags requires_photo — a checkpoint isn't "answered"
@@ -356,8 +359,8 @@ export default function ChecklistRun() {
                       <input
                         id={`reading-${item.id}`}
                         type="number"
+                        step="any"
                         className="mono"
-                        inputMode="decimal"
                         value={r.valueText || ''}
                         onChange={(e) => editText(item.id, e.target.value)}
                         onBlur={() => saveTextResponse(item).catch(() => {})}

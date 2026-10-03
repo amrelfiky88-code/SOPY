@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../api.js';
+import { bestEffortPosition } from '../../lib/location.js';
 import { FORM_LABELS } from '../../i18n/formLabels.js';
 
 // Shared start/save/submit lifecycle for the Kitchen Daily and Bar &
@@ -162,14 +163,7 @@ export function useOpsReport({ kind, onResume }) {
       clearTimeout(autosaveTimer.current);
       pendingAutosave.current = null;
       await queueSave(formData, hasIncident);
-      const { lat, lng } = await new Promise((resolve) => {
-        if (!navigator.geolocation) return resolve({});
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          () => resolve({}),
-          { timeout: 4000 }
-        );
-      });
+      const { lat, lng } = await bestEffortPosition();
       await api.post(`/submissions/${submissionId}/submit`, { gpsLat: lat, gpsLng: lng });
       setStatus('submitted');
     } catch (err) {

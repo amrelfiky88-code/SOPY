@@ -161,7 +161,7 @@ export default function KitchenDailyForm() {
       <Section title={L('sec.E')}>
         <RepeatableTable columns={columns('wasteLog', WASTE_COLUMNS)} {...editRepeatable('wasteLog')} />
         <div style={{ marginTop: 12, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <input placeholder={L('wasteTotal.value')} aria-label={L('wasteTotal.value')} type="number" style={{ maxWidth: 200 }} value={form.wasteTotal.value} onChange={(e) => patch('wasteTotal', { value: e.target.value })} />
+          <input placeholder={L('wasteTotal.value')} aria-label={L('wasteTotal.value')} type="number" step="any" min="0" inputMode="decimal" style={{ maxWidth: 200 }} value={form.wasteTotal.value} onChange={(e) => patch('wasteTotal', { value: e.target.value })} />
           <select aria-label={L('wasteTotal.category')} value={form.wasteTotal.category} onChange={(e) => patch('wasteTotal', { category: e.target.value })}>
             {['overproduction', 'spoilage', 'error'].map((v) => <option key={v} value={v}>{t(`f.v.${v}`)}</option>)}
           </select>

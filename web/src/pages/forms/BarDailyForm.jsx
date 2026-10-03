@@ -105,7 +105,7 @@ export default function BarDailyForm() {
     <LabeledTextarea label={L(`notes.${key}`)} value={form.notes[key]} onChange={(v) => patchNested('notes', key, v)} />
   );
   const textInput = (section, key, type) => (
-    <input placeholder={L(`${section}.${key}`)} aria-label={L(`${section}.${key}`)} type={type} value={form[section][key]} onChange={(e) => patch(section, { [key]: e.target.value })} />
+    <input placeholder={L(`${section}.${key}`)} aria-label={L(`${section}.${key}`)} {...(type === 'number' ? { type, step: 'any', min: 0, inputMode: 'decimal' } : { type })} value={form[section][key]} onChange={(e) => patch(section, { [key]: e.target.value })} />
   );
   const checkbox = (section, key) => (
     <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 400 }}>

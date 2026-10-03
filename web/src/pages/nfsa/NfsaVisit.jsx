@@ -160,7 +160,7 @@ export default function NfsaVisit() {
         {error && <div className="error-banner" style={{ marginBottom: 8 }}>{error}</div>}
         {group === null && <div className="error-banner" style={{ marginBottom: 8 }}>{t('library.notFound')}</div>}
         {stores.length > 1 && (
-          <select aria-label={t('common.store')} value={storeId} onChange={(e) => setStoreId(e.target.value)} style={{ width: '100%', minHeight: 44, marginBottom: 8 }}>
+          <select aria-label={t('common.store')} value={storeId} onChange={(e) => setStoreId(e.target.value)} className="sticky-store-select">
             {stores.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         )}

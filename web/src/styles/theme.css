@@ -1248,6 +1248,17 @@ button.list-row:disabled { cursor: default; }
 }
 select.store-pill { appearance: none; -webkit-appearance: none; cursor: pointer; padding-inline-end: 12px; }
 select.store-pill option { color: var(--ink); }
+/* The store picker above Run now / Start (SOP detail, NFSA page). It sits
+   outside a card, so it had the browser's 13px default. */
+.sticky-store-select {
+  width: 100%; min-height: 44px; margin-bottom: 8px; padding: 8px 10px; border: 1px solid var(--line);
+  border-radius: var(--radius-sm); font-size: 16px; font-family: inherit; background: var(--paper-white); color: var(--ink);
+}
+/* iPhone Safari zooms the whole page into any control under 16px when it
+   gets focus; these two are drawn smaller on purpose, so only there. */
+@supports (-webkit-touch-callout: none) {
+  .language-switcher, .store-pill .store-select { font-size: 16px; }
+}
 .hero-greeting { font-family: var(--font-serif); font-size: 28px; font-weight: 700; line-height: 1.15; margin-top: 18px; }
 .hero-sub { color: #cfe0d5; font-size: 14px; margin-top: 4px; }
 .hero-progress-label { margin-top: 18px; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; font-size: 13px; color: #cfe0d5; }
