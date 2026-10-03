@@ -1,8 +1,17 @@
 import pg from 'pg';
 import 'dotenv/config';
 
+// pg treats sslmode=require (and prefer, verify-ca) as verify-full today,
+// and printed a "SECURITY WARNING" about a future change at every start
+// (Neon's addresses say require). Say verify-full outright: the same
+// connection as now, without the warning flooding the log.
+export function explicitSslMode(url) {
+  if (!url || /[?&]uselibpqcompat=/i.test(url)) return url;
+  return url.replace(/([?&]sslmode=)(require|prefer|verify-ca)(?=&|$)/i, '$1verify-full');
+}
+
 export const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: explicitSslMode(process.env.DATABASE_URL),
   // Give up on a connection attempt rather than queueing requests behind
   // a database that isn't answering.
   connectionTimeoutMillis: 10_000,
