@@ -141,7 +141,8 @@ test('retaking a photo removes the replaced file from disk', async () => {
   await postResponse(emp.token, subId, { itemId: itemIds[0] }, true);
   const second = (await api('GET', `/api/submissions/${subId}`, { token: emp.token })).body.responses[0].photo_path.split('?')[0];
   assert.notEqual(first, second);
-  const onDisk = (p) => fsMod.existsSync(pathMod.resolve('uploads', p.slice('/uploads/'.length)));
+  const { UPLOAD_ROOT } = await import('../src/storage.js');
+  const onDisk = (p) => fsMod.existsSync(pathMod.join(UPLOAD_ROOT, p.slice('/uploads/'.length)));
   await new Promise((r) => setTimeout(r, 50));
   assert.equal(onDisk(first), false, 'the old photo is gone');
   assert.equal(onDisk(second), true);

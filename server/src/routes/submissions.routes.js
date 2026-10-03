@@ -8,13 +8,13 @@ import { requireAuth } from '../auth/middleware.js';
 import { translateRows, requestLanguage } from '../i18n/translateContent.js';
 import { signPhotos } from '../uploads.js';
 import { SHARE_ROOT, SHARE_DAYS, sweepSoon } from '../shares.js';
+import { UPLOAD_ROOT } from '../storage.js';
 import { visibleBranchIds, canSeeSubmission, SEES_OWN_ONLY } from '../auth/scope.js';
 import { temperatureDeviations } from '../../../shared/temperatures.js';
 import { onReportSubmitted } from '../inbox.js';
 
 export const submissionsRouter = Router();
 
-const UPLOAD_ROOT = path.resolve('uploads');
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 }, // 8MB per photo

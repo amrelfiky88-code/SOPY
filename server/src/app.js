@@ -25,6 +25,7 @@ import { requireSignedUpload } from './uploads.js';
 import { blockWritesWhenPlanEnded } from './auth/plan.js';
 import { translateErrorResponses } from './i18n/errorMessages.js';
 import { noteDatabaseAwake } from './reminders.js';
+import { UPLOAD_ROOT } from './storage.js';
 
 // Paddle's checkout (Paddle.js) loads from cdn.paddle.com and opens its
 // overlay from buy.paddle.com / sandbox-buy.paddle.com; Paymob is a full
@@ -93,7 +94,7 @@ export function createApp() {
   // job to refresh its list of due times (reminders.js) without waking it.
   app.use('/api', (req, res, next) => { res.on('finish', noteDatabaseAwake); next(); });
   // Photos are only served through signed, expiring links (see uploads.js).
-  app.use('/uploads', requireSignedUpload, express.static(path.resolve('uploads')));
+  app.use('/uploads', requireSignedUpload, express.static(UPLOAD_ROOT));
 
   app.get('/api/health', (req, res) => res.json({ ok: true }));
 

@@ -5,7 +5,9 @@ import { query } from './db.js';
 // Shared report PDFs (WhatsApp / email links). A link stops working after
 // SHARE_DAYS, but the file used to stay on disk for ever — a full report,
 // photos included, long after anyone was meant to be able to read it.
-export const SHARE_ROOT = path.resolve('storage', 'shares');
+// Kept outside the app folder in production (storage.js).
+import { SHARE_ROOT } from './storage.js';
+export { SHARE_ROOT };
 export const SHARE_DAYS = 30;
 
 // The expired link keeps saying "expired" (not "not valid") for this long

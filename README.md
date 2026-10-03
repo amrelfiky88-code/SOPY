@@ -326,9 +326,13 @@ in that component**, and the server's upload endpoint
   Manager to only *their assigned* branches everywhere (not just where
   `user_branches` is already joined) would need a bit more query-level
   filtering as the team grows.
-- **Photo storage** is local disk (`server/uploads/`), fine for a single
-  Hostinger instance; move to S3/Object Storage if you scale to multiple
-  app instances.
+- **Photo storage** is local disk, fine for a single Hostinger instance;
+  move to S3/Object Storage if you scale to multiple app instances. In
+  production, photos and shared report PDFs are kept in `~/sopy-data`
+  (or `DATA_DIR`), outside the app: Hostinger deploys each push into a
+  fresh folder and deletes the old one, so anything kept inside the app
+  folder is lost at the next deploy. Locally they stay in `server/uploads/`
+  and `server/storage/shares/`.
 - **Invite emails** aren't actually sent (only forgot-password codes are emailed) — `POST /api/tenants/users/invite`
   returns the invite link directly in the API response for the demo; wire
   up an email provider before real use.

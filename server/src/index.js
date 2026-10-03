@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { startReminderJob } from './reminders.js';
 import { upgradeSchema, upgradeContent } from './db/upgrade.js';
 import { reportDeliverySetup } from './delivery.js';
+import { prepareStorage } from './storage.js';
 
 // Bring the database up to schema.sql before taking requests, so a deploy
 // with new columns or tables doesn't fail on a database made before them.
@@ -15,6 +16,9 @@ try {
 } catch (err) {
   console.error('Could not check the database schema:', err.message);
 }
+
+// Photos and shared PDFs live outside the app folder, which each deploy replaces.
+prepareStorage();
 
 const app = createApp();
 const port = process.env.PORT || 4000;
