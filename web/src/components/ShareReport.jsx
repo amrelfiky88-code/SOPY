@@ -18,6 +18,7 @@ export default function ShareReport({ submissionId, model }) {
   const [link, setLink] = useState(null);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
+  const [manualLink, setManualLink] = useState(null); // shown when the browser wouldn't copy it
   const [error, setError] = useState('');
   const linkPromise = useRef(null);
 
@@ -110,20 +111,31 @@ export default function ShareReport({ submissionId, model }) {
     window.location.href = `mailto:?subject=${encodeURIComponent(model.title)}&body=${encodeURIComponent(message(url))}`;
   });
 
+  // The first copy has to upload the PDF before there is a link, and iPhone
+  // Safari only lets a page write to the clipboard straight after a tap:
+  // after the upload both ways of copying failed, yet the page said "Link
+  // copied" and people pasted nothing. Now it says so only when it's true;
+  // otherwise the link is shown, selected, to copy by hand.
   const copyLink = () => run('copy', async () => {
     const url = await ensureLink();
+    let copied = false;
     try {
       await navigator.clipboard.writeText(url);
+      copied = true;
     } catch {
-      // Older iOS without clipboard permission: select a temporary field.
       const field = document.createElement('textarea');
       field.value = url;
       document.body.appendChild(field);
       field.select();
-      document.execCommand('copy');
+      try { copied = document.execCommand('copy'); } catch { copied = false; }
       field.remove();
     }
-    setNotice(t('share.copied'));
+    if (copied) {
+      setManualLink(null);
+      setNotice(t('share.copied'));
+    } else {
+      setManualLink(url);
+    }
   });
 
   const ready = status === 'ready';
@@ -180,6 +192,20 @@ export default function ShareReport({ submissionId, model }) {
       </div>
 
       {notice && <div className="success-banner" role="status" style={{ marginTop: 12 }}>{notice}</div>}
+      {manualLink && (
+        <div style={{ marginTop: 12 }}>
+          <input
+            className="manual-link"
+            readOnly
+            dir="ltr"
+            value={manualLink}
+            aria-label={t('share.copyLink')}
+            ref={(el) => { if (el) { el.focus(); el.select(); } }}
+            onFocus={(e) => e.target.select()}
+          />
+          <p className="hint" role="status" style={{ margin: '6px 0 0' }}>{t('invite.copyByHand')}</p>
+        </div>
+      )}
       {error && <div className="error-banner" style={{ marginTop: 12 }}>{error}</div>}
       <p className="hint" style={{ marginTop: 10 }}>{t('share.linkNote')}</p>
     </div>
