@@ -915,7 +915,11 @@ tbody tr:hover { background: var(--paper); }
 }
 .share-targets::-webkit-scrollbar { display: none; }
 .share-target {
-  flex: 1 0 76px;
+  /* Share the row's width: at 76px each the fourth ("More") was cut off
+     on a 375px phone. Labels wrap under the icon instead. */
+  flex: 1 1 0;
+  min-width: 64px;
+  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1371,6 +1375,9 @@ select.store-pill option { color: var(--ink); }
 .composer textarea {
   flex: 1; min-width: 0; padding: 11px 14px; border: 1px solid var(--line); border-radius: 22px; resize: none;
   font-size: 16px; font-family: inherit; background: var(--paper-white); color: var(--ink); outline: none; max-height: 140px;
+  /* A set line height: the Arabic font's taller default overflowed one row
+     and showed a scrollbar in the empty box. Thread.jsx grows the box. */
+  line-height: 22px; overflow-y: hidden;
 }
 .composer textarea:focus { border-color: var(--green); }
 .send-btn {

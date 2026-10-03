@@ -26,6 +26,18 @@ export default function Thread() {
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState('');
   const [draft, setDraft] = useState('');
+  // The message box grows with what's typed, up to its CSS max-height,
+  // and only scrolls past that (it used to stay one line tall).
+  const boxRef = useRef(null);
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    box.style.height = 'auto';
+    const full = box.scrollHeight + 2; // + the 1px borders (border-box)
+    const max = parseFloat(getComputedStyle(box).maxHeight) || 140;
+    box.style.height = `${Math.min(full, max)}px`;
+    box.style.overflowY = full > max ? 'auto' : 'hidden';
+  }, [draft]);
   const [sending, setSending] = useState(false);
   const endRef = useRef(null);
   const lastCount = useRef(0);
@@ -148,6 +160,7 @@ export default function Thread() {
       {(error || loadError) && <div className="error-banner" style={{ marginBottom: 8 }}>{error || loadError}</div>}
       <div className="composer">
         <textarea
+          ref={boxRef}
           rows={1}
           value={draft}
           maxLength={MAX_LENGTH}
