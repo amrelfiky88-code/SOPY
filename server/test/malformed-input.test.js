@@ -4,6 +4,7 @@ import { resetTestDb, closeDb } from '../test-utils/db.js';
 import { startTestServer, completeSetup } from '../test-utils/server.js';
 import webpush from 'web-push';
 import { setPushSender } from '../src/push.js';
+import { setMessageSender } from '../src/delivery.js';
 
 // Every endpoint, sent the wrong shapes of data (numbers where text goes,
 // lists, objects, null, very long strings, broken ids). A mistake by the
@@ -23,13 +24,14 @@ const FIELDS = [
   'pagePath', 'branchCount', 'userCount', 'businessType', 'onboardingStep', 'language', 'phone',
   'currentPassword', 'newPassword', 'inviteToken', 'restaurantName', 'country', 'referralCode',
   'dueTime', 'text', 'description', 'standard', 'isCritical', 'fileName', 'timezone', 'q', 'from',
-  'to', 'before', 'limit', 'libraryGroup', 'period', 'branches', 'users', 'critical', 'group', 'body', 'notifyIncidents', 'notifyReminders', 'endpoint', 'keys',
+  'to', 'before', 'limit', 'libraryGroup', 'period', 'branches', 'users', 'critical', 'group', 'body', 'notifyIncidents', 'notifyReminders', 'endpoint', 'keys', 'code',
 ];
 const BAD = [null, 12345, -1, 1.5, true, [], ['x'], {}, { $gt: '' }, 'x'.repeat(5000), "' OR 1=1 --", '../../etc/passwd', '', 'NaN'];
 
 const ROUTES = [
   ['POST', '/api/auth/signup'], ['POST', '/api/auth/login'], ['GET', '/api/auth/me'], ['PATCH', '/api/auth/me'],
   ['PATCH', '/api/auth/password'], ['POST', '/api/auth/accept-invite'], ['GET', '/api/auth/invite/:bad'],
+  ['GET', '/api/auth/forgot/options'], ['POST', '/api/auth/forgot'], ['POST', '/api/auth/forgot/verify'],
   ['GET', '/api/billing/subscription'], ['PATCH', '/api/billing/subscription/quantities'], ['POST', '/api/billing/checkout'],
   ['POST', '/api/billing/paymob/webhook'], ['POST', '/api/billing/paymob/return'], ['POST', '/api/billing/paymob/renew'],
   ['GET', '/api/checklists/library'], ['POST', '/api/checklists/library'], ['GET', '/api/checklists/templates'],
@@ -58,6 +60,8 @@ const ROUTES = [
 // "missing fields" checks and into the code that uses it. (A store list
 // sent as text used to crash an invite this way.)
 const VALID = {
+  'POST /api/auth/forgot': () => ({ email: 'fuzz@example.com', language: 'en' }),
+  'POST /api/auth/forgot/verify': () => ({ phone: '+20 1001234567', code: '123456' }),
   'PATCH /api/auth/me': () => ({ fullName: 'A', title: 'Chef', phone: '123', language: 'en', notifyIncidents: true, notifyReminders: true }),
   'PATCH /api/billing/subscription/quantities': () => ({ branchCount: 50, userCount: 200 }),
   'POST /api/billing/checkout': () => ({ method: 'paymob' }),
@@ -111,6 +115,7 @@ before(async () => {
   const vapid = webpush.generateVAPIDKeys();
   Object.assign(process.env, { VAPID_PUBLIC_KEY: vapid.publicKey, VAPID_PRIVATE_KEY: vapid.privateKey });
   setPushSender(async () => {});
+  setMessageSender(() => {}); // forgot-password codes go nowhere
   Object.assign(process.env, { PAYMOB_SECRET_KEY: 'sk', PAYMOB_PUBLIC_KEY: 'pk', PAYMOB_INTEGRATION_IDS: '1', PAYMOB_HMAC_SECRET: 'h', PAYMOB_EGP_PER_USD: '50' });
   realFetch = globalThis.fetch;
   let n = 0;
@@ -148,6 +153,7 @@ before(async () => {
 
 after(async () => {
   globalThis.fetch = realFetch;
+  setMessageSender(null);
   for (const k of ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY']) delete process.env[k];
   for (const k of ['PAYMOB_SECRET_KEY', 'PAYMOB_PUBLIC_KEY', 'PAYMOB_INTEGRATION_IDS', 'PAYMOB_HMAC_SECRET', 'PAYMOB_EGP_PER_USD']) delete process.env[k];
   await close();

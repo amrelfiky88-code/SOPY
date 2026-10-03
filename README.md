@@ -50,6 +50,13 @@ Edit `server/.env`:
 If you fill in Paddle keys, also set `web/.env`'s `VITE_PADDLE_CLIENT_TOKEN`
 (from Paddle > Developer Tools > Authentication > client-side tokens).
 
+**Forgot password** sends a 6-digit code by email (`SMTP_HOST`, `SMTP_PORT`,
+`SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`: any SMTP service, such as Google Workspace,
+Zoho, SendGrid or Brevo) or by text message (`TWILIO_ACCOUNT_SID`,
+`TWILIO_AUTH_TOKEN` and `TWILIO_FROM` or `TWILIO_MESSAGING_SERVICE_SID`). A way
+that isn't set up isn't offered. Locally, without them, the codes are printed in
+the API server's console.
+
 ## 3. Create the database schema
 
 ```bash
@@ -315,7 +322,7 @@ in that component**, and the server's upload endpoint
 - **Photo storage** is local disk (`server/uploads/`), fine for a single
   Hostinger instance; move to S3/Object Storage if you scale to multiple
   app instances.
-- **Invite emails** aren't actually sent — `POST /api/tenants/users/invite`
+- **Invite emails** aren't actually sent (only forgot-password codes are emailed) — `POST /api/tenants/users/invite`
   returns the invite link directly in the API response for the demo; wire
   up an email provider before real use.
 

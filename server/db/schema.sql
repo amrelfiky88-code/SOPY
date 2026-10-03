@@ -369,3 +369,18 @@ CREATE TABLE push_subscriptions (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_push_subscriptions_user ON push_subscriptions(user_id);
+
+-- Forgot password: a 6-digit code sent by email or text message
+-- (routes/forgot.routes.js). Only a hash of the code is kept. It works for
+-- 10 minutes and 5 wrong tries; the right one hands out a short reset link.
+CREATE TABLE password_reset_codes (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  channel     TEXT NOT NULL,              -- 'email' | 'sms'
+  code_hash   TEXT NOT NULL,
+  attempts    INT NOT NULL DEFAULT 0,
+  expires_at  TIMESTAMPTZ NOT NULL,
+  used_at     TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_password_reset_codes_user ON password_reset_codes(user_id, created_at);

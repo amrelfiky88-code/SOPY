@@ -8,6 +8,7 @@ import path from 'node:path';
 import './asyncErrors.js';
 
 import { authRouter } from './routes/auth.routes.js';
+import { forgotRouter } from './routes/forgot.routes.js';
 import { tenantsRouter } from './routes/tenants.routes.js';
 import { pricingRouter } from './routes/pricing.routes.js';
 import { billingRouter, paddleWebhookHandler } from './routes/billing.routes.js';
@@ -68,6 +69,7 @@ export function createApp() {
 
   app.get('/api/health', (req, res) => res.json({ ok: true }));
 
+  app.use('/api/auth/forgot', forgotRouter);
   app.use('/api/auth', authRouter);
   // After a plan ends, adding stores or people is blocked; shrinking
   // (plan counts, disabling users, removing stores) stays open so an owner

@@ -5,6 +5,7 @@ import { useT } from './i18n/index.jsx';
 
 import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
 import WhoAreYou from './pages/WhoAreYou.jsx';
 import ConfigureData from './pages/ConfigureData.jsx';
 import Pricing from './pages/Pricing.jsx';
@@ -118,6 +119,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/get-started" element={<WhoAreYou />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
 

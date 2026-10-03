@@ -57,12 +57,14 @@ export default function Login() {
         <div className="field">
           <label htmlFor="password">{t('login.password')}</label>
           <PasswordInput id="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          <div style={{ textAlign: 'end', marginTop: 4 }}>
+            <Link to="/forgot-password" state={{ email }} className="forgot-link">{t('forgot.link')}</Link>
+          </div>
         </div>
         <button className="btn btn-primary" type="submit" disabled={submitting} style={{ width: '100%' }}>
           {submitting ? t('login.signingIn') : t('login.submit')}
         </button>
       </form>
-      <p className="hint" style={{ marginTop: 14 }}>{t('login.forgot')}</p>
       <p style={{ marginTop: 16 }}>{t('login.newToSopy')} <Link to="/get-started">{t('login.getStarted')}</Link></p>
     </div>
   );

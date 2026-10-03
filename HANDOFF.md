@@ -128,9 +128,9 @@ Confirmed missing by grepping the actual code, not by memory — see the
 conversation history around the `SOPY.pptx` audit for full detail:
 
 1. **PDF export** ("save as a pdf") — no PDF generation anywhere in the app.
-2. **Email sending** ("send by email") — no email capability at all;
-   invites currently just show a link in-app (see README's "Known
-   simplifications").
+2. **Email sending** ("send by email") — the only email SOPY sends is the
+   forgot-password code (`server/src/delivery.js`, SMTP); invites still just
+   show a link in-app (see README's "Known simplifications").
 3. **Yearly billing option** — Paddle billing is hardcoded to
    `interval: 'month'` in `server/src/paddle/client.js`; no annual plan
    exists anywhere, not even a toggle on the Pricing page.
