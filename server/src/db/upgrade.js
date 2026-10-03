@@ -75,12 +75,12 @@ export function upgradeStatements(stmt) {
 
 // What the database already has, read from the catalogue (no table locks).
 async function currentSchema(db) {
-  const [tables, columns, indexes, enums] = await Promise.all([
-    db.query("SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema()"),
-    db.query("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = current_schema()"),
-    db.query('SELECT indexname FROM pg_indexes WHERE schemaname = current_schema()'),
-    db.query('SELECT t.typname, e.enumlabel FROM pg_type t LEFT JOIN pg_enum e ON e.enumtypid = t.oid WHERE t.typtype = $1', ['e']),
-  ]);
+  // One after another: they share one connection, and pg is dropping
+  // support for overlapping queries on a client (it warned at every start).
+  const tables = await db.query("SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema()");
+  const columns = await db.query("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = current_schema()");
+  const indexes = await db.query('SELECT indexname FROM pg_indexes WHERE schemaname = current_schema()');
+  const enums = await db.query('SELECT t.typname, e.enumlabel FROM pg_type t LEFT JOIN pg_enum e ON e.enumtypid = t.oid WHERE t.typtype = $1', ['e']);
   const enumLabels = new Map();
   for (const r of enums.rows) {
     if (!enumLabels.has(r.typname)) enumLabels.set(r.typname, new Set());
