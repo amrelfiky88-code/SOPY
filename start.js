@@ -6,4 +6,4 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 process.chdir(path.join(path.dirname(fileURLToPath(import.meta.url)), 'server'));
-await import('./server/src/index.js');
+import('./server/src/index.js').catch((err) => { console.error(err); process.exit(1); });
