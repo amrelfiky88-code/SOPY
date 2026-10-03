@@ -55,6 +55,8 @@ function errorForException(err) {
   }
 }
 
+const TRANSIENT_ERRORS = new Set(['NotReadableError', 'TrackStartError', 'AbortError', 'NotFoundError', 'DevicesNotFoundError']);
+
 // Evidence needs to be legible (labels, thermometer readouts), but a
 // full-sensor frame is several MB on a phone connection.
 const MAX_EDGE = 1920;
@@ -75,6 +77,11 @@ export default function CameraCapture({ onCapture }) {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [ready, setReady] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // Quiet retries for errors that pass on their own: the camera still held
+  // by the last checkpoint's preview (Android: NotReadableError) or briefly
+  // not listed. Showing "camera in use" for those sent people hunting for
+  // another app; a moment later it opens.
+  const quietRetries = useRef(0);
 
   useEffect(() => {
     if (previewUrl) return undefined; // showing the shot — don't hold the camera open
@@ -93,6 +100,7 @@ export default function CameraCapture({ onCapture }) {
       .then((stream) => {
         if (!active) { stream.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = stream;
+        quietRetries.current = 0;
         const video = videoRef.current;
         if (video) {
           video.srcObject = stream;
@@ -100,7 +108,17 @@ export default function CameraCapture({ onCapture }) {
           video.play().catch(() => {});
         }
       })
-      .catch((err) => { if (active) setError(errorForException(err)); });
+      .catch((err) => {
+        if (!active) return;
+        if (TRANSIENT_ERRORS.has(err?.name) && quietRetries.current < 2) {
+          quietRetries.current += 1;
+          // 0.7 s, then 1.4 s, before saying anything.
+          const wait = 700 * quietRetries.current;
+          setTimeout(() => { if (active) setAttempt((a) => a + 1); }, wait);
+          return;
+        }
+        setError(errorForException(err));
+      });
 
     // Phones stop the camera when the app goes to the background; the
     // preview then sits frozen on return. Reopen it if that happened.

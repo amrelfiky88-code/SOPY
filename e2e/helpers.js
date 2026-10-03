@@ -23,7 +23,11 @@ export async function createBusiness(request, { name = 'E2E Cafe', fullName = 'E
 
 // Signed in as `token`, in English, on every page this context opens.
 export async function signIn(context, token, lang = 'en') {
+  // Only on the first page: later ones keep whatever the app stored (a new
+  // session after a password change, say).
   await context.addInitScript(([t, l]) => {
+    if (localStorage.getItem('sopy_signed_in_once')) return;
+    localStorage.setItem('sopy_signed_in_once', '1');
     localStorage.setItem('sopy_token', t);
     localStorage.setItem('sopy_lang', l);
   }, [token, lang]);

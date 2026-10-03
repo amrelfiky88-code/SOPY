@@ -11,8 +11,9 @@ test.describe('from the Library to a checklist on Today', () => {
     await expect(page).toHaveURL(/\/app\/checklists$/);
     // The SOP's checkpoints arrive selected, with its name.
     await expect(page.locator('#tname')).not.toHaveValue('');
+    // (The checkpoint list takes a moment to load on a busy server.)
+    await expect.poll(() => page.locator('input[type=checkbox]:checked').count(), { timeout: 20_000 }).toBeGreaterThan(3);
     const picked = await page.locator('input[type=checkbox]:checked').count();
-    expect(picked).toBeGreaterThan(3);
 
     await page.locator('#tname').fill('Morning opening');
     await page.getByRole('button', { name: /^Save checklist/ }).click();

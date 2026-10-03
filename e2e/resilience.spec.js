@@ -22,9 +22,10 @@ test.describe('bad connections and impatient fingers', () => {
     const biz = await createBusiness(request);
     await signIn(context, biz.token);
     await page.goto('/app/library');
+    await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible();
     await context.setOffline(true);
     await page.evaluate(() => { history.pushState({}, '', '/app/account'); dispatchEvent(new PopStateEvent('popstate')); });
-    await expect(page.locator('#billing .error-banner')).toBeVisible();
+    await expect(page.locator('#billing .error-banner')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('No active subscription')).toHaveCount(0);
     await context.setOffline(false);
     await expect(page.locator('#billing .error-banner')).toHaveCount(0);

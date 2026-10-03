@@ -27,7 +27,19 @@ if ('serviceWorker' in navigator) {
 const NON_TEXT_INPUTS = new Set(['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'file', 'color', 'image']);
 const opensKeyboard = (el) =>
   !!el && (el.tagName === 'TEXTAREA' || el.isContentEditable || (el.tagName === 'INPUT' && !NON_TEXT_INPUTS.has(el.type)));
-const syncKeyboardFlag = () => document.documentElement.classList.toggle('keyboard-open', opensKeyboard(document.activeElement));
+// Hidden at once when a text field gets focus; shown again only a moment
+// after focus leaves. The tap that takes focus away (say, "Save profile"
+// just below the name being typed) is still being delivered when focus
+// moves: bringing the tab bar back straight away put it over the button,
+// the tap landed on a tab link, and the save never happened.
+let showBarsLater = null;
+const syncKeyboardFlag = () => {
+  clearTimeout(showBarsLater);
+  if (opensKeyboard(document.activeElement)) document.documentElement.classList.add('keyboard-open');
+  else showBarsLater = setTimeout(() => {
+    if (!opensKeyboard(document.activeElement)) document.documentElement.classList.remove('keyboard-open');
+  }, 350);
+};
 document.addEventListener('focusin', syncKeyboardFlag);
 // focusout fires before focus lands on the next field; check once it has.
 document.addEventListener('focusout', () => setTimeout(syncKeyboardFlag, 0));
