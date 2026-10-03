@@ -10,6 +10,7 @@ import {
 } from '../../components/icons.jsx';
 import { useI18n } from '../../i18n/index.jsx';
 import { reportTitle } from '../../i18n/formLabels.js';
+import { useReconnect } from '../../lib/useReconnect.js';
 
 const MANAGERS = ['business_owner', 'operations_manager', 'area_manager'];
 const PERIODS = ['daily', 'weekly', 'monthly', 'quarterly'];
@@ -61,12 +62,20 @@ export default function DashboardRouter() {
   const isManager = MANAGERS.includes(user?.role);
   const seesKpi = !!user && user.role !== 'employee';
 
-  useEffect(() => {
+  // A failed load leaves the list empty-handed (null) with the error and a
+  // retry: it used to show "No checklists assigned", which offline read as
+  // "nothing to do today".
+  const [loadFailed, setLoadFailed] = useState(false);
+  const loadAssignments = () => {
+    setError('');
+    setLoadFailed(false);
     api.get('/checklists/my-assignments')
       .then((d) => { setAssignments(d.assignments); setMyBranchIds(d.myBranchIds || []); })
-      .catch((err) => { setAssignments([]); setError(err.message); });
+      .catch((err) => { setLoadFailed(true); setError(err.message); });
     api.get('/tenants/branches').then((d) => setBranches(d.branches)).catch(() => {});
-  }, []);
+  };
+  useEffect(loadAssignments, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useReconnect(() => { if (loadFailed) loadAssignments(); });
 
   // The stores this person works at; owners and operations managers (or
   // anyone not tied to a store) see every store.
@@ -156,10 +165,16 @@ export default function DashboardRouter() {
       </div>
 
       <div className="stack">
-        {error && <div className="error-banner" style={{ marginBottom: 0 }}>{error}</div>}
+        {error && (
+          <div className="error-banner" style={{ marginBottom: 0 }}>
+            {error}{' '}
+            {loadFailed && <button type="button" className="link-btn" onClick={loadAssignments}>{t('common.tryAgain')}</button>}
+          </div>
+        )}
 
         <div className="card" style={{ marginBottom: 0, padding: '16px 16px 4px' }}>
           <h3 style={{ margin: '0 0 4px' }}>{t('dashboard.myChecklists')}</h3>
+          {!assignments && !loadFailed && <p className="hint">{t('common.loading')}</p>}
           {assignments && shown.length === 0 && (
             <div className="empty-state">
               <ClipboardEmptyIcon size={32} />

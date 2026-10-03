@@ -25,6 +25,25 @@ import { requireSignedUpload } from './uploads.js';
 import { blockWritesWhenPlanEnded } from './auth/plan.js';
 import { translateErrorResponses } from './i18n/errorMessages.js';
 
+// Paddle's checkout (Paddle.js) loads from cdn.paddle.com and opens its
+// overlay from buy.paddle.com / sandbox-buy.paddle.com; Paymob is a full
+// page redirect, which this doesn't restrict. Fonts come from Google Fonts.
+export const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' https://*.paddle.com https://*.profitwell.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.paddle.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https:",
+  "connect-src 'self' https://*.paddle.com https://*.profitwell.com",
+  "frame-src 'self' https://*.paddle.com",
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+].join('; ');
+
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
@@ -40,6 +59,11 @@ export function createApp() {
     // Camera (evidence photos) and location (report GPS) are used by this
     // site only; nothing else is needed.
     res.setHeader('Permissions-Policy', 'camera=(self), geolocation=(self), microphone=()');
+    // What a page may load, as a second line of defence should any text ever
+    // reach the page as markup: scripts only from this site and Paddle's
+    // checkout, no plugins, no <base> tricks, forms post here only. Inline
+    // styles stay allowed (React style props, the small server pages).
+    res.setHeader('Content-Security-Policy', CONTENT_SECURITY_POLICY);
     if (process.env.NODE_ENV === 'production' && (req.secure || req.headers['x-forwarded-proto'] === 'https')) {
       res.setHeader('Strict-Transport-Security', 'max-age=15552000');
     }

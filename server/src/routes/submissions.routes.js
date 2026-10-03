@@ -3,7 +3,7 @@ import multer from 'multer';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
 import { translateRows, requestLanguage } from '../i18n/translateContent.js';
 import { signPhotos } from '../uploads.js';
@@ -80,23 +80,30 @@ submissionsRouter.post('/', requireAuth, async (req, res) => {
   // "This shift" is a rolling 16 hours, not "since midnight": midnight
   // here meant UTC (2-3am in Cairo), so a run started at 1am and resumed
   // at 3am was missed and duplicated.
-  if (assignmentId) {
-    const { rows: open } = await query(
-      `SELECT * FROM checklist_submissions
-       WHERE tenant_id = $1 AND assignment_id = $2 AND branch_id = $3 AND submitted_by = $4
-         AND status = 'in_progress' AND started_at >= now() - interval '16 hours'
-       ORDER BY started_at DESC LIMIT 1`,
-      [req.auth.tenantId, assignmentId, branchId, req.auth.userId]
+  // Checked and created under a lock: Start tapped three times at once used
+  // to open three runs of the same assignment. (Runs without an assignment
+  // are always new; the daily report pages find their own draft first.)
+  const result = await withTransaction(async (client) => {
+    if (assignmentId) {
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',
+        [`start:${req.auth.tenantId}:${req.auth.userId}:${branchId}:${assignmentId}`]);
+      const { rows: open } = await client.query(
+        `SELECT * FROM checklist_submissions
+         WHERE tenant_id = $1 AND assignment_id = $2 AND branch_id = $3 AND submitted_by = $4
+           AND status = 'in_progress' AND started_at >= now() - interval '16 hours'
+         ORDER BY started_at DESC LIMIT 1`,
+        [req.auth.tenantId, assignmentId, branchId, req.auth.userId]
+      );
+      if (open[0]) return { submission: open[0], resumed: true };
+    }
+    const { rows } = await client.query(
+      `INSERT INTO checklist_submissions (tenant_id, assignment_id, template_id, branch_id, submitted_by)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [req.auth.tenantId, assignmentId || null, templateId, branchId, req.auth.userId]
     );
-    if (open[0]) return res.status(200).json({ submission: open[0], resumed: true });
-  }
-
-  const { rows } = await query(
-    `INSERT INTO checklist_submissions (tenant_id, assignment_id, template_id, branch_id, submitted_by)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [req.auth.tenantId, assignmentId || null, templateId, branchId, req.auth.userId]
-  );
-  res.status(201).json({ submission: rows[0] });
+    return { submission: rows[0], resumed: false };
+  });
+  res.status(result.resumed ? 200 : 201).json(result);
 });
 
 // The caller's own unfinished report of this kind at this store, started
@@ -302,10 +309,13 @@ submissionsRouter.post('/:id/submit', requireAuth, async (req, res) => {
     `UPDATE checklist_submissions
      SET status = 'submitted', submitted_at = now(), gps_lat = $1, gps_lng = $2,
          signed_off_by = $3, signed_off_at = now(), has_incident = has_incident OR $6
-     WHERE id = $4 AND tenant_id = $5 RETURNING *`,
+     WHERE id = $4 AND tenant_id = $5 AND status = 'in_progress' RETURNING *`,
     [coordinate(gpsLat, 90), coordinate(gpsLng, 180), req.auth.userId, req.params.id, req.auth.tenantId, tempIncident]
   );
-  if (!rows[0]) return res.status(404).json({ error: 'Not found' });
+  // Only the first of several Submits at once gets here with a row (the
+  // status check is in the UPDATE). They all used to succeed, and each
+  // sent its own "report submitted" notifications and phone pushes.
+  if (!rows[0]) return res.status(409).json({ error: 'This report has already been submitted' });
   // An incident opens a thread with the store's managers (Inbox) and
   // notifies them; it's done before answering so the app sees it at once.
   await onReportSubmitted(rows[0].id, { temperatureIssues });

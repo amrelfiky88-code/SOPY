@@ -15,6 +15,7 @@ npm run dev:server      # API on :4000 (node --watch)
 npm run dev:web         # Vite on :5173, proxies /api and /uploads to :4000
 npm run build:web       # web/dist — also the only compile check; there is no linter or TS
 npm run test:server     # all backend tests
+npm run test:e2e        # browser tests (needs the production build running, see below)
 ```
 
 Single test file (from `server/`):
@@ -27,13 +28,24 @@ node --env-file=.env.test --test test/billing.test.js
 
 Tests need a `sopy_test` database (`createdb sopy_test`, same role as `server/.env.example`). Every test file calls `resetTestDb()`, which drops and rebuilds the whole schema — that's why the suite runs with `--test-concurrency=1`. Don't remove that flag.
 
-There are no frontend tests. UI changes must be checked in a real browser, including at 375px width — the app is primarily used on phones.
+`test/concurrency-and-abuse.test.js` fires identical requests at once (invites and stores at the plan limit, double Submit, double Start) and sends a crafted email built to be slow; keep new check-then-write code in it.
+
+Browser tests (Playwright, `e2e/`, phone-sized) cover sign-in, untrusted text (XSS) and the CSP, offline/reconnect, missing-screen fallback, double taps on a slow line, and the Kitchen report's readings. They run against a server that's already up with the production build: `npm run build:web`, then from `server/` start it with `NODE_ENV=production PORT=4100`, then `npm run test:e2e` (`E2E_BASE_URL` to point elsewhere; `E2E_CHANNEL`, default `msedge`, picks an installed browser, so no browser download). Each test makes its own business through the API (demo-mode checkout). UI changes must still be checked in a real browser, including at 375px width — the app is primarily used on phones.
 
 ## Architecture
 
 **Server** (`server/src`): Express. `app.js` exports `createApp()` so tests boot the real app on an ephemeral port (`test-utils/server.js`); `index.js` only calls `listen`. In production the same process serves `web/dist` with SPA fallback — one Node app, no separate static host. Unknown `/api/*` paths get a JSON 404 before that fallback; `api.js` treats a non-JSON 2xx/5xx reply as a connection problem, so the SPA's HTML must never answer an API call.
 
 **The database upgrades itself on start.** Before listening, `index.js` runs `upgradeSchema()` (`src/db/upgrade.js`), which rewrites every `schema.sql` statement to be repeat-safe and applies it: missing tables and indexes are created, missing columns are added (`ADD COLUMN IF NOT EXISTS` for every column of every table) and missing enum values are added. Nothing is dropped or altered, and a statement that can't apply is logged, not fatal. It reads what exists from the catalogue first and runs only what's missing, because even `ADD COLUMN IF NOT EXISTS` for a column that's there takes an exclusive table lock; on a busy database every start-up queued behind running queries. It also sets a 10s `lock_timeout`. So a schema change only needs `schema.sql`: write it as a plain `CREATE TABLE`/`CREATE INDEX`/`ALTER TABLE … ADD COLUMN`. A new column on an existing table needs a `DEFAULT` (or to be nullable), or it can't be added to a table that has rows. Keep `schema.sql` free of functions and of `;` or `--` inside strings, since the upgrade splits on them. The "Existing databases need …" notes below are now done automatically. Before this, a deploy whose database lacked `subscriptions.provider` failed every login with "Internal server error". `test/schema-upgrade.test.js` builds such an old database and upgrades it.
+
+**Defences found in the QA audit (October 2026).**
+- Emails are checked with `isEmail` (`src/validation.js`), linear and capped at 200 characters, after the length check. The old regex was quadratic, and sign-up ran it on up to 1 MB: one crafted request froze the single-threaded server for minutes.
+- Check-then-write paths take a Postgres advisory lock inside a transaction:
+  - plan room for stores, invites and re-enables (`lockPlan` in `tenants.routes.js`);
+  - Start on an assignment (`POST /submissions`);
+  - library runs, assignments and pinned-template provisioning (`checklists.routes.js`).
+- `/submit` updates only `WHERE status = 'in_progress'`, so simultaneous Submits count once.
+- `app.js` sends a `Content-Security-Policy` (scripts from self and Paddle only, no inline handlers). Anything new loaded from another origin needs adding there.
 
 **Multi-tenancy is enforced in application code, not Postgres RLS.** `requireAuth` puts `tenantId`/`userId`/`role` from the JWT on `req.auth`; every query must scope by `req.auth.tenantId`. `test/tenant-isolation.test.js` guards this. Roles are `business_owner`, `operations_manager`, `area_manager`, `store_manager`, `employee`, checked with `requireRole(...)`. Permissions come from the role alone. There used to be an Admin/Manager/Standard "access level" that was saved but never enforced; it was removed from the API and UI. The `users.access_level` column is left unused for older databases.
 
@@ -113,6 +125,16 @@ Don't edit seed SQL (or anything with em dashes/Arabic/French) via PowerShell `-
 **Brand** (`design/brand-kit/`, exported from the Claude Design project "SOPY project branding"; open `SOPY Brand Guidelines.dc.html`). Forest #1C3D2E and Paper #F4EFE6 carry the brand. Amber and Red are only for compliance status; amber text on its tint is `--amber-text` #8A4A12. Type: Source Serif 4 for headings, scores and big numbers; IBM Plex Sans for UI; IBM Plex Sans Arabic for Arabic (it follows each Latin face in the font stacks, so Arabic picks it up automatically); IBM Plex Mono (`.mono`) for SOP codes, readings and timestamps. Fonts load from Google Fonts in `index.html`. The logo is `components/Logo.jsx` (Checkpoint mark and wordmark, "سوبي" on Arabic pages; minimum 28px for the lockup). The app icons in `web/public/icons` come from the kit, so bump `CACHE_NAME` in `sw.js` when they change. Status thresholds (Green ≥95%, Amber 85–94%, Red <85% or any critical fail) match `computeScorecard`.
 
 In right-to-left text, wrap each part of a line that mixes Latin names with Arabic dates or words in `<bdi>`, or the parts reorder.
+
+**Loading and bad connections.**
+- Less-used screens are `lazyPage(...)` in `App.jsx`: the setup funnel, Builder, Team, report forms, ReportView, ChecklistRun, KPI, NFSA and SopDetail.
+  - They're fetched during idle time after start-up, so the service worker has them offline.
+  - `PageLoadBoundary` shows "Reload" if one can't download.
+  - Keep the five tabs and the signed-out pages eager.
+- Pages that load data call `useReconnect` (`lib/useReconnect.js`) to refetch what failed when the signal returns.
+- A failed load must not render an empty state: offline, "No checklists" and "No active subscription" read as facts.
+- Location for evidence goes through `lib/location.js` (`bestEffortPosition`), which settles even if the permission prompt is ignored.
+- Uploads (photos, PDFs) have their own timeouts (90s / 2 min).
 
 **Phone layout** (Claude Design handoff "SOPY App"). Under 768px the app has five tabs: Today (`/app/dashboard`), Library, Reports, Inbox and Profile (`/app/account`). Tab pages draw their own title with `PageHead` (big serif title plus bell). Any other `/app` page gets the back bar from `AppLayout`, which goes back in history or to `parentOf()` and has no tab bar. The thread page draws its own header. The web's Kitchen/Bar tabs are tiles on Today, and Team, Builder and KPI are rows on Profile. Desktop keeps the sidebar. New wording goes in `i18n/appLabels.js` (`[key, en, ar, fr]` rows). Shared pieces are `.list-card`/`.list-row`, `.icon-tile`, `.chip-row`/`.chip`, `.search-box`, `.segmented`, `.section-label` and `.stat-grid`. Use `ChevronStartIcon`/`ChevronEndIcon` (they flip in Arabic) rather than left/right arrows.
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../api.js';
+import { useReconnect } from '../../lib/useReconnect.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { useI18n } from '../../i18n/index.jsx';
 import { formatDateTime } from '../../lib/reportModel.js';
@@ -36,14 +37,20 @@ export default function NfsaVisit() {
   const [past, setPast] = useState(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
+  // Something failed to load (offline): all of it is fetched again when the
+  // signal returns. Past runs used to read "none yet" and the store list
+  // stayed empty.
+  const [failed, setFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  useReconnect(() => { if (failed) { setFailed(false); setError(''); setReloadKey((k) => k + 1); } });
 
   useEffect(() => {
     let current = true;
     loadLibrary(lang)
       .then((groups) => { if (current) setGroup(groups.find((g) => g.key === NFSA_GROUP) || null); })
-      .catch((err) => { if (current) setError(err.message); });
+      .catch((err) => { if (current) { setFailed(true); setError(err.message); } });
     return () => { current = false; };
-  }, [lang]);
+  }, [lang, reloadKey]);
 
   // The stores this person can run it at, as in the Library.
   useEffect(() => {
@@ -55,14 +62,14 @@ export default function NfsaVisit() {
         setStores(list);
         setStoreId((s) => s || list.find((b) => b.works_here)?.id || list[0]?.id || '');
       })
-      .catch(() => {});
-  }, [user?.role]);
+      .catch((err) => { setFailed(true); setError(err.message); });
+  }, [user?.role, reloadKey]);
 
   useEffect(() => {
     api.get(`/submissions?${new URLSearchParams({ libraryGroup: NFSA_GROUP, limit: '5' })}`)
       .then((d) => setPast(d.submissions))
-      .catch(() => setPast([]));
-  }, []);
+      .catch(() => setFailed(true));
+  }, [reloadKey]);
 
   const start = async () => {
     if (running || !storeId) return;
@@ -132,7 +139,7 @@ export default function NfsaVisit() {
 
       <div className="section-label">{t('nfsa.pastTitle')}</div>
       <div className="list-card">
-        {past === null && <div className="list-row"><span className="hint">{t('common.loading')}</span></div>}
+        {past === null && !failed && <div className="list-row"><span className="hint">{t('common.loading')}</span></div>}
         {past && past.length === 0 && <div className="list-row"><span className="hint">{t('nfsa.noneYet')}</span></div>}
         {past && past.map((s) => {
           const done = s.status === 'submitted';

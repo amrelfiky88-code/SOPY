@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import PageLoadBoundary from './PageLoadBoundary.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useT } from '../i18n/index.jsx';
 import FeedbackButton from './FeedbackButton.jsx';
@@ -190,7 +191,8 @@ function AppShell({ user, tenant, t, canManage, seesKpi, sidebarOpen, setSidebar
               : t('plan.askOwner')}
           </div>
         )}
-        <Outlet />
+        {/* A screen still downloading shows here, below the bars. */}
+        <PageLoadBoundary><Outlet /></PageLoadBoundary>
       </div>
 
       {onTab && (

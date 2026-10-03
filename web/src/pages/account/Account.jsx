@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api, setToken } from '../../api.js';
+import { useReconnect } from '../../lib/useReconnect.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { calculatePricing, PLAN_LIMITS, clampPlanCount } from '../../../../shared/pricing.js';
 import QuantityField from '../../components/QuantityField.jsx';
@@ -354,14 +355,20 @@ function SubscriptionCard({ user, tenant }) {
   const [upgradePay, setUpgradePay] = useState(null);
   const navigate = useNavigate();
 
+  // A failed load isn't "no subscription": that told a paying owner who
+  // was briefly offline to choose a plan and pay again.
+  const [loadFailed, setLoadFailed] = useState(false);
+  useReconnect(() => { if (loadFailed) load(); });
   const load = async () => {
     setError('');
     try {
       const { subscription: sub } = await api.get('/billing/subscription');
+      setLoadFailed(false);
       setSubscription(sub);
       setBranches(clampPlanCount(sub?.branch_count ?? tenant?.branch_count ?? 1, PLAN_LIMITS.branches));
       setUsers(clampPlanCount(sub?.user_count ?? tenant?.user_count ?? 1, PLAN_LIMITS.users));
     } catch (err) {
+      if (!subscription) setLoadFailed(true);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -472,6 +479,18 @@ function SubscriptionCard({ user, tenant }) {
   };
 
   if (loading) return <div className="card" id="billing"><p style={{ margin: 0 }}>{t('account.loadingPlan')}</p></div>;
+
+  if (!subscription && loadFailed) {
+    return (
+      <div className="card" id="billing">
+        <h3 style={{ fontSize: 16, marginBottom: 8 }}>{t('account.subscription')}</h3>
+        <div className="error-banner" style={{ margin: 0 }}>
+          {error}{' '}
+          <button type="button" className="link-btn" onClick={load}>{t('common.tryAgain')}</button>
+        </div>
+      </div>
+    );
+  }
 
   if (!subscription) {
     return (

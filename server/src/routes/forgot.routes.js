@@ -4,6 +4,7 @@ import { query } from '../db.js';
 import { deliveryChannels, sendEmail, sendSms } from '../delivery.js';
 import { isLocked, recordFailure, clearFailures, LOCKED_MESSAGE } from '../auth/rateLimit.js';
 import { normalizeEmail } from './auth.routes.js';
+import { isEmail } from '../validation.js';
 import { parsePhone, composePhone } from '../../../shared/phone.js';
 import { countryCode } from '../../../shared/countries.js';
 import { isSupportedLanguage, languageDir, LANGUAGE_CODES } from '../../../shared/languages.js';
@@ -26,8 +27,6 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const SENDS_PER_HOUR = 5;
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 // Which ways of sending a code are set up, for the page to offer.
 forgotRouter.get('/options', (req, res) => {
   res.json(deliveryChannels());
@@ -46,7 +45,7 @@ function internationalNumber(value, fallbackIso) {
 async function findAccounts(body) {
   if (typeof body.email === 'string' && body.email.trim()) {
     const email = normalizeEmail(body.email);
-    if (email.length > 200 || !EMAIL_RE.test(email)) return { error: 'Enter a valid email address' };
+    if (!isEmail(email)) return { error: 'Enter a valid email address' };
     const { rows } = await query(
       "SELECT id, full_name, email, language FROM users WHERE email = $1 AND status = 'active'",
       [email]

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
+import { useReconnect } from '../../lib/useReconnect.js';
 import { useI18n } from '../../i18n/index.jsx';
 import { money } from '../../i18n/pageLabels.js';
 import { formatDateTime } from '../../lib/reportModel.js';
@@ -19,6 +20,7 @@ export default function ReferralCard() {
     api.get('/referrals').then(setData).catch((err) => setError(err.message));
   };
   useEffect(load, []);
+  useReconnect(() => { if (!data) load(); });
 
   if (error) {
     return (

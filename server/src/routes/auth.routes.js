@@ -9,6 +9,7 @@ import { isLocked, recordFailure, clearFailures, LOCKED_MESSAGE } from '../auth/
 import { planEnded } from '../auth/plan.js';
 import { tenantForReferralCode } from '../credits.js';
 import { REFERRAL_WELCOME_USD } from '../../../shared/referrals.js';
+import { isEmail } from '../validation.js';
 
 export const authRouter = Router();
 
@@ -26,8 +27,10 @@ authRouter.post('/signup', async (req, res) => {
   if (!name || !cleanEmail || typeof password !== 'string' || !restaurant || !countryName) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-  if (!EMAIL_RE.test(cleanEmail)) return res.status(400).json({ error: 'Enter a valid email address' });
+  // Length first, then a linear check (validation.js): the old regex ran on
+  // whatever was sent, and a crafted address froze the server for seconds.
   if (tooLong(req.body)) return res.status(400).json({ error: 'That text is too long' });
+  if (!isEmail(cleanEmail)) return res.status(400).json({ error: 'Enter a valid email address' });
   if (password.length < 8) {
     return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
@@ -257,7 +260,6 @@ authRouter.patch('/password', requireAuth, async (req, res) => {
   res.json({ token: signToken({ userId: req.auth.userId }) });
 });
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 // Names and details show on every report and PDF; there was no limit at
 // all, so a pasted essay became someone's name.

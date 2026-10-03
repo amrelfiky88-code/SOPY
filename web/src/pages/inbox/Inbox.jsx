@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../api.js';
+import { useReconnect } from '../../lib/useReconnect.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import PageHead from '../../components/PageHead.jsx';
 import { MessageIcon, PlusIcon } from '../../components/icons.jsx';
@@ -19,9 +20,13 @@ export default function Inbox() {
   const [people, setPeople] = useState(null);
   const [opening, setOpening] = useState(false);
 
-  useEffect(() => {
+  const loadThreads = () => {
+    setError('');
     api.get('/inbox/threads').then((d) => setThreads(d.threads)).catch((err) => setError(err.message));
-  }, []);
+  };
+  useEffect(loadThreads, []);
+  // Offline when the list was asked for: fetch it again when the signal returns.
+  useReconnect(() => { if (!threads) loadThreads(); });
 
   const openPicker = () => {
     setPicking((p) => !p);
@@ -60,7 +65,12 @@ export default function Inbox() {
         </div>
       )}
 
-      {error && <div className="error-banner">{error}</div>}
+      {error && (
+        <div className="error-banner">
+          {error}{' '}
+          {!threads && <button type="button" className="link-btn" onClick={loadThreads}>{t('common.tryAgain')}</button>}
+        </div>
+      )}
       {!threads && !error && <p className="hint">{t('common.loading')}</p>}
       {threads && threads.length === 0 && (
         <div className="empty-state"><MessageIcon size={32} /><span>{t('inbox.empty')}</span></div>

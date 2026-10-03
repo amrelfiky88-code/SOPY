@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
 import { useT } from './i18n/index.jsx';
@@ -7,35 +7,52 @@ import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import WhoAreYou from './pages/WhoAreYou.jsx';
-import ConfigureData from './pages/ConfigureData.jsx';
-import Pricing from './pages/Pricing.jsx';
-import Checkout from './pages/Checkout.jsx';
-import OnboardingWizard from './pages/onboarding/OnboardingWizard.jsx';
 import AppLayout from './components/AppLayout.jsx';
 import DashboardRouter from './pages/dashboard/DashboardRouter.jsx';
-import KpiDashboard from './pages/dashboard/KpiDashboard.jsx';
-import ChecklistBuilder from './pages/checklists/ChecklistBuilder.jsx';
-import ChecklistRun from './pages/checklists/ChecklistRun.jsx';
-import KitchenDailyForm from './pages/forms/KitchenDailyForm.jsx';
-import BarDailyForm from './pages/forms/BarDailyForm.jsx';
-import OpeningDailyForm from './pages/forms/OpeningDailyForm.jsx';
-import ClosingDailyForm from './pages/forms/ClosingDailyForm.jsx';
-import QcVisitForm from './pages/forms/QcVisitForm.jsx';
-import NfsaVisit from './pages/nfsa/NfsaVisit.jsx';
-import AreaManagerVisitForm from './pages/forms/AreaManagerVisitForm.jsx';
-import OpsManagerVisitForm from './pages/forms/OpsManagerVisitForm.jsx';
-import Team from './pages/team/Team.jsx';
 import Account from './pages/account/Account.jsx';
 import AcceptInvite from './pages/AcceptInvite.jsx';
 import ReportsList from './pages/reports/ReportsList.jsx';
-import ReportView from './pages/reports/ReportView.jsx';
 import SetupInProgress from './pages/onboarding/SetupInProgress.jsx';
 import Library from './pages/library/Library.jsx';
-import SopDetail from './pages/library/SopDetail.jsx';
 import Inbox from './pages/inbox/Inbox.jsx';
 import Thread from './pages/inbox/Thread.jsx';
 import Notifications from './pages/inbox/Notifications.jsx';
 import Logo from './components/Logo.jsx';
+import PageLoadBoundary from './components/PageLoadBoundary.jsx';
+
+// Screens used less often (the setup funnel, the Builder, Team, the report
+// forms, a report's PDF page…) are downloaded when first opened: everything
+// was one 560 KB script, all of it fetched before the first screen showed.
+// Once the app is idle they're fetched anyway, so the service worker has
+// them for later, offline use.
+const lazyPage = (load) => Object.assign(lazy(load), { preload: load });
+const ConfigureData = lazyPage(() => import('./pages/ConfigureData.jsx'));
+const Pricing = lazyPage(() => import('./pages/Pricing.jsx'));
+const Checkout = lazyPage(() => import('./pages/Checkout.jsx'));
+const OnboardingWizard = lazyPage(() => import('./pages/onboarding/OnboardingWizard.jsx'));
+const KpiDashboard = lazyPage(() => import('./pages/dashboard/KpiDashboard.jsx'));
+const ChecklistBuilder = lazyPage(() => import('./pages/checklists/ChecklistBuilder.jsx'));
+const ChecklistRun = lazyPage(() => import('./pages/checklists/ChecklistRun.jsx'));
+const KitchenDailyForm = lazyPage(() => import('./pages/forms/KitchenDailyForm.jsx'));
+const BarDailyForm = lazyPage(() => import('./pages/forms/BarDailyForm.jsx'));
+const OpeningDailyForm = lazyPage(() => import('./pages/forms/OpeningDailyForm.jsx'));
+const ClosingDailyForm = lazyPage(() => import('./pages/forms/ClosingDailyForm.jsx'));
+const QcVisitForm = lazyPage(() => import('./pages/forms/QcVisitForm.jsx'));
+const NfsaVisit = lazyPage(() => import('./pages/nfsa/NfsaVisit.jsx'));
+const AreaManagerVisitForm = lazyPage(() => import('./pages/forms/AreaManagerVisitForm.jsx'));
+const OpsManagerVisitForm = lazyPage(() => import('./pages/forms/OpsManagerVisitForm.jsx'));
+const Team = lazyPage(() => import('./pages/team/Team.jsx'));
+const ReportView = lazyPage(() => import('./pages/reports/ReportView.jsx'));
+const SopDetail = lazyPage(() => import('./pages/library/SopDetail.jsx'));
+const LAZY_PAGES = [ConfigureData, Pricing, Checkout, OnboardingWizard, KpiDashboard, ChecklistBuilder, ChecklistRun, KitchenDailyForm, BarDailyForm, OpeningDailyForm, ClosingDailyForm, QcVisitForm, NfsaVisit, AreaManagerVisitForm, OpsManagerVisitForm, Team, ReportView, SopDetail];
+
+function usePreloadPages() {
+  useEffect(() => {
+    const run = () => LAZY_PAGES.forEach((page) => page.preload().catch(() => {}));
+    const timer = setTimeout(() => (window.requestIdleCallback ? window.requestIdleCallback(run, { timeout: 5000 }) : run()), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+}
 
 function RequireAuth({ children }) {
   const { user, loading, offline, refresh } = useAuth();
@@ -113,9 +130,11 @@ function ScrollToTop() {
 }
 
 export default function App() {
+  usePreloadPages();
   return (
     <>
     <ScrollToTop />
+    <PageLoadBoundary>
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
@@ -159,6 +178,7 @@ export default function App() {
           page; send them to their dashboard instead. */}
       <Route path="*" element={<NotFoundRedirect />} />
     </Routes>
+    </PageLoadBoundary>
     </>
   );
 }

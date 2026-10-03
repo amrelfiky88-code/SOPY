@@ -6,6 +6,7 @@ import { requireAuth, requireRole } from '../auth/middleware.js';
 import { isValidRole, canAssignRole, canManageUser, EDITABLE_STATUSES } from '../auth/roles.js';
 import { PLAN_LIMITS, clampPlanCount } from '../../../shared/pricing.js';
 import { countryCode } from '../../../shared/countries.js';
+import { isEmail } from '../validation.js';
 import fs from 'node:fs/promises';
 
 export const tenantsRouter = Router();
@@ -139,8 +140,17 @@ const PAID_PLAN = `LEFT JOIN LATERAL (
     ORDER BY created_at DESC LIMIT 1
   ) paid ON true`;
 
-async function planRoom(tenantId, kind) {
-  const { rows } = await query(
+// Takes the business's plan lock for stores or users, inside a
+// transaction: the check-then-add for a store, an invite or a re-enable
+// runs one at a time. Without it six invites sent at once on a 3-user plan
+// all passed the check, leaving 7 users.
+async function lockPlan(client, tenantId, kind) {
+  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`plan:${tenantId}:${kind}`]);
+}
+const planFull = (what, room, role) => Object.assign(new Error(planFullMessage(what, room, role)), { status: 409 });
+
+async function planRoom(tenantId, kind, db = { query }) {
+  const { rows } = await db.query(
     kind === 'branches'
       ? `SELECT COALESCE(paid.branch_count, t.branch_count) AS allowed, t.onboarding_step,
                 (SELECT count(*)::int FROM branches WHERE tenant_id = t.id AND is_active) AS used
@@ -187,14 +197,18 @@ tenantsRouter.post('/branches', requireAuth, requireRole('business_owner', 'oper
   if (timezone !== undefined && timezone !== null && timezone !== '' && !(await validTimeZone(timezone))) {
     return res.status(400).json({ error: 'Choose a valid time zone' });
   }
-  const room = await planRoom(req.auth.tenantId, 'branches');
-  if (room.full) return res.status(409).json({ error: planFullMessage('store', room, req.auth.role) });
-  const { rows } = await query(
-    `INSERT INTO branches (tenant_id, name, address, city, timezone)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [req.auth.tenantId, name, address || null, typeof city === 'string' ? city.trim() || null : null, timezone || 'UTC']
-  );
-  res.status(201).json({ branch: rows[0] });
+  const branch = await withTransaction(async (client) => {
+    await lockPlan(client, req.auth.tenantId, 'branches');
+    const room = await planRoom(req.auth.tenantId, 'branches', client);
+    if (room.full) throw planFull('store', room, req.auth.role);
+    const { rows } = await client.query(
+      `INSERT INTO branches (tenant_id, name, address, city, timezone)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [req.auth.tenantId, name, address || null, typeof city === 'string' ? city.trim() || null : null, timezone || 'UTC']
+    );
+    return rows[0];
+  });
+  res.status(201).json({ branch });
 });
 
 // Rename a store, change its city or its time zone.
@@ -303,19 +317,25 @@ tenantsRouter.post('/users/invite', requireAuth, requireRole('business_owner', '
   if (branches === undefined) return res.status(400).json({ error: 'One or more stores were not found' });
 
   const cleanEmail = email.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return res.status(400).json({ error: 'Enter a valid email address' });
+  if (!isEmail(cleanEmail)) return res.status(400).json({ error: 'Enter a valid email address' });
   const existing = await query('SELECT id FROM users WHERE email = $1', [cleanEmail]);
   if (existing.rows.length) return res.status(409).json({ error: 'A user with this email already exists' });
 
+  // A quick answer when the plan is already full (the check that counts is
+  // the one under the lock below).
   const room = await planRoom(req.auth.tenantId, 'users');
   if (room.full) return res.status(409).json({ error: planFullMessage('user', room, req.auth.role) });
 
   const inviteToken = crypto.randomBytes(24).toString('hex');
+  // Hashed before taking the lock, so the lock is held only briefly.
   const placeholderHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
 
   let user;
   try {
     user = await withTransaction(async (client) => {
+      await lockPlan(client, req.auth.tenantId, 'users');
+      const roomNow = await planRoom(req.auth.tenantId, 'users', client);
+      if (roomNow.full) throw planFull('user', roomNow, req.auth.role);
       const { rows } = await client.query(
         `INSERT INTO users (tenant_id, full_name, email, role, status, invite_token, invite_expires_at, password_hash, title)
          VALUES ($1, $2, $3, $4, 'invited', $5, now() + interval '${INVITE_DAYS} days', $6, $7) RETURNING *`,
@@ -414,6 +434,7 @@ tenantsRouter.patch('/users/:id', requireAuth, requireRole('business_owner', 'op
     let next = status;
     if (status === 'active') {
       // Re-enabling someone takes a seat again.
+      // (Checked again under the plan lock when saving.)
       if (target.status === 'disabled') {
         const room = await planRoom(req.auth.tenantId, 'users');
         if (room.full) return res.status(409).json({ error: planFullMessage('user', room, req.auth.role) });
@@ -433,6 +454,13 @@ tenantsRouter.patch('/users/:id', requireAuth, requireRole('business_owner', 'op
   if (branches === undefined) return res.status(400).json({ error: 'One or more stores were not found' });
 
   await withTransaction(async (client) => {
+    // Re-enabling takes a seat: count again under the plan lock, so it
+    // can't race an invite (or another re-enable) past the plan.
+    if (status === 'active' && target.status === 'disabled') {
+      await lockPlan(client, req.auth.tenantId, 'users');
+      const room = await planRoom(req.auth.tenantId, 'users', client);
+      if (room.full) throw planFull('user', room, req.auth.role);
+    }
     if (fields.length) {
       values.push(target.id);
       await client.query(`UPDATE users SET ${fields.join(', ')} WHERE id = $${i}`, values);

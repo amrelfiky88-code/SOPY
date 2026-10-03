@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../api.js';
 import { bestEffortPosition } from '../../lib/location.js';
+import { useReconnect } from '../../lib/useReconnect.js';
 import { FORM_LABELS } from '../../i18n/formLabels.js';
 
 // Shared start/save/submit lifecycle for the Kitchen Daily and Bar &
@@ -85,7 +86,11 @@ export function useOpsReport({ kind, onResume }) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
+  // Stores, fetched again when the signal returns if they failed (the page
+  // otherwise said "add a store first" to someone who was just offline).
+  const [branchesFailed, setBranchesFailed] = useState(false);
+  const loadBranches = () => {
+    setBranchesFailed(false);
     api.get('/tenants/branches')
       .then((d) => {
         // The person's own stores first, and one of those picked by default —
@@ -93,10 +98,13 @@ export function useOpsReport({ kind, onResume }) {
         // another branch filed reports against the wrong one.
         const sorted = [...d.branches].sort((a, b) => Number(!!b.works_here) - Number(!!a.works_here));
         setBranches(sorted);
-        if (sorted.length) setBranchId(sorted[0].id);
+        setError('');
+        if (sorted.length) setBranchId((current) => current || sorted[0].id);
       })
-      .catch((err) => setError(err.message));
-  }, []);
+      .catch((err) => { setBranchesFailed(true); setError(err.message); });
+  };
+  useEffect(loadBranches, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useReconnect(() => { if (branchesFailed) loadBranches(); });
 
   useEffect(() => {
     setDraft(null);
@@ -120,12 +128,30 @@ export function useOpsReport({ kind, onResume }) {
     return template.id;
   };
 
+  // A second tap while the first is still starting is ignored: two taps
+  // used to open two drafts, and the page kept only the last.
+  const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
   const start = async () => {
+    if (startingRef.current) return;
     setError('');
-    if (draft) {
-      setSubmissionId(draft.id);
-      onResume?.(draft.form_data || {});
+    startingRef.current = true;
+    setStarting(true);
+    // Ask again for today's draft if the lookup didn't get an answer
+    // (flaky signal): Start used to open a new, empty report then, and the
+    // draft with the morning's readings disappeared behind it.
+    let existing = draft;
+    if (!existing) {
+      try {
+        existing = (await api.get(`/submissions/draft?kind=${encodeURIComponent(kind)}&branchId=${encodeURIComponent(branchId)}`)).submission;
+      } catch { /* creating one below reports the problem */ }
+    }
+    if (existing) {
+      setSubmissionId(existing.id);
+      onResume?.(existing.form_data || {});
       setStatus('started');
+      startingRef.current = false;
+      setStarting(false);
       return;
     }
     try {
@@ -135,6 +161,9 @@ export function useOpsReport({ kind, onResume }) {
       setStatus('started');
     } catch (err) {
       setError(err.message);
+    } finally {
+      startingRef.current = false;
+      setStarting(false);
     }
   };
 
@@ -172,5 +201,5 @@ export function useOpsReport({ kind, onResume }) {
     }
   };
 
-  return { branches, branchId, setBranchId, status, error, setError, start, save, submit, hasDraft: !!draft, justSaved, submissionId, autosave, autosaved };
+  return { branches, branchesFailed, branchId, setBranchId, status, error, setError, start, starting, save, submit, hasDraft: !!draft, justSaved, submissionId, autosave, autosaved };
 }

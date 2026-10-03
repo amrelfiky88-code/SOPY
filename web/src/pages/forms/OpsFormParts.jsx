@@ -151,10 +151,10 @@ export function ReportStart({ report, title, startLabel }) {
             {report.branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </div>
-        <button className="btn btn-primary" onClick={report.start} disabled={!report.branchId}>
+        <button className="btn btn-primary" onClick={report.start} disabled={!report.branchId || report.starting}>
           {report.hasDraft ? t('f.continueDraft') : startLabel || t('f.startReport')}
         </button>
-        {report.branches.length === 0 && <p className="hint">{t('f.addStoreFirst')}</p>}
+        {report.branches.length === 0 && !report.branchesFailed && <p className="hint">{t('f.addStoreFirst')}</p>}
       </div>
     </div>
   );

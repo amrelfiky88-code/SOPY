@@ -6,6 +6,9 @@
 const ROWS = [
   // --- Tabs and shell -------------------------------------------------
   ['app.tabs', 'Main sections', 'الأقسام الرئيسية', 'Sections principales'],
+  // A screen that couldn't be downloaded (offline, or an update replaced it).
+  ['app.pageLoadFailed', 'This screen couldn’t load. Check your connection, then reload.', 'تعذّر تحميل هذه الشاشة. تحقّق من اتصالك ثم أعد التحميل.', 'Cet écran n’a pas pu se charger. Vérifiez votre connexion, puis rechargez.'],
+  ['app.reload', 'Reload', 'إعادة التحميل', 'Recharger'],
   ['app.tabToday', 'Today', 'اليوم', "Aujourd'hui"],
   ['app.tabLibrary', 'Library', 'المكتبة', 'Bibliothèque'],
   ['app.tabInbox', 'Inbox', 'الوارد', 'Messages'],

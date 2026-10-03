@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api.js';
+import { useReconnect } from '../../lib/useReconnect.js';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import { useT } from '../../i18n/index.jsx';
 import { ROLES, roleName } from '../onboarding/roles.js';
@@ -33,16 +34,22 @@ export default function Team() {
   // Only offer roles the server will accept from this user.
   const assignableRoles = ROLES.filter((r) => canAssignRole(me?.role, r.value));
 
+  // Whether the lists failed to load: then they aren't "no stores yet",
+  // and they're fetched again on Try again or when the signal returns.
+  const [loadFailed, setLoadFailed] = useState(false);
   const load = async () => {
     try {
       const [b, u] = await Promise.all([api.get('/tenants/branches'), api.get('/tenants/users')]);
       setBranches(b.branches);
       setUsers(u.users);
+      setLoadFailed(false);
     } catch (err) {
+      setLoadFailed(true);
       setError(err.message);
     }
   };
   useEffect(() => { load(); }, []);
+  useReconnect(() => { if (loadFailed) { setError(''); load(); } });
 
   const addBranch = async (e) => {
     e.preventDefault();
@@ -138,7 +145,12 @@ export default function Team() {
   return (
     <div>
       <h2>{t('team.title')}</h2>
-      {error && <div className="error-banner">{error}</div>}
+      {error && (
+        <div className="error-banner">
+          {error}{' '}
+          {loadFailed && <button type="button" className="link-btn" onClick={() => { setError(''); load(); }}>{t('common.tryAgain')}</button>}
+        </div>
+      )}
 
       <div className="filter-row">
         <button type="button" aria-pressed={tab === 'stores'} className={tab === 'stores' ? 'active' : ''} onClick={() => setTab('stores')}>{t('team.storesTab', { n: branches.length })}</button>
@@ -178,7 +190,7 @@ export default function Team() {
                 )}
               </div>
             ))}
-            {branches.length === 0 && (
+            {branches.length === 0 && !loadFailed && (
               <div className="empty-state">
                 <StorefrontIcon size={32} />
                 <span>{t('team.noStores')}</span>
