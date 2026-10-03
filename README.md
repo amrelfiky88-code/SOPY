@@ -328,8 +328,9 @@ in that component**, and the server's upload endpoint
   filtering as the team grows.
 - **Photo storage** is local disk, fine for a single Hostinger instance;
   move to S3/Object Storage if you scale to multiple app instances. In
-  production, photos and shared report PDFs are kept in `~/sopy-data`
-  (or `DATA_DIR`), outside the app: Hostinger deploys each push into a
+  production, photos and shared report PDFs are kept in `sopy-data` in
+  the account home (`/home/<user>/sopy-data` on Hostinger, or `DATA_DIR`),
+  outside the app: Hostinger deploys each push into a
   fresh folder and deletes the old one, so anything kept inside the app
   folder is lost at the next deploy. Locally they stay in `server/uploads/`
   and `server/storage/shares/`.
