@@ -1203,6 +1203,9 @@ a.sopy-logo, a:has(> .sopy-logo) { text-decoration: none; }
    English note in the Arabic app put its full stop on the wrong end
    (saved notes in reports already do this). */
 textarea { unicode-bidi: plaintext; }
+/* An email always reads left to right. In a right-to-left box the "@" or
+   "." just typed jumped to the other end ("@name") until the next letter. */
+[dir='rtl'] input[type='email'] { direction: ltr; text-align: right; }
 /* A heading straight after a card (NFSA page, SOP detail) sat against it. */
 .list-card + .section-label { margin-top: 20px; }
 .stack { display: flex; flex-direction: column; gap: 16px; }
