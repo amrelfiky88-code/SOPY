@@ -162,6 +162,8 @@ export default function Thread() {
         <textarea
           ref={boxRef}
           rows={1}
+          // Typed text reads in its own direction (English in the Arabic app).
+          dir="auto"
           value={draft}
           maxLength={MAX_LENGTH}
           onChange={(e) => setDraft(e.target.value)}

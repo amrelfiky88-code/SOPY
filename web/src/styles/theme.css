@@ -1199,6 +1199,10 @@ a.sopy-logo, a:has(> .sopy-logo) { text-decoration: none; }
   font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--ink-soft); margin: 0 2px 8px;
 }
+/* Notes and findings read in their own direction as they're typed: an
+   English note in the Arabic app put its full stop on the wrong end
+   (saved notes in reports already do this). */
+textarea { unicode-bidi: plaintext; }
 /* A heading straight after a card (NFSA page, SOP detail) sat against it. */
 .list-card + .section-label { margin-top: 20px; }
 .stack { display: flex; flex-direction: column; gap: 16px; }
